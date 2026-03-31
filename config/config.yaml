@@ -1,0 +1,14 @@
+llm_key:
+  llamaParse: 'llx-YaUnPKRgcMQRDRgJxqRSi7CIE1Skla5Lzr3S7isPm3jl9fYr'
+  deepseek: 'sk-2bb46f04d60d4202b8badc6077f127ff'
+  xiaoAi: 'sk-XB8Wgvn66uZmJkcy65w9xBFsO9ZlrMtNhHOfG4f4Ljr8ZNal'
+  qwen: 'sk-5e27c67b8d06446d83b7ebb1c70cad94'
+  postgressql: 'postgresql://postgres:123123@127.0.0.1:5432/langgraph-multi'
+  redis: 'redis://127.0.0.1:6379'
+
+llama_parser:
+  invalidate_cache: false
+
+milvus:
+  uri: 'http://127.0.0.1:19530'
+  dims: 2560  # qwen向量模型维度
