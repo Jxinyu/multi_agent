@@ -49,6 +49,8 @@ async def hr_agent(state: State, config: RunnableConfig):
     # 获取主代理传进来的问题
     content = state.sub_agent_input_content[SubAgentEnum.HR.value]
 
+    messages = state.sub_agent_messages[SubAgentEnum.HR.value]
+
     logger.info(f"【HR Agent】的输入: {content}")
 
     system_prompt = """
