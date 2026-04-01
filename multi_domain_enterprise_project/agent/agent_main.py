@@ -87,7 +87,7 @@ async def run_agent(query: str, config: dict, checkpointer) -> dict:
             }
 
     except Exception as e:
-        logger.error(f"❌ [Thread {config['configurable']['thread_id']}] 运行异常: {str(e)}")
+        logger.exception(f"❌ [Thread {config['configurable']['thread_id']}] 运行异常: {str(e)}")
         # 这里不要抛死，优雅地告诉前端发生了什么
         return {
             "status": "error",
@@ -194,5 +194,5 @@ async def run_agent_stream(query: str, config: dict, checkpointer):
             }
 
     except Exception as e:
-        logger.error(f"❌ 运行异常: {str(e)}")
+        logger.exception(f"❌ 运行异常: {str(e)}")
         yield {"type": "error", "message": f"系统开小差了，请稍后再试。错误信息: {str(e)}"}

@@ -39,8 +39,12 @@ async def tech_agent_node(state: State, config: RunnableConfig):
     """负责解答 API 文档、内部系统架构、代码规范、项目 Wiki 等问题。"""
 
     content = state.sub_agent_input_content[SubAgentEnum.TECH.value]  # 获取主代理传进来的问题
-
-    logger.info(f"【Tech Agent】的输入：{content}")
+    # 获取子agent的历史对话消息
+    try:
+        messages = state.sub_agent_messages[SubAgentEnum.TECH.value]
+    except:
+        messages = []
+    logger.info(f"【Tech Agent】的输入：{content[:10]}...")
 
     system_prompt = """
 # 角色定位
@@ -70,7 +74,10 @@ async def tech_agent_node(state: State, config: RunnableConfig):
             tools=[get_document] + mcp_tools,
             response_format=SubAgentOutputFormat
         )
-        response = await agent.ainvoke(input={"messages": [{"role": "user", "content": content}]}, config=config)
+        # 组装messages
+        messages.append({"role": "user", "content": content})
+
+        response = await agent.ainvoke(input={"messages": messages}, config=config)
     finally:
         # 关闭服务
         if hasattr(mcp_client, "close"):
@@ -78,15 +85,19 @@ async def tech_agent_node(state: State, config: RunnableConfig):
         elif hasattr(mcp_client, "aclose"):
             await mcp_client.aclose()
 
-    response = response['structured_response']
+    messages = response['messages']
+    structured_response = response['structured_response']
 
-    logger.info(f"【Tech Agent】最终回复：{response.result}")
+    logger.info(f"【Tech Agent】最终回复：{structured_response.result.result[:10]}...")
 
     return {
         "sub_agent_response": {
             "【Tech Agent的回复】": {
-                "回复内容": response.result,
-                "参考资料": response.references
+                "回复内容": structured_response.result,
+                "参考资料": structured_response.references
             },
+        },
+        "sub_agent_messages": {
+            SubAgentEnum.TECH.value: messages
         }
     }

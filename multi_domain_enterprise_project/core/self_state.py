@@ -16,10 +16,17 @@ def merge_dict(old_tasks: Dict[str, Any], new_tasks: Dict[str, Any]) -> Dict[str
     return merged
 
 
+def replace_dict(old_tasks: Dict[str, Any], new_tasks: Dict[str, Any]) -> Dict[str, Any]:
+    """替代字典"""
+    if new_tasks is None:
+        return {}
+    return new_tasks
+
+
 class State(BaseModel):
     messages: Annotated[list[BaseMessage], add_messages]
     sub_agent_input_content: Annotated[Dict[str, Any], merge_dict]  # 给子Agent的输入
-    sub_agent_messages: Annotated[Dict[str, Any], merge_dict]  # 子Agent的messages消息
+    sub_agent_messages: Annotated[Dict[str, list], replace_dict]  # 子Agent的messages消息
     sub_agent_response: Annotated[Dict[str, Any], merge_dict]  # 子Agent的输出
     audit_feedback: Optional[Any] = None  # 审计反馈
     result: Optional[Any] = None

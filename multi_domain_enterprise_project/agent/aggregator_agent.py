@@ -15,7 +15,7 @@ async def aggregator_agent(state: State, config: RunnableConfig):
     # 获取所有子代理的输出
     content = state.sub_agent_response
 
-    logger.info(f"【aggregator_agent 的输入】: {content}")
+    logger.info(f"【aggregator_agent 的输入】: {content.keys()}")
 
     system_prompt = """
 # 角色定位
@@ -49,7 +49,7 @@ async def aggregator_agent(state: State, config: RunnableConfig):
 
     response = response['structured_response']
 
-    logger.info(f"【aggregator Agent的回复】: {response}")
+    logger.info(f"【aggregator Agent的回复】: {response.result[:10]}")
 
     return {
         "sub_agent_response": {

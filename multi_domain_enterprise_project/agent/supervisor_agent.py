@@ -139,7 +139,7 @@ async def create_graph(checkpointer: Checkpointer):
         audit_feedback = state.audit_feedback
         if not audit_feedback:
             return END
-        logger.info(f"【audit_router】返回审核：{state.messages[-1]}")
+        logger.info(f"【audit_router】返回审核：{state.messages[-1].content[:10]}")
         return "supervisor"
 
     graph = StateGraph(State)

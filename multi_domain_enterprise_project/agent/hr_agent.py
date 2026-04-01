@@ -1,11 +1,12 @@
 import logging
 
 from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
 from langgraph.types import interrupt
-from pydantic import BaseModel
+from langchain.agents.middleware import SummarizationMiddleware
 
 from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.self_state import State
@@ -22,14 +23,7 @@ async def get_document(runtime: ToolRuntime):
     config = runtime.config  # 获取运行时配置
     user_info = config['configurable']["user_info"]  # 获取用户信息
 
-    logger.info(f"【HR Agent】触发 human-in-loop")
-
-    decision = interrupt({
-        "action": "get_document",
-        "content": "你想要什么文档嘞？"
-    })
-
-    logger.info(f"【HR Agent】中用户的输入: {decision}")
+    logger.info(f"【HR Agent中】的user_info: {user_info}")
 
     # 接下来的流程
     # 根据不同用户的定位，搜索出不同的文档列表，然后return
@@ -49,9 +43,13 @@ async def hr_agent(state: State, config: RunnableConfig):
     # 获取主代理传进来的问题
     content = state.sub_agent_input_content[SubAgentEnum.HR.value]
 
-    messages = state.sub_agent_messages[SubAgentEnum.HR.value]
+    # 获取子agent的历史对话消息
+    try:
+        messages = state.sub_agent_messages[SubAgentEnum.HR.value]
+    except:
+        messages = []
 
-    logger.info(f"【HR Agent】的输入: {content}")
+    logger.info(f"【HR Agent】的输入: {content[:10]}...")
 
     system_prompt = """
 # 角色定位
@@ -74,9 +72,20 @@ async def hr_agent(state: State, config: RunnableConfig):
             model=await qwen_model(),
             system_prompt=system_prompt,
             tools=[get_document] + mcp_tools,
-            response_format=SubAgentOutputFormat
+            response_format=SubAgentOutputFormat,
+            middleware=[
+                SummarizationMiddleware(
+                    model=await qwen_model(),
+                    trigger=("messages", 8),
+                    keep=("messages", 4)
+                )
+            ]
         )
-        response = await agent.ainvoke(input={"messages": [{"role": "user", "content": content}]}, config=config)
+
+        # 组装messages
+        messages.append(HumanMessage(content=content))
+
+        response = await agent.ainvoke(input={"messages": messages}, config=config)
     finally:
         # 关闭服务
         if hasattr(mcp_client, "close"):
@@ -84,15 +93,21 @@ async def hr_agent(state: State, config: RunnableConfig):
         elif hasattr(mcp_client, "aclose"):
             await mcp_client.aclose()
 
-    response = response['structured_response']
+    messages = response['messages']
+    structured_response = response['structured_response']
 
-    logger.info(f"【HR Agent】的输出: {response}")
+    logger.info(f"【HR Agent】的输出: {structured_response.result[:10]}...")
 
     return {
         "sub_agent_response": {
             "【HR Agent的回复】": {
-                "回复内容": response.result,
-                "参考资料": response.references
+                "回复内容": structured_response.result,
+                "参考资料": structured_response.references
             },
+        },
+        "sub_agent_messages": {
+            SubAgentEnum.HR.value: messages
         }
     }
+
+

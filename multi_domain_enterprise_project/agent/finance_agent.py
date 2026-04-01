@@ -38,7 +38,13 @@ async def finance_agent(state: State, config: RunnableConfig):
 
     content = state.sub_agent_input_content[SubAgentEnum.FINANCE.value]  # 获取主代理传进来的问题
 
-    logger.info(f"【Finance Agent的输入】: {content}")
+    # 获取子agent的历史对话消息
+    try:
+        messages = state.sub_agent_messages[SubAgentEnum.FINANCE.value]
+    except:
+        messages = []
+
+    logger.info(f"【Finance Agent的输入】: {content[:10]}...")
 
     system_prompt = """
 你是公司极其严谨的财务合规官。你的任务是解答员工关于报销、预算和财务制度的问题。
@@ -65,24 +71,29 @@ async def finance_agent(state: State, config: RunnableConfig):
             tools=[get_document] + mcp_tools,
             response_format=SubAgentOutputFormat
         )
-        response = await agent.ainvoke(input={"messages": [{"role": "user", "content": content}]}, config=config)
+        # 组装messages
+        messages.append({"role": "user", "content": content})
+
+        response = await agent.ainvoke(input={"messages": messages}, config=config)
     finally:
         if hasattr(mcp_client, "close"):
             await mcp_client.close()
         elif hasattr(mcp_client, "aclose"):
             await mcp_client.aclose()
 
-    # print(response)
+    messages = response['messages']
+    structured_response = response['structured_response']
 
-    response = response['structured_response']
-
-    logger.info(f"【Finance Agent的回复】: {response}")
+    logger.info(f"【Finance Agent的回复】: {structured_response.result[:10]}...")
 
     return {
-            "sub_agent_response": {
-                "【Finance Agent的回复】": {
-                    "回复内容": response.result,
-                    "参考资料": response.references
-                },
-            }
+        "sub_agent_response": {
+            "【Finance Agent的回复】": {
+                "回复内容": structured_response.result,
+                "参考资料": structured_response.references
+            },
+        },
+        "sub_agent_messages": {
+            SubAgentEnum.FINANCE.value: messages
         }
+    }

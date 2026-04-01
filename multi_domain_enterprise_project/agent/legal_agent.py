@@ -43,7 +43,13 @@ async def legal_agent(state: State, config: RunnableConfig):
 
     content = state.sub_agent_input_content[SubAgentEnum.LEGAL.value]
 
-    logger.info(f"【Legal Agent】的输入: {content}")
+    # 获取子agent的历史对话消息
+    try:
+        messages = state.sub_agent_messages[SubAgentEnum.LEGAL.value]
+    except:
+        messages = []
+
+    logger.info(f"【Legal Agent】的输入: {content[:10]}...")
 
     system_prompt = """
 # 角色定位
@@ -69,7 +75,10 @@ async def legal_agent(state: State, config: RunnableConfig):
             tools=[get_document] + mcp_tools,
             response_format=SubAgentOutputFormat
         )
-        response = await agent.ainvoke(input={"messages": [{"role": "user", "content": content}]}, config=config)
+        # 组装messages
+        messages.append({"role": "user", "content": content})
+
+        response = await agent.ainvoke(input={"messages": messages}, config=config)
     finally:
         # 关闭服务
         if hasattr(mcp_client, "close"):
@@ -77,15 +86,19 @@ async def legal_agent(state: State, config: RunnableConfig):
         elif hasattr(mcp_client, "aclose"):
             await mcp_client.aclose()
 
-    response = response['structured_response']
+    messages = response['messages']
+    structured_response = response['structured_response']
 
-    logger.info(f"【Legal Agent】的回复: {response}")
+    logger.info(f"【Legal Agent】的回复: {structured_response.result[:10]}...")
 
     return {
         "sub_agent_response": {
             "【Legal Agent的回复】": {
-                "回复内容": response.result,
-                "参考资料": response.references
+                "回复内容": structured_response.result,
+                "参考资料": structured_response.references
             },
+        },
+        "sub_agent_messages": {
+            SubAgentEnum.LEGAL.value: messages
         }
     }

@@ -17,9 +17,9 @@ class AuditOutputFormat(BaseModel):
     输出格式
     """
     is_pass: bool = Field(..., description="是否通过")
-    correction_targets: Dict[str, str] = Field(
-        default_factory=dict,
-        description="如果is_pass为false，则指出需要修正的子Agent名称和对应的修正指令。例如：{'hr': '请补充离职流程中的资产交接步骤'};如果is_pass为true，此字段可为空字符串或简单说明“通过”。"
+    correction_targets: str = Field(
+        default="",
+        description='如果is_pass为false，明确指出需要修正的Agent名称和修正指令。例如："需要 hr Agent 补充离职流程中的资产交接步骤"；如果is_pass为true，此字段输出空字符串。'
     )
 
 
@@ -28,7 +28,7 @@ async def audit_agent(state: State, config: RunnableConfig):
     # 获取aggregator Agent的输出
     content = state.sub_agent_response["aggregator"]
 
-    logger.info(f"【Audit Agent的输入】: {content}")
+    logger.info(f"【Audit Agent的输入】: {content['回复内容'][:10]}...")
 
     system_prompt = """
     # 角色定位
@@ -65,7 +65,7 @@ async def audit_agent(state: State, config: RunnableConfig):
 
     response = response['structured_response']
 
-    logger.info(f"【Audit Agent的回复】: {response}")
+    logger.info(f"【Audit Agent的回复】: {response.is_pass}...")
 
     retry_count = state.retry_count
     max_retries = state.max_retries

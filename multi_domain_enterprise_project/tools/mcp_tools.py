@@ -1,5 +1,7 @@
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
+dq = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJocnwxfDIiLCJpc3MiOiJodHRwczovL3hpbnl1LmNvbSIsImlhdCI6MTc3NDk2MTE1OSwiZXhwIjoxNzc1NTY1OTU5LCJhdWQiOiJteS1kZXYtc2VydmVyIiwidGVuYW50IjoiaHIiLCJhY2wiOiIxfDIifQ.JLB72JbStZYNDc-WIb2rLvO09BfUSh6WVR4yfyblMnIpQ8qdyp-Qx4YL2dks7YY_v3NkhQPi9ohaCQZUPpDrizL38sbKwhWRiFWWcuzdTOdF9Y22d_3IyjxPkrm3oZxDEn2MEvWMtkEwuQnolK7kaJCvY68GEZ8-P2JeoJxdlPwPWEGCteSA2apy4R7rQ-iGhJQT39lB2f5dUD59IVAw_Ro4hvajmHnfssv0JFXWF5nm20jfDS70Gerf5HdLAC-8YlU4oGqgCH8f_d5MJingb1xyenAfcsxSjJVLszFZb9k3pejk5aGSGAj5JKAzVSw-Y-GTWDExMiU39jyUMhV8aA"
+
 
 async def finance_mcp_client():
     """可视化图表"""
@@ -15,7 +17,7 @@ async def finance_mcp_client():
                     "transport": "streamable-http",
                     "url": "http://127.0.0.1:8000/rag-retriever",
                     "headers": {
-                        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJocnwxfDIiLCJpc3MiOiJodHRwczovL3hpbnl1LmNvbSIsImlhdCI6MTc3NDE2OTA2OSwiZXhwIjoxNzc0NzczODY5LCJhdWQiOiJteS1kZXYtc2VydmVyIiwidGVuYW50IjoiaHIiLCJhY2wiOiIxfDIifQ.dzoUgcGt5v-aYLTXnM4UaewyeTYIMT3Dhfxf1gEQEFyTW47_vEwMEvYUzVRwKimI1WBu608iDqrWpzu_eJc2GbHjlHXzQznyvK6CjEGwh2YMrbJfSDApcsgCqsQxyY_aWHMfwuVMmJWKCaHaADFLmHaozW4AU2SOsEPGfxFpHKbSjM9dd91_q6xLVBV1TusG9KVuBkGjT4jjlr_VFSK3kDNLmGOdtiQbOv7LDzY7Ykp0vaqHdw-LWX-8uSgPQiSJQmDSfAXgsG0lXgGjWBPC1LmeIbmK-UZDs0ofw6DwtdcliL1Cx_Vi87d73pX3avz1GAVBN6Al9MhETSIoGJx0xw",
+                        "Authorization": f"Bearer {dq}"
                     }
                 },
         },
@@ -31,7 +33,7 @@ async def document_retriever_mcp_client():
                 "transport": "streamable-http",
                 "url": "http://127.0.0.1:8000/rag-retriever",
                 "headers": {
-                    "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJocnwxfDIiLCJpc3MiOiJodHRwczovL3hpbnl1LmNvbSIsImlhdCI6MTc3NDE2OTA2OSwiZXhwIjoxNzc0NzczODY5LCJhdWQiOiJteS1kZXYtc2VydmVyIiwidGVuYW50IjoiaHIiLCJhY2wiOiIxfDIifQ.dzoUgcGt5v-aYLTXnM4UaewyeTYIMT3Dhfxf1gEQEFyTW47_vEwMEvYUzVRwKimI1WBu608iDqrWpzu_eJc2GbHjlHXzQznyvK6CjEGwh2YMrbJfSDApcsgCqsQxyY_aWHMfwuVMmJWKCaHaADFLmHaozW4AU2SOsEPGfxFpHKbSjM9dd91_q6xLVBV1TusG9KVuBkGjT4jjlr_VFSK3kDNLmGOdtiQbOv7LDzY7Ykp0vaqHdw-LWX-8uSgPQiSJQmDSfAXgsG0lXgGjWBPC1LmeIbmK-UZDs0ofw6DwtdcliL1Cx_Vi87d73pX3avz1GAVBN6Al9MhETSIoGJx0xw",
+                    "Authorization": f"Bearer {dq}"
                 }
             },
         }
@@ -53,7 +55,7 @@ async def tech_mcp_client():
                     "transport": "streamable-http",
                     "url": "http://127.0.0.1:8000/rag-retriever",
                     "headers": {
-                        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJocnwxfDIiLCJpc3MiOiJodHRwczovL3hpbnl1LmNvbSIsImlhdCI6MTc3NDE2OTA2OSwiZXhwIjoxNzc0NzczODY5LCJhdWQiOiJteS1kZXYtc2VydmVyIiwidGVuYW50IjoiaHIiLCJhY2wiOiIxfDIifQ.dzoUgcGt5v-aYLTXnM4UaewyeTYIMT3Dhfxf1gEQEFyTW47_vEwMEvYUzVRwKimI1WBu608iDqrWpzu_eJc2GbHjlHXzQznyvK6CjEGwh2YMrbJfSDApcsgCqsQxyY_aWHMfwuVMmJWKCaHaADFLmHaozW4AU2SOsEPGfxFpHKbSjM9dd91_q6xLVBV1TusG9KVuBkGjT4jjlr_VFSK3kDNLmGOdtiQbOv7LDzY7Ykp0vaqHdw-LWX-8uSgPQiSJQmDSfAXgsG0lXgGjWBPC1LmeIbmK-UZDs0ofw6DwtdcliL1Cx_Vi87d73pX3avz1GAVBN6Al9MhETSIoGJx0xw",
+                        "Authorization": f"Bearer {dq}"
                     }
                 },
         }
@@ -75,7 +77,7 @@ async def legal_mcp_client():
                     "transport": "streamable-http",
                     "url": "http://127.0.0.1:8000/rag-retriever",
                     "headers": {
-                        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJocnwxfDIiLCJpc3MiOiJodHRwczovL3hpbnl1LmNvbSIsImlhdCI6MTc3NDE2OTA2OSwiZXhwIjoxNzc0NzczODY5LCJhdWQiOiJteS1kZXYtc2VydmVyIiwidGVuYW50IjoiaHIiLCJhY2wiOiIxfDIifQ.dzoUgcGt5v-aYLTXnM4UaewyeTYIMT3Dhfxf1gEQEFyTW47_vEwMEvYUzVRwKimI1WBu608iDqrWpzu_eJc2GbHjlHXzQznyvK6CjEGwh2YMrbJfSDApcsgCqsQxyY_aWHMfwuVMmJWKCaHaADFLmHaozW4AU2SOsEPGfxFpHKbSjM9dd91_q6xLVBV1TusG9KVuBkGjT4jjlr_VFSK3kDNLmGOdtiQbOv7LDzY7Ykp0vaqHdw-LWX-8uSgPQiSJQmDSfAXgsG0lXgGjWBPC1LmeIbmK-UZDs0ofw6DwtdcliL1Cx_Vi87d73pX3avz1GAVBN6Al9MhETSIoGJx0xw",
+                        "Authorization": f"Bearer {dq}"
                     }
                 },
         }
