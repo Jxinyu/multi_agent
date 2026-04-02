@@ -1,6 +1,7 @@
 import logging
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import SummarizationMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
@@ -73,7 +74,14 @@ async def legal_agent(state: State, config: RunnableConfig):
             model=await qwen_model(),
             system_prompt=system_prompt,
             tools=[get_document] + mcp_tools,
-            response_format=SubAgentOutputFormat
+            response_format=SubAgentOutputFormat,
+            middleware=[
+                SummarizationMiddleware(
+                    model=await qwen_model(),
+                    trigger=("messages", 8),
+                    keep=("messages", 4)
+                )
+            ]
         )
         # 组装messages
         messages.append({"role": "user", "content": content})

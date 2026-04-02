@@ -8,7 +8,7 @@ from langgraph.constants import END
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition, ToolRuntime
 from langgraph.types import Checkpointer, Command, interrupt
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from multi_domain_enterprise_project.agent.tech_agent import tech_agent_node
 from multi_domain_enterprise_project.agent.aggregator_agent import aggregator_agent
@@ -37,31 +37,38 @@ async def get_sub_agent_list() -> List[Dict]:
     ]
 
 
+class InvokeAgentModel(BaseModel):
+    """定义invoke_sub_agent模型参数"""
+    sub_agent_name: Annotated[str, Field(..., description="子代理名称")]
+    content: Annotated[str, Field(...,description="给专家下达的具体任务指令。警告：必须是陈述句指令，严禁在此处填写对用户意图的疑问！")]
+
+
 @tool
-async def invoke_sub_agent(sub_agent_name: Annotated[str, Field(..., description="子代理名称")],
-                           content: Annotated[str, Field(...,
-                                                         description="给专家下达的具体任务指令。警告：必须是陈述句指令，严禁在此处填写对用户意图的疑问！")],
+async def invoke_sub_agent(sub_agents: List[InvokeAgentModel],
                            runtime: ToolRuntime) -> Union[str, Command]:
     """向专家下发任务。如果用户问题涉及多个领域，可以被并发调用多次。"""
-    try:
-        operation = SubAgentEnum(sub_agent_name)
-    except:
-        return f"子代理 {sub_agent_name} 不存在,仔细检查子代理名称"
-    logger.info(f"调用 {operation.value} 代理成功!")
-    tool_call_id = runtime.tool_call_id
-    return Command(
-        goto=operation.value,
-        update={
-            "sub_agent_input_content": {operation.value: content},
-            "messages": [
-                ToolMessage(
-                    content=f"调用 {operation.value} 代理成功! 等待审核结果",
-                    name='invoke_sub_agent',
-                    tool_call_id=tool_call_id
-                )
-            ]
-        }
-    )
+    for agent in sub_agents:
+        sub_agent_name = agent.sub_agent_name
+        content = agent.content
+        try:
+            operation = SubAgentEnum(sub_agent_name)
+        except:
+            return f"子代理 {sub_agent_name} 不存在,仔细检查子代理名称"
+        logger.info(f"调用 {operation.value} 代理成功!")
+        tool_call_id = runtime.tool_call_id
+        return Command(
+            goto=operation.value,
+            update={
+                "sub_agent_input_content": {operation.value: content},
+                "messages": [
+                    ToolMessage(
+                        content=f"调用 {operation.value} 代理成功! 等待审核结果",
+                        name='invoke_sub_agent',
+                        tool_call_id=tool_call_id
+                    )
+                ]
+            }
+        )
 
 
 @tool

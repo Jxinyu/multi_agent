@@ -4,6 +4,20 @@
 
 ---
 
+## File: `t.py`
+
+```py
+t = {"query": "请用中文回答：1+1等于几？"}
+print(t.get("quey", {}))
+
+
+
+
+
+
+
+```
+
 ## File: `multi_domain_enterprise_project\main.py`
 
 ```py
@@ -37,6 +51,12 @@ os.environ["NO_PROXY"] = "localhost,127.0.0.1,modelscope.net,bigmodel.cn,xiaoai.
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+logging.getLogger("watchfiles.main").setLevel(logging.WARNING)
+logging.getLogger("redisvl.index.index").setLevel(logging.WARNING)
+logging.getLogger("langgraph.checkpoint.redis.aio").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("mcp.client.streamable_http").setLevel(logging.WARNING)
 
 # 全局变量
 redis_conn = None
@@ -440,7 +460,7 @@ async def run_agent(query: str, config: dict, checkpointer) -> dict:
             }
 
     except Exception as e:
-        logger.error(f"❌ [Thread {config['configurable']['thread_id']}] 运行异常: {str(e)}")
+        logger.exception(f"❌ [Thread {config['configurable']['thread_id']}] 运行异常: {str(e)}")
         # 这里不要抛死，优雅地告诉前端发生了什么
         return {
             "status": "error",
@@ -547,7 +567,7 @@ async def run_agent_stream(query: str, config: dict, checkpointer):
             }
 
     except Exception as e:
-        logger.error(f"❌ 运行异常: {str(e)}")
+        logger.exception(f"❌ 运行异常: {str(e)}")
         yield {"type": "error", "message": f"系统开小差了，请稍后再试。错误信息: {str(e)}"}
 ```
 
@@ -571,7 +591,7 @@ async def aggregator_agent(state: State, config: RunnableConfig):
     # 获取所有子代理的输出
     content = state.sub_agent_response
 
-    logger.info(f"【aggregator_agent 的输入】: {content}")
+    logger.info(f"【aggregator_agent 的输入】: {content.keys()}")
 
     system_prompt = """
 # 角色定位
@@ -605,7 +625,7 @@ async def aggregator_agent(state: State, config: RunnableConfig):
 
     response = response['structured_response']
 
-    logger.info(f"【aggregator Agent的回复】: {response}")
+    logger.info(f"【aggregator Agent的回复】: {response.result[:10]}")
 
     return {
         "sub_agent_response": {
@@ -642,9 +662,9 @@ class AuditOutputFormat(BaseModel):
     输出格式
     """
     is_pass: bool = Field(..., description="是否通过")
-    correction_targets: Dict[str, str] = Field(
-        default_factory=dict,
-        description="如果is_pass为false，则指出需要修正的子Agent名称和对应的修正指令。例如：{'hr': '请补充离职流程中的资产交接步骤'};如果is_pass为true，此字段可为空字符串或简单说明“通过”。"
+    correction_targets: str = Field(
+        default="",
+        description='如果is_pass为false，明确指出需要修正的Agent名称和修正指令。例如："需要 hr Agent 补充离职流程中的资产交接步骤"；如果is_pass为true，此字段输出空字符串。'
     )
 
 
@@ -653,7 +673,7 @@ async def audit_agent(state: State, config: RunnableConfig):
     # 获取aggregator Agent的输出
     content = state.sub_agent_response["aggregator"]
 
-    logger.info(f"【Audit Agent的输入】: {content}")
+    logger.info(f"【Audit Agent的输入】: {content['回复内容'][:10]}...")
 
     system_prompt = """
     # 角色定位
@@ -690,22 +710,26 @@ async def audit_agent(state: State, config: RunnableConfig):
 
     response = response['structured_response']
 
-    logger.info(f"【Audit Agent的回复】: {response}")
+    logger.info(f"【Audit Agent的回复】: {response.is_pass}...")
 
     retry_count = state.retry_count
     max_retries = state.max_retries
 
     if (not response.is_pass) and (retry_count < max_retries):
+        # 审核不通过
         return {
             "messages": [HumanMessage(content=f'审计反馈：\n"correction_targets": {response.correction_targets}')],
             "audit_feedback": f'审计反馈：\n"correction_targets": {response.correction_targets}',
             "retry_count": retry_count + 1
         }
+    # 审核通过
+    final_reply = content["回复内容"]
     return {
         "audit_feedback": None,
         "sub_agent_response": None,
         "sub_agent_input_content": None,
-        "result": content
+        "result": content,
+        "messages": [HumanMessage(content=f"【最终结果】{final_reply}")]
     }
 ```
 
@@ -715,6 +739,7 @@ async def audit_agent(state: State, config: RunnableConfig):
 import logging
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import SummarizationMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
@@ -752,7 +777,13 @@ async def finance_agent(state: State, config: RunnableConfig):
 
     content = state.sub_agent_input_content[SubAgentEnum.FINANCE.value]  # 获取主代理传进来的问题
 
-    logger.info(f"【Finance Agent的输入】: {content}")
+    # 获取子agent的历史对话消息
+    try:
+        messages = state.sub_agent_messages[SubAgentEnum.FINANCE.value]
+    except:
+        messages = []
+
+    logger.info(f"【Finance Agent的输入】: {content[:10]}...")
 
     system_prompt = """
 你是公司极其严谨的财务合规官。你的任务是解答员工关于报销、预算和财务制度的问题。
@@ -777,29 +808,41 @@ async def finance_agent(state: State, config: RunnableConfig):
             model=await qwen_model(),
             system_prompt=system_prompt,
             tools=[get_document] + mcp_tools,
-            response_format=SubAgentOutputFormat
+            response_format=SubAgentOutputFormat,
+            middleware=[
+                SummarizationMiddleware(
+                    model=await qwen_model(),
+                    trigger=("messages", 8),
+                    keep=("messages", 4)
+                )
+            ]
         )
-        response = await agent.ainvoke(input={"messages": [{"role": "user", "content": content}]}, config=config)
+        # 组装messages
+        messages.append({"role": "user", "content": content})
+
+        response = await agent.ainvoke(input={"messages": messages}, config=config)
     finally:
         if hasattr(mcp_client, "close"):
             await mcp_client.close()
         elif hasattr(mcp_client, "aclose"):
             await mcp_client.aclose()
 
-    # print(response)
+    messages = response['messages']
+    structured_response = response['structured_response']
 
-    response = response['structured_response']
-
-    logger.info(f"【Finance Agent的回复】: {response}")
+    logger.info(f"【Finance Agent的回复】: {structured_response.result[:10]}...")
 
     return {
-            "sub_agent_response": {
-                "【Finance Agent的回复】": {
-                    "回复内容": response.result,
-                    "参考资料": response.references
-                },
-            }
+        "sub_agent_response": {
+            "【Finance Agent的回复】": {
+                "回复内容": structured_response.result,
+                "参考资料": structured_response.references
+            },
+        },
+        "sub_agent_messages": {
+            SubAgentEnum.FINANCE.value: messages
         }
+    }
 ```
 
 ## File: `multi_domain_enterprise_project\agent\hr_agent.py`
@@ -808,11 +851,12 @@ async def finance_agent(state: State, config: RunnableConfig):
 import logging
 
 from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
 from langgraph.types import interrupt
-from pydantic import BaseModel
+from langchain.agents.middleware import SummarizationMiddleware
 
 from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.self_state import State
@@ -829,14 +873,7 @@ async def get_document(runtime: ToolRuntime):
     config = runtime.config  # 获取运行时配置
     user_info = config['configurable']["user_info"]  # 获取用户信息
 
-    logger.info(f"【HR Agent】触发 human-in-loop")
-
-    decision = interrupt({
-        "action": "get_document",
-        "content": "你想要什么文档嘞？"
-    })
-
-    logger.info(f"【HR Agent】中用户的输入: {decision}")
+    logger.info(f"【HR Agent中】的user_info: {user_info}")
 
     # 接下来的流程
     # 根据不同用户的定位，搜索出不同的文档列表，然后return
@@ -856,7 +893,13 @@ async def hr_agent(state: State, config: RunnableConfig):
     # 获取主代理传进来的问题
     content = state.sub_agent_input_content[SubAgentEnum.HR.value]
 
-    logger.info(f"【HR Agent】的输入: {content}")
+    # 获取子agent的历史对话消息
+    try:
+        messages = state.sub_agent_messages[SubAgentEnum.HR.value]
+    except:
+        messages = []
+
+    logger.info(f"【HR Agent】的输入: {content[:10]}...")
 
     system_prompt = """
 # 角色定位
@@ -879,9 +922,20 @@ async def hr_agent(state: State, config: RunnableConfig):
             model=await qwen_model(),
             system_prompt=system_prompt,
             tools=[get_document] + mcp_tools,
-            response_format=SubAgentOutputFormat
+            response_format=SubAgentOutputFormat,
+            middleware=[
+                SummarizationMiddleware(
+                    model=await qwen_model(),
+                    trigger=("messages", 8),
+                    keep=("messages", 4)
+                )
+            ]
         )
-        response = await agent.ainvoke(input={"messages": [{"role": "user", "content": content}]}, config=config)
+
+        # 组装messages
+        messages.append(HumanMessage(content=content))
+
+        response = await agent.ainvoke(input={"messages": messages}, config=config)
     finally:
         # 关闭服务
         if hasattr(mcp_client, "close"):
@@ -889,18 +943,24 @@ async def hr_agent(state: State, config: RunnableConfig):
         elif hasattr(mcp_client, "aclose"):
             await mcp_client.aclose()
 
-    response = response['structured_response']
+    messages = response['messages']
+    structured_response = response['structured_response']
 
-    logger.info(f"【HR Agent】的输出: {response}")
+    logger.info(f"【HR Agent】的输出: {structured_response.result[:10]}...")
 
     return {
         "sub_agent_response": {
             "【HR Agent的回复】": {
-                "回复内容": response.result,
-                "参考资料": response.references
+                "回复内容": structured_response.result,
+                "参考资料": structured_response.references
             },
+        },
+        "sub_agent_messages": {
+            SubAgentEnum.HR.value: messages
         }
     }
+
+
 ```
 
 ## File: `multi_domain_enterprise_project\agent\legal_agent.py`
@@ -909,6 +969,7 @@ async def hr_agent(state: State, config: RunnableConfig):
 import logging
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import SummarizationMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
@@ -951,7 +1012,13 @@ async def legal_agent(state: State, config: RunnableConfig):
 
     content = state.sub_agent_input_content[SubAgentEnum.LEGAL.value]
 
-    logger.info(f"【Legal Agent】的输入: {content}")
+    # 获取子agent的历史对话消息
+    try:
+        messages = state.sub_agent_messages[SubAgentEnum.LEGAL.value]
+    except:
+        messages = []
+
+    logger.info(f"【Legal Agent】的输入: {content[:10]}...")
 
     system_prompt = """
 # 角色定位
@@ -975,9 +1042,19 @@ async def legal_agent(state: State, config: RunnableConfig):
             model=await qwen_model(),
             system_prompt=system_prompt,
             tools=[get_document] + mcp_tools,
-            response_format=SubAgentOutputFormat
+            response_format=SubAgentOutputFormat,
+            middleware=[
+                SummarizationMiddleware(
+                    model=await qwen_model(),
+                    trigger=("messages", 8),
+                    keep=("messages", 4)
+                )
+            ]
         )
-        response = await agent.ainvoke(input={"messages": [{"role": "user", "content": content}]}, config=config)
+        # 组装messages
+        messages.append({"role": "user", "content": content})
+
+        response = await agent.ainvoke(input={"messages": messages}, config=config)
     finally:
         # 关闭服务
         if hasattr(mcp_client, "close"):
@@ -985,16 +1062,20 @@ async def legal_agent(state: State, config: RunnableConfig):
         elif hasattr(mcp_client, "aclose"):
             await mcp_client.aclose()
 
-    response = response['structured_response']
+    messages = response['messages']
+    structured_response = response['structured_response']
 
-    logger.info(f"【Legal Agent】的回复: {response}")
+    logger.info(f"【Legal Agent】的回复: {structured_response.result[:10]}...")
 
     return {
         "sub_agent_response": {
             "【Legal Agent的回复】": {
-                "回复内容": response.result,
-                "参考资料": response.references
+                "回复内容": structured_response.result,
+                "参考资料": structured_response.references
             },
+        },
+        "sub_agent_messages": {
+            SubAgentEnum.LEGAL.value: messages
         }
     }
 ```
@@ -1143,7 +1224,7 @@ async def create_graph(checkpointer: Checkpointer):
         audit_feedback = state.audit_feedback
         if not audit_feedback:
             return END
-        logger.info(f"【audit_router】返回审核：{state.messages[-1]}")
+        logger.info(f"【audit_router】返回审核：{state.messages[-1].content[:10]}")
         return "supervisor"
 
     graph = StateGraph(State)
@@ -1184,6 +1265,7 @@ async def create_graph(checkpointer: Checkpointer):
 import logging
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import SummarizationMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
@@ -1222,8 +1304,12 @@ async def tech_agent_node(state: State, config: RunnableConfig):
     """负责解答 API 文档、内部系统架构、代码规范、项目 Wiki 等问题。"""
 
     content = state.sub_agent_input_content[SubAgentEnum.TECH.value]  # 获取主代理传进来的问题
-
-    logger.info(f"【Tech Agent】的输入：{content}")
+    # 获取子agent的历史对话消息
+    try:
+        messages = state.sub_agent_messages[SubAgentEnum.TECH.value]
+    except:
+        messages = []
+    logger.info(f"【Tech Agent】的输入：{content[:10]}...")
 
     system_prompt = """
 # 角色定位
@@ -1251,9 +1337,19 @@ async def tech_agent_node(state: State, config: RunnableConfig):
             model=await qwen_model(),
             system_prompt=system_prompt,
             tools=[get_document] + mcp_tools,
-            response_format=SubAgentOutputFormat
+            response_format=SubAgentOutputFormat,
+            middleware=[
+                SummarizationMiddleware(
+                    model=await qwen_model(),
+                    trigger=("messages", 8),
+                    keep=("messages", 4)
+                )
+            ]
         )
-        response = await agent.ainvoke(input={"messages": [{"role": "user", "content": content}]}, config=config)
+        # 组装messages
+        messages.append({"role": "user", "content": content})
+
+        response = await agent.ainvoke(input={"messages": messages}, config=config)
     finally:
         # 关闭服务
         if hasattr(mcp_client, "close"):
@@ -1261,16 +1357,20 @@ async def tech_agent_node(state: State, config: RunnableConfig):
         elif hasattr(mcp_client, "aclose"):
             await mcp_client.aclose()
 
-    response = response['structured_response']
+    messages = response['messages']
+    structured_response = response['structured_response']
 
-    logger.info(f"【Tech Agent】最终回复：{response.result}")
+    logger.info(f"【Tech Agent】最终回复：{structured_response.result.result[:10]}...")
 
     return {
         "sub_agent_response": {
             "【Tech Agent的回复】": {
-                "回复内容": response.result,
-                "参考资料": response.references
+                "回复内容": structured_response.result,
+                "参考资料": structured_response.references
             },
+        },
+        "sub_agent_messages": {
+            SubAgentEnum.TECH.value: messages
         }
     }
 ```
@@ -1321,9 +1421,17 @@ def merge_dict(old_tasks: Dict[str, Any], new_tasks: Dict[str, Any]) -> Dict[str
     return merged
 
 
+def replace_dict(old_tasks: Dict[str, Any], new_tasks: Dict[str, Any]) -> Dict[str, Any]:
+    """替代字典"""
+    if new_tasks is None:
+        return {}
+    return new_tasks
+
+
 class State(BaseModel):
     messages: Annotated[list[BaseMessage], add_messages]
     sub_agent_input_content: Annotated[Dict[str, Any], merge_dict]  # 给子Agent的输入
+    sub_agent_messages: Annotated[Dict[str, list], replace_dict]  # 子Agent的messages消息
     sub_agent_response: Annotated[Dict[str, Any], merge_dict]  # 子Agent的输出
     audit_feedback: Optional[Any] = None  # 审计反馈
     result: Optional[Any] = None
@@ -3298,6 +3406,8 @@ class EnterpriseMilvusStore:
 ```py
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
+dq = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJocnwxfDIiLCJpc3MiOiJodHRwczovL3hpbnl1LmNvbSIsImlhdCI6MTc3NDk2MTE1OSwiZXhwIjoxNzc1NTY1OTU5LCJhdWQiOiJteS1kZXYtc2VydmVyIiwidGVuYW50IjoiaHIiLCJhY2wiOiIxfDIifQ.JLB72JbStZYNDc-WIb2rLvO09BfUSh6WVR4yfyblMnIpQ8qdyp-Qx4YL2dks7YY_v3NkhQPi9ohaCQZUPpDrizL38sbKwhWRiFWWcuzdTOdF9Y22d_3IyjxPkrm3oZxDEn2MEvWMtkEwuQnolK7kaJCvY68GEZ8-P2JeoJxdlPwPWEGCteSA2apy4R7rQ-iGhJQT39lB2f5dUD59IVAw_Ro4hvajmHnfssv0JFXWF5nm20jfDS70Gerf5HdLAC-8YlU4oGqgCH8f_d5MJingb1xyenAfcsxSjJVLszFZb9k3pejk5aGSGAj5JKAzVSw-Y-GTWDExMiU39jyUMhV8aA"
+
 
 async def finance_mcp_client():
     """可视化图表"""
@@ -3313,7 +3423,7 @@ async def finance_mcp_client():
                     "transport": "streamable-http",
                     "url": "http://127.0.0.1:8000/rag-retriever",
                     "headers": {
-                        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJocnwxfDIiLCJpc3MiOiJodHRwczovL3hpbnl1LmNvbSIsImlhdCI6MTc3NDE2OTA2OSwiZXhwIjoxNzc0NzczODY5LCJhdWQiOiJteS1kZXYtc2VydmVyIiwidGVuYW50IjoiaHIiLCJhY2wiOiIxfDIifQ.dzoUgcGt5v-aYLTXnM4UaewyeTYIMT3Dhfxf1gEQEFyTW47_vEwMEvYUzVRwKimI1WBu608iDqrWpzu_eJc2GbHjlHXzQznyvK6CjEGwh2YMrbJfSDApcsgCqsQxyY_aWHMfwuVMmJWKCaHaADFLmHaozW4AU2SOsEPGfxFpHKbSjM9dd91_q6xLVBV1TusG9KVuBkGjT4jjlr_VFSK3kDNLmGOdtiQbOv7LDzY7Ykp0vaqHdw-LWX-8uSgPQiSJQmDSfAXgsG0lXgGjWBPC1LmeIbmK-UZDs0ofw6DwtdcliL1Cx_Vi87d73pX3avz1GAVBN6Al9MhETSIoGJx0xw",
+                        "Authorization": f"Bearer {dq}"
                     }
                 },
         },
@@ -3329,7 +3439,7 @@ async def document_retriever_mcp_client():
                 "transport": "streamable-http",
                 "url": "http://127.0.0.1:8000/rag-retriever",
                 "headers": {
-                    "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJocnwxfDIiLCJpc3MiOiJodHRwczovL3hpbnl1LmNvbSIsImlhdCI6MTc3NDE2OTA2OSwiZXhwIjoxNzc0NzczODY5LCJhdWQiOiJteS1kZXYtc2VydmVyIiwidGVuYW50IjoiaHIiLCJhY2wiOiIxfDIifQ.dzoUgcGt5v-aYLTXnM4UaewyeTYIMT3Dhfxf1gEQEFyTW47_vEwMEvYUzVRwKimI1WBu608iDqrWpzu_eJc2GbHjlHXzQznyvK6CjEGwh2YMrbJfSDApcsgCqsQxyY_aWHMfwuVMmJWKCaHaADFLmHaozW4AU2SOsEPGfxFpHKbSjM9dd91_q6xLVBV1TusG9KVuBkGjT4jjlr_VFSK3kDNLmGOdtiQbOv7LDzY7Ykp0vaqHdw-LWX-8uSgPQiSJQmDSfAXgsG0lXgGjWBPC1LmeIbmK-UZDs0ofw6DwtdcliL1Cx_Vi87d73pX3avz1GAVBN6Al9MhETSIoGJx0xw",
+                    "Authorization": f"Bearer {dq}"
                 }
             },
         }
@@ -3351,7 +3461,7 @@ async def tech_mcp_client():
                     "transport": "streamable-http",
                     "url": "http://127.0.0.1:8000/rag-retriever",
                     "headers": {
-                        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJocnwxfDIiLCJpc3MiOiJodHRwczovL3hpbnl1LmNvbSIsImlhdCI6MTc3NDE2OTA2OSwiZXhwIjoxNzc0NzczODY5LCJhdWQiOiJteS1kZXYtc2VydmVyIiwidGVuYW50IjoiaHIiLCJhY2wiOiIxfDIifQ.dzoUgcGt5v-aYLTXnM4UaewyeTYIMT3Dhfxf1gEQEFyTW47_vEwMEvYUzVRwKimI1WBu608iDqrWpzu_eJc2GbHjlHXzQznyvK6CjEGwh2YMrbJfSDApcsgCqsQxyY_aWHMfwuVMmJWKCaHaADFLmHaozW4AU2SOsEPGfxFpHKbSjM9dd91_q6xLVBV1TusG9KVuBkGjT4jjlr_VFSK3kDNLmGOdtiQbOv7LDzY7Ykp0vaqHdw-LWX-8uSgPQiSJQmDSfAXgsG0lXgGjWBPC1LmeIbmK-UZDs0ofw6DwtdcliL1Cx_Vi87d73pX3avz1GAVBN6Al9MhETSIoGJx0xw",
+                        "Authorization": f"Bearer {dq}"
                     }
                 },
         }
@@ -3373,7 +3483,7 @@ async def legal_mcp_client():
                     "transport": "streamable-http",
                     "url": "http://127.0.0.1:8000/rag-retriever",
                     "headers": {
-                        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJocnwxfDIiLCJpc3MiOiJodHRwczovL3hpbnl1LmNvbSIsImlhdCI6MTc3NDE2OTA2OSwiZXhwIjoxNzc0NzczODY5LCJhdWQiOiJteS1kZXYtc2VydmVyIiwidGVuYW50IjoiaHIiLCJhY2wiOiIxfDIifQ.dzoUgcGt5v-aYLTXnM4UaewyeTYIMT3Dhfxf1gEQEFyTW47_vEwMEvYUzVRwKimI1WBu608iDqrWpzu_eJc2GbHjlHXzQznyvK6CjEGwh2YMrbJfSDApcsgCqsQxyY_aWHMfwuVMmJWKCaHaADFLmHaozW4AU2SOsEPGfxFpHKbSjM9dd91_q6xLVBV1TusG9KVuBkGjT4jjlr_VFSK3kDNLmGOdtiQbOv7LDzY7Ykp0vaqHdw-LWX-8uSgPQiSJQmDSfAXgsG0lXgGjWBPC1LmeIbmK-UZDs0ofw6DwtdcliL1Cx_Vi87d73pX3avz1GAVBN6Al9MhETSIoGJx0xw",
+                        "Authorization": f"Bearer {dq}"
                     }
                 },
         }

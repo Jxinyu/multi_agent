@@ -1,6 +1,7 @@
 import logging
 
 from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 
 from multi_domain_enterprise_project.core.model import qwen_model
@@ -57,7 +58,7 @@ async def aggregator_agent(state: State, config: RunnableConfig):
                 "回复内容": response.result,
                 "参考资料": response.references
             },
-        }
+        },
     }
 
 

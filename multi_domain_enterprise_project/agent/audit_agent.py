@@ -73,7 +73,7 @@ async def audit_agent(state: State, config: RunnableConfig):
     if (not response.is_pass) and (retry_count < max_retries):
         # 审核不通过
         return {
-            "messages": [HumanMessage(content=f'审计反馈：\n"correction_targets": {response.correction_targets}')],
+            "messages": [HumanMessage(content=f'审计专家反馈：\n"correction_targets": {response.correction_targets}')],
             "audit_feedback": f'审计反馈：\n"correction_targets": {response.correction_targets}',
             "retry_count": retry_count + 1
         }
@@ -84,5 +84,5 @@ async def audit_agent(state: State, config: RunnableConfig):
         "sub_agent_response": None,
         "sub_agent_input_content": None,
         "result": content,
-        "messages": [HumanMessage(content=f"【最终结果】{final_reply}")]
+        "messages": [HumanMessage(content=f"【所有领域专家的最终答复】{final_reply}")]
     }
