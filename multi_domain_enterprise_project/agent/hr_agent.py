@@ -63,6 +63,7 @@ async def hr_agent(state: State, config: RunnableConfig):
 # 开始你的任务
     """
 
+    # MCP客户端
     mcp_client = await document_retriever_mcp_client()
 
     # 创建agent
@@ -98,8 +99,6 @@ async def hr_agent(state: State, config: RunnableConfig):
 
     logger.info(f"【HR Agent】的输出: {structured_response.result[:10]}...")
 
-    state.pending_sub_agents.remove(SubAgentEnum.HR.value)
-
     return {
         "sub_agent_response": {
             "【HR Agent的回复】": {
@@ -109,7 +108,9 @@ async def hr_agent(state: State, config: RunnableConfig):
         },
         "sub_agent_messages": {
             SubAgentEnum.HR.value: messages
-        }
+        },
+        "finished_sub_agents": SubAgentEnum.HR.value,
+        "pending_sub_agents": SubAgentEnum.HR.value
     }
 
 

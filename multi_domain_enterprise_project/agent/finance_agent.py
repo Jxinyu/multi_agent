@@ -94,8 +94,6 @@ async def finance_agent(state: State, config: RunnableConfig):
 
     logger.info(f"【Finance Agent的回复】: {structured_response.result[:10]}...")
 
-    state.pending_sub_agents.remove(SubAgentEnum.FINANCE.value)
-
     return {
         "sub_agent_response": {
             "【Finance Agent的回复】": {
@@ -105,5 +103,7 @@ async def finance_agent(state: State, config: RunnableConfig):
         },
         "sub_agent_messages": {
             SubAgentEnum.FINANCE.value: messages
-        }
+        },
+        "finished_sub_agents": SubAgentEnum.FINANCE.value,
+        "pending_sub_agents": SubAgentEnum.FINANCE.value
     }

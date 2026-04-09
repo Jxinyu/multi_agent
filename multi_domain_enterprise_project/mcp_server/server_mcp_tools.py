@@ -117,7 +117,7 @@ async def create_mcp_token(tenant: str, acl: str):
         subject=subject_payload,  # 用户唯一标识符
         issuer='https://xinyu.com',  # 令牌签发方标识
         audience='my-dev-server',  # 令牌接收方标识
-        expires_in_seconds=3600 * 24 * 7,  # 令牌有效期
+        expires_in_seconds=3600 * 24 * 365,  # 令牌有效期
         additional_claims={"tenant": tenant, "acl": acl}
     )
 

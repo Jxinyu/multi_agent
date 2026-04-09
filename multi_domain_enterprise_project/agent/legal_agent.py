@@ -99,8 +99,6 @@ async def legal_agent(state: State, config: RunnableConfig):
 
     logger.info(f"【Legal Agent】的回复: {structured_response.result[:10]}...")
 
-    state.pending_sub_agents.remove(SubAgentEnum.LEGAL.value)
-
     return {
         "sub_agent_response": {
             "【Legal Agent的回复】": {
@@ -110,5 +108,7 @@ async def legal_agent(state: State, config: RunnableConfig):
         },
         "sub_agent_messages": {
             SubAgentEnum.LEGAL.value: messages
-        }
+        },
+        "finished_sub_agents": SubAgentEnum.LEGAL.value,
+        "pending_sub_agents": SubAgentEnum.LEGAL.value
     }

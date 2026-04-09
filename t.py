@@ -1,3 +1,3 @@
-t = ["1"]
-t.remove("1")
+t = ["hr"]
+t.remove("hr")
 print(t)

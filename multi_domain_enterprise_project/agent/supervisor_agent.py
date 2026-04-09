@@ -3,7 +3,7 @@ import logging
 
 from langchain_core.messages import ToolMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool
+from langchain_core.tools import tool, InjectedToolCallId
 from langgraph.constants import END
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition, ToolRuntime
@@ -45,27 +45,47 @@ class InvokeAgentModel(BaseModel):
 
 @tool
 async def invoke_sub_agent(sub_agents: List[InvokeAgentModel],
-                           runtime: ToolRuntime):
+                           runtime: ToolRuntime,
+                           tool_call_id: Annotated[str, InjectedToolCallId],):
     """向领域专家下发任务。"""
+    pending = list(runtime.state.pending_sub_agents or [])
+    input_content = dict(runtime.state.sub_agent_input_content or {})
 
     for agent in sub_agents:
-        sub_agent_name = agent.sub_agent_name
-        content = agent.content
-        if sub_agent_name in runtime.state.finished_sub_agents:
-            logger.info(f"【invoke_sub_agent】: {sub_agent_name} 已在目录中")
-            continue
         try:
-            operation = SubAgentEnum(sub_agent_name)
-        except:
-            return f"子代理 {sub_agent_name} 不存在,仔细检查子代理名称"
+            operation = SubAgentEnum(agent.sub_agent_name)
+        except Exception:
+            return Command(
+                update={
+                    "messages": [
+                        ToolMessage(
+                            content=f"子代理 {agent.sub_agent_name} 不存在",
+                            tool_call_id=tool_call_id,
+                        )
+                    ]
+                }
+            )
 
-        runtime.state.sub_agent_input_content[operation.value] = content  # 添加到字典
-        runtime.state.pending_sub_agents.append(operation.value)  # 添加到待执行的子任务
+        if operation.value in runtime.state.finished_sub_agents:
+            continue
 
-    logger.info(f"【sub_agents】: {sub_agents}")
-    logger.info(f"【runtime.state.pending_sub_agents】: {runtime.state.pending_sub_agents}")
+        input_content[operation.value] = agent.content
+        if operation.value not in pending:
+            pending.append(operation.value)
 
-    return {"status": "ok", "message": "已登记待执行子代理"}
+    return Command(
+        update={
+            "messages": [
+                ToolMessage(
+                    content='{"status":"ok","message":"已登记待执行子代理"}',
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "pending_sub_agents": pending,
+            "sub_agent_input_content": input_content,
+        },
+        goto="dispatcher",
+    )
 
 
 @tool
@@ -149,7 +169,7 @@ async def create_graph(checkpointer: Checkpointer):
         if last_message.type != "tool":
             return "supervisor"
         if not state.pending_sub_agents:
-            return "tools"
+            return "supervisor"
         return "dispatcher"
 
     async def dispatcher(state: State, config: RunnableConfig):

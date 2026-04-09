@@ -98,8 +98,6 @@ async def tech_agent_node(state: State, config: RunnableConfig):
 
     logger.info(f"【Tech Agent】最终回复：{structured_response.result.result[:10]}...")
 
-    state.pending_sub_agents.remove(SubAgentEnum.TECH.value)
-
     return {
         "sub_agent_response": {
             "【Tech Agent的回复】": {
@@ -109,5 +107,7 @@ async def tech_agent_node(state: State, config: RunnableConfig):
         },
         "sub_agent_messages": {
             SubAgentEnum.TECH.value: messages
-        }
+        },
+        "finished_sub_agents": SubAgentEnum.TECH.value,
+        "pending_sub_agents": SubAgentEnum.TECH.value
     }
