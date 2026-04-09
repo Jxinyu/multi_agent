@@ -1,9 +1,3 @@
-t = {"query": "请用中文回答：1+1等于几？"}
-print(t.get("quey", {}))
-
-
-
-
-
-
-
+t = ["1"]
+t.remove("1")
+print(t)

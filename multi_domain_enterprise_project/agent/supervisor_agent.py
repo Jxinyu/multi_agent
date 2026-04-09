@@ -45,30 +45,27 @@ class InvokeAgentModel(BaseModel):
 
 @tool
 async def invoke_sub_agent(sub_agents: List[InvokeAgentModel],
-                           runtime: ToolRuntime) -> Union[str, Command]:
-    """向专家下发任务。如果用户问题涉及多个领域，可以被并发调用多次。"""
+                           runtime: ToolRuntime):
+    """向领域专家下发任务。"""
+
     for agent in sub_agents:
         sub_agent_name = agent.sub_agent_name
         content = agent.content
+        if sub_agent_name in runtime.state.finished_sub_agents:
+            logger.info(f"【invoke_sub_agent】: {sub_agent_name} 已在目录中")
+            continue
         try:
             operation = SubAgentEnum(sub_agent_name)
         except:
             return f"子代理 {sub_agent_name} 不存在,仔细检查子代理名称"
-        logger.info(f"调用 {operation.value} 代理成功!")
-        tool_call_id = runtime.tool_call_id
-        return Command(
-            goto=operation.value,
-            update={
-                "sub_agent_input_content": {operation.value: content},
-                "messages": [
-                    ToolMessage(
-                        content=f"调用 {operation.value} 代理成功! 等待审核结果",
-                        name='invoke_sub_agent',
-                        tool_call_id=tool_call_id
-                    )
-                ]
-            }
-        )
+
+        runtime.state.sub_agent_input_content[operation.value] = content  # 添加到字典
+        runtime.state.pending_sub_agents.append(operation.value)  # 添加到待执行的子任务
+
+    logger.info(f"【sub_agents】: {sub_agents}")
+    logger.info(f"【runtime.state.pending_sub_agents】: {runtime.state.pending_sub_agents}")
+
+    return {"status": "ok", "message": "已登记待执行子代理"}
 
 
 @tool
@@ -103,14 +100,12 @@ async def create_graph(checkpointer: Checkpointer):
     ### 模式一：首次路由
     当 **没有审计反馈（state 中 audit_feedback 为空）** 时，你处于首次路由模式：
     - 💡 **超级能力与严厉警告**：
-      1. 你具备**并发调度**能力！如果用户的问题同时包含多个领域的意图，你**必须在一次回答中，并发生成多个 invoke_sub_agent 调用**！
-      2. **严禁分批或分步处理！** 不允许先发两个任务等结果再发剩下的！必须一次性穷尽提取用户的所有意图并全部分发！
-      3. **严禁工具混用**：绝不能在同一次回答中既调用 invoke_sub_agent 又调用 human_in_loop。
+      1. 当问题涉及多个领域时，只调用一次 invoke_sub_agent，并在 sub_agents 参数中一次性提交所有任务。严禁拆成多次 invoke_sub_agent 调用。
 
     - **工作流程**：
       1. 深挖用户意图，拆解出所有包含的专业领域。
       2. 执行动作：
-         - 领域明确（置信度 ≥ 0.7）：并发调用多次 `invoke_sub_agent`，将拆解后的所有子任务一次性全部下发！
+         - 领域明确（置信度 ≥ 0.7）：调用 `invoke_sub_agent`，并一次性提交所有任务。！
          - 信息模糊（置信度 < 0.7）：调用 `human_in_loop`，直接向用户提问澄清。
 
     ### 模式二：修正路由
@@ -136,8 +131,8 @@ async def create_graph(checkpointer: Checkpointer):
         response = []
         try:
             response = await agent.ainvoke(messages, config=config)
-        except:
-            logger.error(f"【supervisor_agent】执行错误")
+        except Exception as e:
+            logger.error(f"【supervisor_agent】执行错误", e)
 
         return {"messages": [response]}
 
@@ -149,10 +144,26 @@ async def create_graph(checkpointer: Checkpointer):
         logger.info(f"【audit_router】返回审核：{state.messages[-1].content[:10]}")
         return "supervisor"
 
+    async def tools_condition_router(state: State, config: RunnableConfig):
+        last_message = state.messages[-1]
+        if last_message.type != "tool":
+            return "supervisor"
+        if not state.pending_sub_agents:
+            return "tools"
+        return "dispatcher"
+
+    async def dispatcher(state: State, config: RunnableConfig):
+        """用于分发任务"""
+        sub_agent_names = state.pending_sub_agents or []
+        if not sub_agent_names:
+            return Command(goto="supervisor")
+        return Command(goto=sub_agent_names)
+
     graph = StateGraph(State)
 
     graph.add_node("supervisor", supervisor_agent)
     graph.add_node("tools", too_node)
+    graph.add_node("dispatcher", dispatcher)
     graph.add_node("tech", tech_agent_node)
     graph.add_node("hr", hr_agent)
     graph.add_node("finance", finance_agent)
@@ -165,7 +176,11 @@ async def create_graph(checkpointer: Checkpointer):
         "supervisor",
         path=tools_condition
     )
-    graph.add_edge("tools", "supervisor")
+    graph.add_conditional_edges(
+        "tools",
+        path=tools_condition_router
+    )
+
     graph.add_edge("tech", "aggregator")
     graph.add_edge("hr", "aggregator")
     graph.add_edge("finance", "aggregator")

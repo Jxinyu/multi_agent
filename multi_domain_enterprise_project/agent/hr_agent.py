@@ -98,6 +98,8 @@ async def hr_agent(state: State, config: RunnableConfig):
 
     logger.info(f"【HR Agent】的输出: {structured_response.result[:10]}...")
 
+    state.pending_sub_agents.remove(SubAgentEnum.HR.value)
+
     return {
         "sub_agent_response": {
             "【HR Agent的回复】": {

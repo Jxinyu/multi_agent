@@ -1,8 +1,9 @@
 import logging
 
 from langchain.agents import create_agent
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
 
 from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.self_state import State
@@ -13,6 +14,15 @@ logger = logging.getLogger(__name__)
 
 async def aggregator_agent(state: State, config: RunnableConfig):
     """收集子Agent返回的答案，并进行整理。消除重复或冲突，合成一段逻辑连贯、主次分明的最终回答，并统一整理所有引用来源。"""
+    if state.pending_sub_agents != []:
+        return Command(
+            goto="supervisor",
+            update={
+                "messages": [SystemMessage(content=f"领域专家 【{state.pending_sub_agents}】 智能体执行失败，"
+                                                   f"请重新向 【{state.pending_sub_agents}】 智能体下发任务。")]
+            }
+        )
+
     # 获取所有子代理的输出
     content = state.sub_agent_response
 
@@ -60,6 +70,3 @@ async def aggregator_agent(state: State, config: RunnableConfig):
             },
         },
     }
-
-
-

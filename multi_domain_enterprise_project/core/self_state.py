@@ -25,10 +25,47 @@ def replace_dict(old_tasks: Dict[str, Any], new_tasks: Dict[str, Any]) -> Dict[s
 
 class State(BaseModel):
     messages: Annotated[list[BaseMessage], add_messages]
-    sub_agent_input_content: Annotated[Dict[str, Any], merge_dict]  # 给子Agent的输入
+
+    pending_sub_agents: List[str] = []  # 待处理的子代理任务
+    finished_sub_agents: List[str] = []  # 已完成的子代理任务
+
+    sub_agent_input_content: Annotated[Dict[str, Any], merge_dict]  # 子代理的输入内容
     sub_agent_messages: Annotated[Dict[str, list], replace_dict]  # 子Agent的messages消息
     sub_agent_response: Annotated[Dict[str, Any], merge_dict]  # 子Agent的输出
+
     audit_feedback: Optional[Any] = None  # 审计反馈
-    result: Optional[Any] = None
+    result: Optional[Any] = None  # 返回给用户的最终结果
+
     retry_count: int = 0  # 当前重试次数
     max_retries: int = 3  # 最大重试次数
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

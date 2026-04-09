@@ -7,15 +7,9 @@
 ## File: `t.py`
 
 ```py
-t = {"query": "请用中文回答：1+1等于几？"}
-print(t.get("quey", {}))
-
-
-
-
-
-
-
+t = ["1"]
+t.remove("1")
+print(t)
 ```
 
 ## File: `multi_domain_enterprise_project\main.py`
@@ -577,7 +571,9 @@ async def run_agent_stream(query: str, config: dict, checkpointer):
 import logging
 
 from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
 
 from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.self_state import State
@@ -588,6 +584,15 @@ logger = logging.getLogger(__name__)
 
 async def aggregator_agent(state: State, config: RunnableConfig):
     """收集子Agent返回的答案，并进行整理。消除重复或冲突，合成一段逻辑连贯、主次分明的最终回答，并统一整理所有引用来源。"""
+    if state.pending_sub_agents != []:
+        return Command(
+            goto="supervisor",
+            update={
+                "messages": [SystemMessage(content=f"领域专家 【{state.pending_sub_agents}】 智能体执行失败，"
+                                                   f"请重新向 【{state.pending_sub_agents}】 智能体下发任务。")]
+            }
+        )
+
     # 获取所有子代理的输出
     content = state.sub_agent_response
 
@@ -633,11 +638,8 @@ async def aggregator_agent(state: State, config: RunnableConfig):
                 "回复内容": response.result,
                 "参考资料": response.references
             },
-        }
+        },
     }
-
-
-
 ```
 
 ## File: `multi_domain_enterprise_project\agent\audit_agent.py`
@@ -718,7 +720,7 @@ async def audit_agent(state: State, config: RunnableConfig):
     if (not response.is_pass) and (retry_count < max_retries):
         # 审核不通过
         return {
-            "messages": [HumanMessage(content=f'审计反馈：\n"correction_targets": {response.correction_targets}')],
+            "messages": [HumanMessage(content=f'审计专家反馈：\n"correction_targets": {response.correction_targets}')],
             "audit_feedback": f'审计反馈：\n"correction_targets": {response.correction_targets}',
             "retry_count": retry_count + 1
         }
@@ -729,7 +731,7 @@ async def audit_agent(state: State, config: RunnableConfig):
         "sub_agent_response": None,
         "sub_agent_input_content": None,
         "result": content,
-        "messages": [HumanMessage(content=f"【最终结果】{final_reply}")]
+        "messages": [HumanMessage(content=f"【所有领域专家的最终答复】{final_reply}")]
     }
 ```
 
@@ -831,6 +833,8 @@ async def finance_agent(state: State, config: RunnableConfig):
     structured_response = response['structured_response']
 
     logger.info(f"【Finance Agent的回复】: {structured_response.result[:10]}...")
+
+    state.pending_sub_agents.remove(SubAgentEnum.FINANCE.value)
 
     return {
         "sub_agent_response": {
@@ -947,6 +951,8 @@ async def hr_agent(state: State, config: RunnableConfig):
     structured_response = response['structured_response']
 
     logger.info(f"【HR Agent】的输出: {structured_response.result[:10]}...")
+
+    state.pending_sub_agents.remove(SubAgentEnum.HR.value)
 
     return {
         "sub_agent_response": {
@@ -1067,6 +1073,8 @@ async def legal_agent(state: State, config: RunnableConfig):
 
     logger.info(f"【Legal Agent】的回复: {structured_response.result[:10]}...")
 
+    state.pending_sub_agents.remove(SubAgentEnum.LEGAL.value)
+
     return {
         "sub_agent_response": {
             "【Legal Agent的回复】": {
@@ -1093,7 +1101,7 @@ from langgraph.constants import END
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition, ToolRuntime
 from langgraph.types import Checkpointer, Command, interrupt
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from multi_domain_enterprise_project.agent.tech_agent import tech_agent_node
 from multi_domain_enterprise_project.agent.aggregator_agent import aggregator_agent
@@ -1122,25 +1130,35 @@ async def get_sub_agent_list() -> List[Dict]:
     ]
 
 
+class InvokeAgentModel(BaseModel):
+    """定义invoke_sub_agent模型参数"""
+    sub_agent_name: Annotated[str, Field(..., description="子代理名称")]
+    content: Annotated[str, Field(...,description="给专家下达的具体任务指令。警告：必须是陈述句指令，严禁在此处填写对用户意图的疑问！")]
+
+
 @tool
-async def invoke_sub_agent(sub_agent_name: Annotated[str, Field(..., description="子代理名称")],
-                           content: Annotated[str, Field(...,
-                                                         description="给专家下达的具体任务指令。警告：必须是陈述句指令，严禁在此处填写对用户意图的疑问！")],
+async def invoke_sub_agent(sub_agents: List[InvokeAgentModel],
                            runtime: ToolRuntime) -> Union[str, Command]:
-    """向专家下发任务。如果用户问题涉及多个领域，可以被并发调用多次。"""
-    try:
-        operation = SubAgentEnum(sub_agent_name)
-    except:
-        return f"子代理 {sub_agent_name} 不存在,仔细检查子代理名称"
-    logger.info(f"调用 {operation.value} 代理成功!")
+    """向领域专家下发任务。"""
+
+    for agent in sub_agents:
+        sub_agent_name = agent.sub_agent_name
+        content = agent.content
+        try:
+            operation = SubAgentEnum(sub_agent_name)
+        except:
+            return f"子代理 {sub_agent_name} 不存在,仔细检查子代理名称"
+
+        runtime.state.sub_agent_input_content[operation.value] = content  # 添加到字典
+        runtime.state.pending_sub_agents.append(operation.value)  # 添加到待执行的子任务
+
     tool_call_id = runtime.tool_call_id
     return Command(
-        goto=operation.value,
+        goto="dispatcher",
         update={
-            "sub_agent_input_content": {operation.value: content},
             "messages": [
                 ToolMessage(
-                    content=f"调用 {operation.value} 代理成功! 等待审核结果",
+                    content=f"调用所有领域专家成功! 等待结果",
                     name='invoke_sub_agent',
                     tool_call_id=tool_call_id
                 )
@@ -1181,14 +1199,12 @@ async def create_graph(checkpointer: Checkpointer):
     ### 模式一：首次路由
     当 **没有审计反馈（state 中 audit_feedback 为空）** 时，你处于首次路由模式：
     - 💡 **超级能力与严厉警告**：
-      1. 你具备**并发调度**能力！如果用户的问题同时包含多个领域的意图，你**必须在一次回答中，并发生成多个 invoke_sub_agent 调用**！
-      2. **严禁分批或分步处理！** 不允许先发两个任务等结果再发剩下的！必须一次性穷尽提取用户的所有意图并全部分发！
-      3. **严禁工具混用**：绝不能在同一次回答中既调用 invoke_sub_agent 又调用 human_in_loop。
+      1. 当问题涉及多个领域时，只调用一次 invoke_sub_agent，并在 sub_agents 参数中一次性提交所有任务。严禁拆成多次 invoke_sub_agent 调用。
 
     - **工作流程**：
       1. 深挖用户意图，拆解出所有包含的专业领域。
       2. 执行动作：
-         - 领域明确（置信度 ≥ 0.7）：并发调用多次 `invoke_sub_agent`，将拆解后的所有子任务一次性全部下发！
+         - 领域明确（置信度 ≥ 0.7）：调用 `invoke_sub_agent`，并一次性提交所有任务。！
          - 信息模糊（置信度 < 0.7）：调用 `human_in_loop`，直接向用户提问澄清。
 
     ### 模式二：修正路由
@@ -1227,10 +1243,26 @@ async def create_graph(checkpointer: Checkpointer):
         logger.info(f"【audit_router】返回审核：{state.messages[-1].content[:10]}")
         return "supervisor"
 
+    async def tools_condition_router(state: State, config: RunnableConfig):
+        last_message = state.messages[-1]
+        if last_message.type != "tool":
+            return "supervisor"
+        if not state.pending_sub_agents:
+            return "tools"
+        return "dispatcher"
+
+    async def dispatcher(state: State, config: RunnableConfig):
+        """用于分发任务"""
+        sub_agent_names = state.pending_sub_agents or []
+        if not sub_agent_names:
+            return Command(goto="supervisor")
+        return Command(goto=sub_agent_names)
+
     graph = StateGraph(State)
 
     graph.add_node("supervisor", supervisor_agent)
     graph.add_node("tools", too_node)
+    graph.add_node("dispatcher", dispatcher)
     graph.add_node("tech", tech_agent_node)
     graph.add_node("hr", hr_agent)
     graph.add_node("finance", finance_agent)
@@ -1243,7 +1275,11 @@ async def create_graph(checkpointer: Checkpointer):
         "supervisor",
         path=tools_condition
     )
-    graph.add_edge("tools", "supervisor")
+    graph.add_conditional_edges(
+        "tools",
+        path=tools_condition_router
+    )
+
     graph.add_edge("tech", "aggregator")
     graph.add_edge("hr", "aggregator")
     graph.add_edge("finance", "aggregator")
@@ -1362,6 +1398,8 @@ async def tech_agent_node(state: State, config: RunnableConfig):
 
     logger.info(f"【Tech Agent】最终回复：{structured_response.result.result[:10]}...")
 
+    state.pending_sub_agents.remove(SubAgentEnum.TECH.value)
+
     return {
         "sub_agent_response": {
             "【Tech Agent的回复】": {
@@ -1430,13 +1468,50 @@ def replace_dict(old_tasks: Dict[str, Any], new_tasks: Dict[str, Any]) -> Dict[s
 
 class State(BaseModel):
     messages: Annotated[list[BaseMessage], add_messages]
-    sub_agent_input_content: Annotated[Dict[str, Any], merge_dict]  # 给子Agent的输入
+
+    pending_sub_agents: List[str] = []  # 待处理的子代理任务
+    finished_sub_agents: List[str] = []  # 已完成的子代理任务
+
+    sub_agent_input_content: Annotated[Dict[str, Any], merge_dict]  # 子代理的输入内容
     sub_agent_messages: Annotated[Dict[str, list], replace_dict]  # 子Agent的messages消息
     sub_agent_response: Annotated[Dict[str, Any], merge_dict]  # 子Agent的输出
+
     audit_feedback: Optional[Any] = None  # 审计反馈
-    result: Optional[Any] = None
+    result: Optional[Any] = None  # 返回给用户的最终结果
+
     retry_count: int = 0  # 当前重试次数
     max_retries: int = 3  # 最大重试次数
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ```
 
 ## File: `multi_domain_enterprise_project\core\sub_agent_enum.py`
