@@ -66,7 +66,8 @@ async def invoke_sub_agent(sub_agents: List[InvokeAgentModel],
                 }
             )
 
-        if operation.value in runtime.state.finished_sub_agents:
+        is_retry_round = bool(runtime.state.audit_feedback)  # 是否为重试轮
+        if (not is_retry_round) and (operation.value in runtime.state.finished_sub_agents):  # 重试轮，且该子代理已经完成过任务
             continue
 
         input_content[operation.value] = agent.content

@@ -58,7 +58,7 @@ def update_pending_sub_agents(old_tasks: List[str], new_tasks: List[str] | str):
 class State(BaseModel):
     messages: Annotated[list[BaseMessage], add_messages]
 
-    pending_sub_agents: List[str] = []  # 待处理的子代理任务
+    pending_sub_agents: Annotated[List[str], update_pending_sub_agents] = []  # 待处理的子代理任务
     finished_sub_agents: Annotated[List[str], update_finished_sub_agents] = []  # 已完成的子代理任务
 
     sub_agent_input_content: Annotated[Dict[str, Any], merge_dict]  # 子代理的输入内容
