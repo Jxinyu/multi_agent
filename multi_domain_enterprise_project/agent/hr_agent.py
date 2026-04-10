@@ -19,15 +19,18 @@ logger = logging.getLogger(__name__)
 
 @tool
 async def get_document(runtime: ToolRuntime):
-    """获取内部文档列表"""
+    """获取内部相关资料"""
     config = runtime.config  # 获取运行时配置
     user_info = config['configurable']["user_info"]  # 获取用户信息
 
     logger.info(f"【HR Agent中】的user_info: {user_info}")
 
-    # 接下来的流程
-    # 根据不同用户的定位，搜索出不同的文档列表，然后return
-    # 手动构建，用于快速测试
+    decision = interrupt({
+        "action": "human_decision",
+        "content": "human-in-loop test",
+    })
+    logger.info(f"🧵[Thread {config['configurable']['thread_id']}] 提交人机协作数据: {decision}")
+
     return {
         "文档列表": [
             {"《员工手册》": "公司基本规章制度、员工行为规范、考勤管理、办公纪律、入职离职流程、着装要求、办公设备使用规定等。"},
