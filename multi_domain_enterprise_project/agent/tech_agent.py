@@ -96,7 +96,7 @@ async def tech_agent_node(state: State, config: RunnableConfig):
     messages = response['messages']
     structured_response = response['structured_response']
 
-    logger.info(f"【Tech Agent】最终回复：{structured_response.result.result[:10]}...")
+    logger.info(f"【Tech Agent】最终回复：{structured_response.result[:10]}...")
 
     return {
         "sub_agent_response": {
