@@ -1,9 +1,21 @@
 from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional
+import operator
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph import add_messages
 from pydantic import BaseModel, Field
+
+
+def merge_unique(existing: list[str] | None, incoming: list[str] | None) -> list[str]:
+    """合并列表并去重，避免并发 step 下重复写入冲突。"""
+    existing = existing or []
+    incoming = incoming or []
+    merged = list(existing)
+    for item in incoming:
+        if item not in merged:
+            merged.append(item)
+    return merged
 
 
 class TaskStatus(str, Enum):
@@ -28,13 +40,13 @@ class TaskState(BaseModel):
 
     task_status: TaskStatus = TaskStatus.IDLE  # 当前任务所处的状态阶段
     task_id: Optional[str] = None  # 当前任务唯一标识，便于跨轮追踪和排障
-    requested_agents: List[str] = Field(default_factory=list)  # 本轮被请求过的子代理名称列表
-    pending_sub_agents: List[str] = Field(default_factory=list)  # 仍待执行或待完成的子代理名称列表
-    finished_sub_agents: List[str] = Field(default_factory=list)  # 已完成的子代理名称列表
+    requested_agents: Annotated[List[str], merge_unique] = Field(default_factory=list)  # 本轮被请求过的子代理名称列表
+    pending_sub_agents: Annotated[List[str], merge_unique] = Field(default_factory=list)  # 仍待执行或待完成的子代理名称列表
+    finished_sub_agents: Annotated[List[str], merge_unique] = Field(default_factory=list)  # 已完成的子代理名称列表
 
     sub_agent_input_content: Dict[str, Any] = Field(default_factory=dict)  # 每个子代理对应的输入任务内容
-    sub_agent_messages: Dict[str, list] = Field(default_factory=dict)  # 每个子代理的历史消息记录
-    sub_agent_response: Dict[str, Any] = Field(default_factory=dict)  # 子代理输出的中间结果与汇总结果
+    sub_agent_messages: Annotated[Dict[str, list], operator.or_] = Field(default_factory=dict)  # 每个子代理的历史消息记录
+    sub_agent_response: Annotated[Dict[str, Any], operator.or_] = Field(default_factory=dict)  # 子代理输出的中间结果与汇总结果
 
     audit_feedback: Optional[Dict[str, Any]] = None  # 审计反馈，失败时保存修正意见；成功时为 None
     result: Optional[Dict[str, Any]] = None  # 最终返回给用户的结构化结果
