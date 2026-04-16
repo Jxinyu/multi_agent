@@ -15,6 +15,7 @@ from starlette.responses import StreamingResponse
 from config import settings
 from multi_domain_enterprise_project.agent.agent_main import run_agent, run_agent_stream
 from langgraph.checkpoint.redis import AsyncRedisSaver
+from multi_domain_enterprise_project.core.task_state import TaskState, TaskStatus
 import redis
 
 # 设置代理白名单
@@ -90,9 +91,6 @@ async def worker_write_to_postgres(thread_id: str, query: str):
         logger.error(f"❌ 写入 PG 请求表失败: {e}")
 
 
-# ----------------------------------------------------
-
-
 # 定义 API 数据模型
 class ChatRequest(BaseModel):
     query: str
@@ -124,15 +122,20 @@ async def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks)
     # ==========================================
     # 架构右侧分支：LangGraph 执行与 Redis Checkpoint
     # ==========================================
-    config = {
+    config: dict[str, Any] = {
         "configurable": {
             "thread_id": request.thread_id,
-            "user_info": {"user_id": "123123", "position": "CEO", "department": "老板"}
+            "user_info": {"user_id": "123123", "position": "CEO", "department": "老板"},
+            "task_status": TaskStatus.ROUTING.value,
         }
     }
 
     async def event_generator():
         # 调用流式引擎 (内部将使用 global_checkpointer 即 Redis)
+        if global_checkpointer is None:
+            yield f"data: {json.dumps({'type': 'error', 'message': '检查点服务未初始化'}, ensure_ascii=False)}\n\n"
+            return
+
         async for chunk in run_agent_stream(
                 query=request.query,
                 config=config,

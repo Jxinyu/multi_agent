@@ -11,7 +11,7 @@ from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 from multi_domain_enterprise_project.core.sub_agent_output_format import SubAgentOutputFormat
 from multi_domain_enterprise_project.tools.mcp_tools import tech_mcp_client
 from multi_domain_enterprise_project.core.model import qwen_model
-from multi_domain_enterprise_project.core.self_state import State
+from multi_domain_enterprise_project.core.task_state import TaskState
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ async def get_document(runtime: ToolRuntime):
     }
 
 
-async def tech_agent_node(state: State, config: RunnableConfig):
+async def tech_agent_node(state: TaskState, config: RunnableConfig):
     """负责解答 API 文档、内部系统架构、代码规范、项目 Wiki 等问题。"""
 
     content = state.sub_agent_input_content[SubAgentEnum.TECH.value]  # 获取主代理传进来的问题
@@ -96,12 +96,13 @@ async def tech_agent_node(state: State, config: RunnableConfig):
     messages = response['messages']
     structured_response = response['structured_response']
 
-    logger.info(f"【Tech Agent】最终回复：{structured_response.result[:10]}...")
+    final_result = structured_response.result
+    logger.info(f"【Tech Agent】最终回复：{final_result[:10]}...")
 
     return {
         "sub_agent_response": {
             "【Tech Agent的回复】": {
-                "回复内容": structured_response.result,
+                "回复内容": final_result,
                 "参考资料": structured_response.references
             },
         },

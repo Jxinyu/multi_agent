@@ -5,11 +5,11 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
-from langgraph.types import interrupt
 from langchain.agents.middleware import SummarizationMiddleware
+from langgraph.types import interrupt
 
 from multi_domain_enterprise_project.core.model import qwen_model
-from multi_domain_enterprise_project.core.self_state import State
+from multi_domain_enterprise_project.core.task_state import TaskState
 from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 from multi_domain_enterprise_project.core.sub_agent_output_format import SubAgentOutputFormat
 from multi_domain_enterprise_project.tools.mcp_tools import document_retriever_mcp_client
@@ -25,11 +25,11 @@ async def get_document(runtime: ToolRuntime):
 
     logger.info(f"【HR Agent中】的user_info: {user_info}")
 
-    decision = interrupt({
-        "action": "human_decision",
-        "content": "human-in-loop test",
-    })
-    logger.info(f"🧵[Thread {config['configurable']['thread_id']}] 提交人机协作数据: {decision}")
+    # decision = interrupt({
+    #     "action": "human_decision",
+    #     "content": "human-in-loop test",
+    # })
+    # logger.info(f"🧵[Thread {config['configurable']['thread_id']}] 提交人机协作数据: {decision}")
 
     return {
         "文档列表": [
@@ -41,7 +41,7 @@ async def get_document(runtime: ToolRuntime):
     }
 
 
-async def hr_agent(state: State, config: RunnableConfig):
+async def hr_agent(state: TaskState, config: RunnableConfig):
     """专门解答员工手册、请假制度、入职流程、福利政策等问题。"""
     # 获取主代理传进来的问题
     content = state.sub_agent_input_content[SubAgentEnum.HR.value]
@@ -112,8 +112,8 @@ async def hr_agent(state: State, config: RunnableConfig):
         "sub_agent_messages": {
             SubAgentEnum.HR.value: messages
         },
-        "finished_sub_agents": SubAgentEnum.HR.value,
-        "pending_sub_agents": SubAgentEnum.HR.value
+        "finished_sub_agents": [SubAgentEnum.HR.value],
+        "pending_sub_agents": []
     }
 
 

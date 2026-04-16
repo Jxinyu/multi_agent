@@ -8,6 +8,7 @@ from langgraph.types import Command
 
 from config import settings
 from multi_domain_enterprise_project.agent.supervisor_agent import create_graph
+from multi_domain_enterprise_project.core.task_state import TaskStatus
 
 import os
 
@@ -69,7 +70,6 @@ async def run_agent(query: str, config: dict, checkpointer) -> dict:
 
         # 如果没有 interrupt，说明 Graph 走到了 END，提取最终答案
         try:
-            # 按照你 aggregator_agent 的标准格式提取
             final_reply = response['result']['最终回复']
             references = response['result'].get('参考资料', [])
             return {
@@ -78,10 +78,10 @@ async def run_agent(query: str, config: dict, checkpointer) -> dict:
                 "references": references
             }
         except KeyError:
-            # 容错：如果没经过 aggregator (比如只有单节点返回)，安全提取最后一条消息
             last_msg = response['messages'][-1].content
+            fallback_status = TaskStatus.COMPLETED if last_msg else TaskStatus.FAILED
             return {
-                "status": "completed",
+                "status": fallback_status.value,
                 "message": str(last_msg),
                 "references": []
             }
@@ -94,6 +94,31 @@ async def run_agent(query: str, config: dict, checkpointer) -> dict:
             "message": f"系统开小差了，请稍后再试。错误信息: {str(e)}",
             "references": []
         }
+
+
+STATUS_MESSAGES = {
+    "supervisor": "🧠 调度中枢正在分析意图并规划任务...",
+    "tools": "🛠️ 正在为您分发任务至专属领域专家...",
+    "tech": "💻 技术专家正在查阅系统操作指南...",
+    "hr": "🧑‍💼 HR专家正在比对人事制度与离职流程...",
+    "finance": "💰 财务专家正在核对财务报销规范...",
+    "legal": "⚖️ 法务专家正在审查合规与法律条文...",
+    "aggregator": "📝 信息合成中心正在汇编专家的最终解答...",
+}
+
+
+def _resolve_stream_status(node_name: str, node_state: dict | None) -> dict | None:
+    """把 LangGraph 节点事件映射成前端可消费的状态消息。"""
+    if node_name == "audit":
+        feedback = (node_state or {}).get("audit_feedback")
+        message = "⚠️ 审计未通过，要求专家重新修正..." if feedback else "✅ 合规审计已通过，准备输出内容..."
+        return {"type": "status", "message": message}
+
+    message = STATUS_MESSAGES.get(node_name)
+    if message:
+        return {"type": "status", "message": message}
+
+    return None
 
 
 async def run_agent_stream(query: str, config: dict, checkpointer):
@@ -117,27 +142,9 @@ async def run_agent_stream(query: str, config: dict, checkpointer):
         async for event in agent.astream(input_data, config=config, stream_mode="updates"):
             # event 的格式例如：{"supervisor": {"messages": [...]}}
             for node_name, node_state in event.items():
-                # 根据节点名称，实时推流对应的状态文案
-                if node_name == "supervisor":
-                    yield {"type": "status", "message": "🧠 调度中枢正在分析意图并规划任务..."}
-                elif node_name == "tools":
-                    yield {"type": "status", "message": "🛠️ 正在为您分发任务至专属领域专家..."}
-                elif node_name == "tech":
-                    yield {"type": "status", "message": "💻 技术专家正在查阅系统操作指南..."}
-                elif node_name == "hr":
-                    yield {"type": "status", "message": "🧑‍💼 HR专家正在比对人事制度与离职流程..."}
-                elif node_name == "finance":
-                    yield {"type": "status", "message": "💰 财务专家正在核对财务报销规范..."}
-                elif node_name == "legal":
-                    yield {"type": "status", "message": "⚖️ 法务专家正在审查合规与法律条文..."}
-                elif node_name == "aggregator":
-                    yield {"type": "status", "message": "📝 信息合成中心正在汇编专家的最终解答..."}
-                elif node_name == "audit":
-                    feedback = node_state.get('audit_feedback')
-                    if feedback:
-                        yield {"type": "status", "message": "⚠️ 审计未通过，要求专家重新修正..."}
-                    else:
-                        yield {"type": "status", "message": "✅ 合规审计已通过，准备输出内容..."}
+                status_event = _resolve_stream_status(node_name, node_state)
+                if status_event:
+                    yield status_event
 
         # 图执行结束后（可能是 End，也可能是 Interrupt 挂起），提取最终状态
         final_state = await agent.aget_state(config)

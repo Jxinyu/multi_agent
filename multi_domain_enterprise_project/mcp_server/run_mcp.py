@@ -11,11 +11,11 @@ async def main():
     logger.info("🔄 正在初始化企业知识库 MCP 服务...")
     mcp_app = await build_mcp_server()
 
-    logger.info("🚀 服务已启动！监听 8000 端口 (streamable-http Transport)")
+    logger.info("🚀 服务已启动！监听 8010 端口 (streamable-http Transport)")
 
     await mcp_app.run_async(
         transport="streamable-http",
-        host="127.0.0.1", port=8000,
+        host="127.0.0.1", port=8010,
         show_banner=True,
         log_level='debug',
         path='/rag-retriever'

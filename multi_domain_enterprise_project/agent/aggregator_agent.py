@@ -6,25 +6,24 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
 from multi_domain_enterprise_project.core.model import qwen_model
-from multi_domain_enterprise_project.core.self_state import State
+from multi_domain_enterprise_project.core.task_state import TaskState, TaskStatus
 from multi_domain_enterprise_project.core.sub_agent_output_format import SubAgentOutputFormat
 
 logger = logging.getLogger(__name__)
 
 
-async def aggregator_agent(state: State, config: RunnableConfig):
-    """收集子Agent返回的答案，并进行整理。消除重复或冲突，合成一段逻辑连贯、主次分明的最终回答，并统一整理所有引用来源。"""
-    if state.pending_sub_agents:
+async def aggregator_agent(state: TaskState, config: RunnableConfig):
+    """收集子Agent返回的答案，并进行整理。"""
+    content = state.sub_agent_response or {}
+
+    if not content:
         return Command(
             goto="supervisor",
             update={
-                "messages": [SystemMessage(content=f"领域专家 【{state.pending_sub_agents}】 智能体执行失败，"
-                                                   f"请重新向 【{state.pending_sub_agents}】 智能体下发任务。")]
+                "task_status": TaskStatus.ROUTING,
+                "messages": [SystemMessage(content="当前没有可汇总的子代理结果，请重新路由任务。")]
             }
         )
-
-    # 获取所有子代理的输出
-    content = state.sub_agent_response
 
     logger.info(f"【aggregator_agent 的输入】: {content.keys()}")
 
@@ -59,14 +58,17 @@ async def aggregator_agent(state: State, config: RunnableConfig):
     response = await agent.ainvoke(input={"messages": [{"role": "user", "content": str(content)}]}, config=config)
 
     response = response['structured_response']
+    final_result = getattr(response, "result", "")
+    final_references = getattr(response, "references", [])
 
-    logger.info(f"【aggregator Agent的回复】: {response.result[:10]}")
+    logger.info(f"【aggregator Agent的回复】: {final_result[:10]}")
 
     return {
+        "task_status": TaskStatus.AUDITING,
         "sub_agent_response": {
             "aggregator": {
-                "回复内容": response.result,
-                "参考资料": response.references
+                "回复内容": final_result,
+                "参考资料": final_references
             },
         },
     }

@@ -14,7 +14,7 @@ async def finance_mcp_client():
             "文档检索":
                 {  # 文档检索
                     "transport": "streamable-http",
-                    "url": "http://127.0.0.1:8000/rag-retriever",
+                    "url": "http://127.0.0.1:8010/rag-retriever",
                     "headers": {
                         "Authorization": f"Bearer {dq}"
                     }
@@ -30,7 +30,7 @@ async def document_retriever_mcp_client():
         {"文档检索":
             {  # 文档检索
                 "transport": "streamable-http",
-                "url": "http://127.0.0.1:8000/rag-retriever",
+                "url": "http://127.0.0.1:8010/rag-retriever",
                 "headers": {
                     "Authorization": f"Bearer {dq}"
                 }
@@ -52,7 +52,7 @@ async def tech_mcp_client():
             "文档检索":
                 {  # 文档检索
                     "transport": "streamable-http",
-                    "url": "http://127.0.0.1:8000/rag-retriever",
+                    "url": "http://127.0.0.1:8010/rag-retriever",
                     "headers": {
                         "Authorization": f"Bearer {dq}"
                     }
@@ -74,7 +74,7 @@ async def legal_mcp_client():
             "文档检索":
                 {  # 文档检索
                     "transport": "streamable-http",
-                    "url": "http://127.0.0.1:8000/rag-retriever",
+                    "url": "http://127.0.0.1:8010/rag-retriever",
                     "headers": {
                         "Authorization": f"Bearer {dq}"
                     }

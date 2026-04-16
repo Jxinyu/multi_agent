@@ -17,7 +17,7 @@ from multi_domain_enterprise_project.agent.finance_agent import finance_agent
 from multi_domain_enterprise_project.agent.hr_agent import hr_agent
 from multi_domain_enterprise_project.agent.legal_agent import legal_agent
 from multi_domain_enterprise_project.core.model import qwen_model
-from multi_domain_enterprise_project.core.self_state import State
+from multi_domain_enterprise_project.core.task_state import TaskState, TaskStatus
 from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 
 logger = logging.getLogger(__name__)
@@ -46,10 +46,12 @@ class InvokeAgentModel(BaseModel):
 @tool
 async def invoke_sub_agent(sub_agents: List[InvokeAgentModel],
                            runtime: ToolRuntime,
-                           tool_call_id: Annotated[str, InjectedToolCallId],):
+                           tool_call_id: Annotated[str, InjectedToolCallId]):
     """向领域专家下发任务。"""
     pending = list(runtime.state.pending_sub_agents or [])
     input_content = dict(runtime.state.sub_agent_input_content or {})
+    finished = list(runtime.state.finished_sub_agents or [])
+    requested = list(runtime.state.requested_agents or [])
 
     for agent in sub_agents:
         try:
@@ -62,17 +64,20 @@ async def invoke_sub_agent(sub_agents: List[InvokeAgentModel],
                             content=f"子代理 {agent.sub_agent_name} 不存在",
                             tool_call_id=tool_call_id,
                         )
-                    ]
+                    ],
+                    "task_status": TaskStatus.FAILED,
                 }
             )
 
-        is_retry_round = bool(runtime.state.audit_feedback)  # 是否为重试轮
-        if (not is_retry_round) and (operation.value in runtime.state.finished_sub_agents):  # 重试轮，且该子代理已经完成过任务
+        is_retry_round = bool(runtime.state.audit_feedback)
+        if (not is_retry_round) and (operation.value in finished):
             continue
 
         input_content[operation.value] = agent.content
         if operation.value not in pending:
             pending.append(operation.value)
+        if operation.value not in requested:
+            requested.append(operation.value)
 
     return Command(
         update={
@@ -82,6 +87,8 @@ async def invoke_sub_agent(sub_agents: List[InvokeAgentModel],
                     tool_call_id=tool_call_id,
                 )
             ],
+            "task_status": TaskStatus.DISPATCHED,
+            "requested_agents": requested,
             "pending_sub_agents": pending,
             "sub_agent_input_content": input_content,
         },
@@ -142,45 +149,67 @@ async def create_graph(checkpointer: Checkpointer):
     # model绑定系统提示词和工具
     agent = model.bind_tools(tools=tools)  # 绑定工具
 
-    async def supervisor_agent(state: State, config: RunnableConfig):
+    async def supervisor_agent(state: TaskState, config: RunnableConfig):
         """它是整个多代理系统的“大脑”和“交通枢纽”，直接面向用户输入。"""
         sys_prompt = SystemMessage(content=system_prompt)
-
         messages = [sys_prompt] + state.messages
 
-        logger.info(f"【supervisor_agent】开始执行: {state.messages[-1]}")
+        if state.audit_feedback:
+            next_status = TaskStatus.RETRYING
+        elif state.task_status in {TaskStatus.IDLE, TaskStatus.COMPLETED, TaskStatus.FAILED}:
+            next_status = TaskStatus.ROUTING
+        else:
+            next_status = state.task_status
+
+        logger.info(f"【supervisor_agent】开始执行: {state.messages[-1] if state.messages else 'EMPTY'} | status={next_status}")
         response = []
         try:
             response = await agent.ainvoke(messages, config=config)
         except Exception as e:
-            logger.error(f"【supervisor_agent】执行错误", e)
+            logger.error(f"【supervisor_agent】执行错误: {e}")
+            return {
+                "task_status": TaskStatus.FAILED,
+                "messages": [SystemMessage(content=f"supervisor 执行失败: {e}")]
+            }
 
-        return {"messages": [response]}
+        return {
+            "messages": [response],
+            "task_status": next_status,
+        }
 
-    async def audit_router(state: State, config: RunnableConfig):
+    def audit_router(state: TaskState, config: RunnableConfig):
         """用于审核子代理的输出，并给出相应的反馈。"""
-        audit_feedback = state.audit_feedback
-        if not audit_feedback:
+        terminal_statuses = {TaskStatus.COMPLETED, TaskStatus.FAILED}
+        if state.task_status in terminal_statuses:
             return END
-        logger.info(f"【audit_router】返回审核：{state.messages[-1].content[:10]}")
-        return "supervisor"
+        if state.audit_feedback:
+            logger.info(f"【audit_router】需要重试：{state.messages[-1].content[:10] if state.messages else ''}")
+            return "supervisor"
+        return END
 
-    async def tools_condition_router(state: State, config: RunnableConfig):
+    def tools_condition_router(state: TaskState, config: RunnableConfig):
         last_message = state.messages[-1]
+        route_map = {
+            TaskStatus.DISPATCHED: "dispatcher",
+            TaskStatus.EXECUTING: "dispatcher",
+            TaskStatus.AGGREGATING: "aggregator",
+            TaskStatus.AUDITING: "aggregator",
+            TaskStatus.RETRYING: "aggregator",
+        }
         if last_message.type != "tool":
             return "supervisor"
-        if not state.pending_sub_agents:
-            return "supervisor"
-        return "dispatcher"
+        if state.task_status in {TaskStatus.DISPATCHED, TaskStatus.EXECUTING} and state.pending_sub_agents:
+            return route_map[state.task_status]
+        return route_map.get(state.task_status, "supervisor")
 
-    async def dispatcher(state: State, config: RunnableConfig):
+    async def dispatcher(state: TaskState, config: RunnableConfig):
         """用于分发任务"""
-        sub_agent_names = state.pending_sub_agents or []
+        sub_agent_names = list(state.pending_sub_agents or [])
         if not sub_agent_names:
-            return Command(goto="supervisor")
-        return Command(goto=sub_agent_names)
+            return Command(goto="aggregator", update={"task_status": TaskStatus.AGGREGATING})
+        return Command(goto=sub_agent_names, update={"task_status": TaskStatus.EXECUTING})
 
-    graph = StateGraph(State)
+    graph = StateGraph(TaskState)
 
     graph.add_node("supervisor", supervisor_agent)
     graph.add_node("tools", too_node)

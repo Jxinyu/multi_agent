@@ -10,7 +10,7 @@ from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 from multi_domain_enterprise_project.core.sub_agent_output_format import SubAgentOutputFormat
 from multi_domain_enterprise_project.tools.mcp_tools import finance_mcp_client
 from multi_domain_enterprise_project.core.model import qwen_model
-from multi_domain_enterprise_project.core.self_state import State
+from multi_domain_enterprise_project.core.task_state import TaskState
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ async def get_document(runtime: ToolRuntime):
     }
 
 
-async def finance_agent(state: State, config: RunnableConfig):
+async def finance_agent(state: TaskState, config: RunnableConfig):
     """解答差旅报销规则、预算申请流程、采购 SOP 等问题。"""
 
     content = state.sub_agent_input_content[SubAgentEnum.FINANCE.value]  # 获取主代理传进来的问题
@@ -104,6 +104,6 @@ async def finance_agent(state: State, config: RunnableConfig):
         "sub_agent_messages": {
             SubAgentEnum.FINANCE.value: messages
         },
-        "finished_sub_agents": SubAgentEnum.FINANCE.value,
-        "pending_sub_agents": SubAgentEnum.FINANCE.value
+        "finished_sub_agents": [SubAgentEnum.FINANCE.value],
+        "pending_sub_agents": []
     }

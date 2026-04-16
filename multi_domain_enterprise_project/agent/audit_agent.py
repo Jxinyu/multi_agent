@@ -7,7 +7,8 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from multi_domain_enterprise_project.core.model import qwen_model
-from multi_domain_enterprise_project.core.self_state import State
+from multi_domain_enterprise_project.core.task_state import TaskState, TaskStatus
+from multi_domain_enterprise_project.core.task_state import TaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +24,22 @@ class AuditOutputFormat(BaseModel):
     )
 
 
-async def audit_agent(state: State, config: RunnableConfig):
+async def audit_agent(state: TaskState, config: RunnableConfig):
     """收集子Agent返回的答案，并进行整理。消除重复或冲突，合成一段逻辑连贯、主次分明的最终回答，并统一整理所有引用来源。"""
     # 获取aggregator Agent的输出
-    content = state.sub_agent_response["aggregator"]
+    content = (state.sub_agent_response or {}).get("aggregator", {})
+    if not content:
+        return {
+            "audit_feedback": None,
+            "task_status": TaskStatus.FAILED,
+            "result": {
+                "最终回复": "当前没有可审核的聚合结果，请重新派发任务。",
+                "参考资料": []
+            },
+            "messages": [HumanMessage(content="【系统提示】当前没有可审核的聚合结果。")]
+        }
 
-    logger.info(f"【Audit Agent的输入】: {content['回复内容'][:10]}...")
+    logger.info(f"【Audit Agent的输入】: {content.get('回复内容', '')[:10]}...")
 
     system_prompt = """
     # 角色定位
@@ -79,19 +90,28 @@ async def audit_agent(state: State, config: RunnableConfig):
     max_retries = state.max_retries
 
     if (not response.is_pass) and (retry_count < max_retries):
-        # 审核不通过
+        # 审核不通过，保留聚合结果并生成结构化反馈
+        feedback_text = f'审计反馈：\n"correction_targets": {response.correction_targets}'
         return {
-            "messages": [HumanMessage(content=f'审计专家反馈：\n"correction_targets": {response.correction_targets}')],
-            "audit_feedback": f'审计反馈：\n"correction_targets": {response.correction_targets}',
+            "messages": [HumanMessage(content=feedback_text)],
+            "task_status": TaskStatus.RETRYING,
+            "audit_feedback": {
+                "correction_targets": response.correction_targets,
+                "retry_count": retry_count + 1
+            },
             "retry_count": retry_count + 1
         }
+
     # 审核通过：统一输出键名，和 run_agent/run_agent_stream 的读取逻辑保持一致
-    final_reply = content["回复内容"]
+    final_reply = content.get("回复内容", "")
     final_references = content.get("参考资料", [])
     return {
+        "task_status": TaskStatus.COMPLETED,
         "audit_feedback": None,
-        "sub_agent_response": None,
-        "sub_agent_input_content": None,
+        "sub_agent_response": {},
+        "sub_agent_input_content": {},
+        "pending_sub_agents": [],
+        "finished_sub_agents": [],
         "result": {
             "最终回复": final_reply,
             "参考资料": final_references
