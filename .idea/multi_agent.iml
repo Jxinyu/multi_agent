@@ -15,6 +15,7 @@
         <option value="$MODULE_DIR$/multi_domain_enterprise_project/rag/documentParser" />
         <option value="$MODULE_DIR$/multi_domain_enterprise_project/rag" />
         <option value="$MODULE_DIR$/chain_graph" />
+        <option value="$MODULE_DIR$/multi_domain_enterprise_project/tests" />
       </list>
     </option>
   </component>

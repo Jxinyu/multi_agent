@@ -1,0 +1,2460 @@
+{
+  "total_cases": 106,
+  "passed_cases": 92,
+  "failed_cases": [
+    {
+      "case_id": "multi_045",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "hr",
+        "finance"
+      ],
+      "actual_agents": [
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_011",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_040",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_035",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "finance",
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_032",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_016",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_039",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "tech",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_024",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_046",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "tech",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_007",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "finance",
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_041",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_048",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "hr_012",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "hr"
+      ],
+      "actual_agents": [
+        "hr",
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "retry_002",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "未先调用 get_sub_agent_list",
+      "expected_agents": [
+        "finance",
+        "legal"
+      ],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    }
+  ],
+  "pass_rate": 0.8679245283018868,
+  "strict_total": 100,
+  "strict_passed": 87,
+  "boundary_total": 0,
+  "boundary_passed": 0,
+  "scoring_rule": {
+    "name": "supervisor_real_llm_eval_two_stage_with_retry",
+    "summary": "真实 LLM 评估首次路由与 audit 失败后的重试分发：首次先分析是否需要澄清或分发；重试时应直接 invoke_sub_agent。",
+    "allowed_actions": [
+      "get_sub_agent_list",
+      "invoke_sub_agent",
+      "human_in_loop"
+    ],
+    "allowed_sub_agents": [
+      "finance",
+      "hr",
+      "legal",
+      "tech"
+    ],
+    "tiers": {
+      "strict": "语义明确、标签稳定，适合硬性评估",
+      "boundary": "边界/模糊/歧义样本，仅统计不一票否决",
+      "retry": "audit 失败后的修正路由，重点检查是否直接重分发"
+    }
+  },
+  "results": [
+    {
+      "case_id": "clarify_039",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请明确您所指的流程编号39具体涉及哪个业务场景或系统？例如：是入职流程、离职流程、薪资发放流程，还是其他流程？以便我准确为您定位负责人。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_045",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "hr",
+        "finance"
+      ],
+      "actual_agents": [
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_049",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请问您提到的“这个问题”具体是指什么？请提供更详细的信息，例如涉及的系统、流程或业务场景，以便我能够快速为您处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "finance_010",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance"
+      ],
+      "actual_agents": [
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_024",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "finance"
+      ],
+      "actual_agents": [
+        "hr",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "finance_017",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance"
+      ],
+      "actual_agents": [
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_037",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_012",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的‘账号、权限、请假都不对劲’具体是指哪些方面的问题？请明确描述问题现象，例如：是无法登录、权限不足、请假流程异常，还是其他情况？同时，请确认是否涉及特定系统或流程名称（如OA系统、人力资源系统等），以便我们精准定位问题。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_010",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "finance"
+      ],
+      "actual_agents": [
+        "hr",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_021",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的“这件事”具体指什么？请提供更明确的问题描述、涉及的系统或流程名称，以及您期望完成的目标，以便我准确分发任务。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "finance_002",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance"
+      ],
+      "actual_agents": [
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_043",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的‘报销、入职、合同’以及编号43，能否具体说明一下您希望我协助处理哪一项？例如：是需要查看某项流程的进度，还是需要指导操作步骤？请明确您的主诉求。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_013",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的“这件事”具体是指什么？请提供更详细的信息，例如涉及的系统、流程名称或业务目标，以便我能够准确处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_038",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到“找谁”但不想说明是财务还是法务，能否请您补充一下具体场景或需求？例如：是合同审核、报销流程、合规审查，还是其他事项？这样我才能帮您准确定位合适的专家。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_036",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的‘账号、权限、请假都不对劲’具体是指哪些方面出现问题？请补充更详细的描述，例如：是账号无法登录、权限缺失导致功能不可用，还是请假流程异常？以便我准确分发任务。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_011",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_026",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的流程编号26出现了问题，但目前信息不够明确。请您补充以下内容以便我准确处理：\n1. 该流程的具体名称或类型（如：订单审批、数据同步、用户注册等）？\n2. 问题表现是什么（如：卡在某个节点、报错信息、无法提交等）？\n3. 是否涉及特定系统或模块（如：CRM系统、财务模块等）？\n4. 当前是否已有错误日志或截图？",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "legal_032",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "legal"
+      ],
+      "actual_agents": [
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "hr_019",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr"
+      ],
+      "actual_agents": [
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_026",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "tech_022",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_049",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech",
+        "finance",
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_040",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "tech_037",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_003",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的‘报销、入职、合同’是多个流程，能否明确一下具体想了解哪个？例如：是想查询某个流程的办理步骤，还是需要帮助处理某一项？另外，‘编号3’是指什么系统的编号，还是其他业务上下文？请补充更多细节以便我准确分发任务。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_013",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "hr",
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "legal_040",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "legal"
+      ],
+      "actual_agents": [
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "legal_031",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "legal"
+      ],
+      "actual_agents": [
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_033",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请问您提到的‘这个问题’具体是指什么？请提供更详细的信息，例如问题类型、涉及的系统或流程名称、目标对象等，以便我尽快为您处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_011",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "tech",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "finance_033",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance"
+      ],
+      "actual_agents": [
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_031",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请明确您所指的流程编号31的具体内容或业务场景，以便我准确为您定位负责人。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_035",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "finance",
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_009",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请问您提到的“这个问题”具体是指什么？请提供更详细的信息，例如问题类型、涉及的系统或流程名称，以便我快速为您处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_017",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "finance"
+      ],
+      "actual_agents": [
+        "finance",
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_012",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_032",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_025",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请问您提到的‘这个问题’具体是指什么？请提供更详细的信息，例如问题类型、涉及的系统或流程名称、目标对象等，以便我快速为您处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "hr_003",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr"
+      ],
+      "actual_agents": [
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_047",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请明确您所指的流程编号47具体涉及哪个业务场景或系统？例如：是人事流程、财务报销、IT系统申请，还是其他？以便我准确分配责任人。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_034",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的流程编号34出了问题，但目前信息不够明确。请您补充以下内容：\n1. 该流程的具体名称或业务场景（例如：订单审批流程、数据同步流程等）；\n2. 出现的具体问题表现（如报错信息、卡顿环节、数据异常等）；\n3. 是否涉及特定系统或模块（如ERP、CRM、API接口等）。\n以便我准确分派给对应专家处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_027",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "hr",
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "legal_015",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "legal"
+      ],
+      "actual_agents": [
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_028",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的‘账号、权限、请假都不对劲’具体是指哪些方面的问题？请提供更详细的描述，例如：是账号无法登录、权限配置错误，还是请假流程异常？以便我准确分派处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_021",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech",
+        "finance",
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_016",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_022",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_039",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "tech",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_033",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_027",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的‘报销、入职、合同’以及编号27，能否明确一下具体想了解哪一方面？例如：是需要处理某个流程（如入职流程中的合同签署）？还是希望查看这些事项的办理进度？请补充更具体的场景或目标。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_048",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "hr",
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_028",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech",
+        "finance",
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "hr_035",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr"
+      ],
+      "actual_agents": [
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_042",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech",
+        "finance",
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_001",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "legal_039",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "legal"
+      ],
+      "actual_agents": [
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "tech_005",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_002",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "legal"
+      ],
+      "actual_agents": [
+        "hr",
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_010",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的流程编号10出现问题，请明确具体是哪个流程、涉及哪些系统或业务环节，以及当前遇到的具体现象或错误表现，以便我准确分派处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_020",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "hr",
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_004",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的‘账号、权限、请假都不对劲’具体是指哪些方面的问题？例如：是账号无法登录、权限配置错误，还是请假流程异常？请提供更详细的信息，以便我准确分派处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "finance_018",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance"
+      ],
+      "actual_agents": [
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_003",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "finance"
+      ],
+      "actual_agents": [
+        "hr",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_044",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的‘账号、权限、请假都不对劲’具体是指哪些方面出现问题？请补充更多细节，例如：是账号无法登录、权限配置错误，还是请假流程异常？以及涉及的具体系统或业务场景是什么？（编号44）",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_005",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的“这件事”具体是指什么？请提供更明确的问题描述、涉及的系统或流程名称，以及目标对象（如用户、数据、业务模块等），以便我准确分派任务。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_008",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_018",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的流程编号18出现了问题，但目前信息不够明确。请您补充以下内容以便我们准确处理：\n1. 该流程的具体名称或类型（如：订单审批、财务报销、系统部署等）；\n2. 问题表现是什么（如：卡在某个节点、报错提示、无法提交等）；\n3. 是否有相关的错误日志或截图？\n4. 当前流程所涉及的系统或平台名称（如：ERP、OA、CRM等）。\n请提供以上信息，我们将尽快为您定位并处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_043",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_017",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请问您提到的‘这个问题’具体是指什么？请提供更详细的信息，例如问题类型、涉及的系统或流程名称，以便我快速为您处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_042",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的流程编号42出现问题，但缺少具体描述。请说明：1）该流程的名称或业务场景（如“订单审批流程”）；2）问题的具体表现（如“卡在某个节点”或“数据异常”）；3）是否涉及特定系统或角色？以便精准定位并处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_047",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_006",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到想寻求帮助但不确定是财务还是法务相关，能否请您描述一下具体遇到的问题或需求？例如：是合同审核、报销流程、税务申报，还是其他事项？这将帮助我更准确地为您分配合适的专家。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_024",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_046",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "tech",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_030",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到想解决一个涉及财务或法务的问题，但暂时不想明确具体领域。能否请您简单描述一下问题的核心内容？例如：是合同相关、报销流程、合规审查，还是其他事项？这有助于我更准确地为您匹配合适的专家。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_037",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的“这件事”具体是指什么？请提供更明确的问题描述、涉及的流程名称、系统名称或目标对象，以便我准确为您分发任务。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_001",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请问您提到的“这个问题”具体是指什么？请提供更详细的信息，例如涉及的系统、流程、目标对象或业务场景，以便我快速为您处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_041",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请问您提到的“这个问题”具体是指什么？请提供更详细的信息，例如问题类型、涉及的系统或流程名称、目标对象等，以便我尽快为您处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "finance_025",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance"
+      ],
+      "actual_agents": [
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_034",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "hr",
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_007",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "finance",
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_040",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_041",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "tech_038",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_048",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "澄清类样本不应先取子代理列表后再分发",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "hr_011",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr"
+      ],
+      "actual_agents": [
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_007",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请明确您所指的流程编号7具体涉及哪个业务场景或系统？例如：是人事流程、财务报销、IT申请，还是其他？以便准确定位负责人。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "legal_016",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "legal"
+      ],
+      "actual_agents": [
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_029",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "tech"
+      ],
+      "actual_agents": [
+        "finance",
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_019",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "tech_006",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "finance_034",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance"
+      ],
+      "actual_agents": [
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_035",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "您提到的‘报销、入职、合同’是需要我帮您处理的具体事项吗？请明确一下目标对象（如某位员工、某个项目）和具体场景（如新员工入职流程中的合同签署与报销申请），以便我准确分发任务。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_005",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "finance",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "finance"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_006",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "hr",
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "tech_013",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "multi_009",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "hr",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "hr_012",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "派发子代理不符合预期",
+      "expected_agents": [
+        "hr"
+      ],
+      "actual_agents": [
+        "hr",
+        "legal"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "tech_014",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "工具链与派发内容匹配",
+      "expected_agents": [
+        "tech"
+      ],
+      "actual_agents": [
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "clarify_015",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请明确您所指的流程编号15具体涉及哪个业务场景或系统？例如：是入职流程、离职流程，还是其他流程？以便我准确为您定位负责人。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "retry_001",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "重试轮已按审计反馈直接重分发",
+      "expected_agents": [
+        "hr",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "retry_after_audit"
+    },
+    {
+      "case_id": "retry_002",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "invoke_sub_agent"
+      ],
+      "passed": false,
+      "reason": "未先调用 get_sub_agent_list",
+      "expected_agents": [
+        "finance",
+        "legal"
+      ],
+      "actual_agents": [],
+      "clarification_text": null,
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "retry_003",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "重试轮已按审计反馈直接重分发",
+      "expected_agents": [
+        "hr",
+        "tech"
+      ],
+      "actual_agents": [
+        "hr",
+        "tech"
+      ],
+      "clarification_text": null,
+      "mode": "retry_after_audit"
+    },
+    {
+      "case_id": "retry_004",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请提供更具体的问题描述，以便我快速为您处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "retry_005",
+      "expected_tool_chain": [
+        "human_in_loop"
+      ],
+      "actual_tool_chain": [
+        "human_in_loop"
+      ],
+      "passed": true,
+      "reason": "调用了 human_in_loop",
+      "expected_agents": [],
+      "actual_agents": [],
+      "clarification_text": "请具体说明您认为账号、权限、请假方面“不对劲”的具体情况，例如是无法登录、权限缺失、请假流程异常，还是其他问题？以便我准确分派处理。",
+      "mode": "first_pass"
+    },
+    {
+      "case_id": "retry_006",
+      "expected_tool_chain": [
+        "get_sub_agent_list",
+        "invoke_sub_agent",
+        "invoke_sub_agent"
+      ],
+      "actual_tool_chain": [
+        "get_sub_agent_list",
+        "get_sub_agent_list",
+        "invoke_sub_agent",
+        "invoke_sub_agent"
+      ],
+      "passed": true,
+      "reason": "重试轮已按审计反馈直接重分发",
+      "expected_agents": [
+        "hr",
+        "legal"
+      ],
+      "actual_agents": [
+        "legal",
+        "hr"
+      ],
+      "clarification_text": null,
+      "mode": "retry_after_audit"
+    }
+  ]
+}

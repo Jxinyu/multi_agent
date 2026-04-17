@@ -1,0 +1,2001 @@
+[
+  {
+    "case_id": "clarify_039",
+    "query": "这个流程谁负责？别问我是入职还是离职。（编号39）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "流程名称",
+      "业务对象"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_045",
+    "query": "员工福利补贴是否需要财务审批，和入职资料如何关联？（编号45）",
+    "expected_agents": [
+      "hr",
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "finance"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "福利",
+      "审批",
+      "入职"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_049",
+    "query": "这个问题很急，帮我处理一下。（编号49）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "业务范围",
+      "系统范围"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "finance_010",
+    "query": "预算申请超标了，补充材料需要走哪个财务步骤？（场景10）",
+    "expected_agents": [
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "预算",
+      "审批"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_024",
+    "query": "员工福利补贴是否需要财务审批，和入职资料如何关联？（编号24）",
+    "expected_agents": [
+      "hr",
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "finance"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "福利",
+      "审批",
+      "入职"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "finance_017",
+    "query": "差旅报销里发票抬头和税号不一致怎么处理？（场景17）",
+    "expected_agents": [
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance"
+    ],
+    "difficulty": "easy",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "发票",
+      "税号"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_037",
+    "query": "离职员工的资产交接和保密协议冲突时，先走哪一步？（编号37）",
+    "expected_agents": [
+      "hr",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "离职",
+      "保密协议"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_012",
+    "query": "账号、权限、请假都不对劲，先给结论。（编号12）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "具体系统",
+      "错误现象"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_010",
+    "query": "员工福利补贴是否需要财务审批，和入职资料如何关联？（编号10）",
+    "expected_agents": [
+      "hr",
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "finance"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "福利",
+      "审批",
+      "入职"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_021",
+    "query": "把这件事搞定。（编号21）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "low",
+    "expected_clarification_focus": [
+      "背景信息",
+      "期望结果"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "finance_002",
+    "query": "预算申请超标了，补充材料需要走哪个财务步骤？（场景2）",
+    "expected_agents": [
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "预算",
+      "审批"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_043",
+    "query": "报销、入职、合同都顺手看看。（编号43）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "目标优先级",
+      "单一主问题"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_013",
+    "query": "把这件事搞定。（编号13）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "low",
+    "expected_clarification_focus": [
+      "背景信息",
+      "期望结果"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_038",
+    "query": "我到底该找谁，但我不想说是财务还是法务。（编号38）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "主问题",
+      "责任部门"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_036",
+    "query": "账号、权限、请假都不对劲，先给结论。（编号36）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "具体系统",
+      "错误现象"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_011",
+    "query": "报销、入职、合同都顺手看看。（编号11）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "目标优先级",
+      "单一主问题"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_026",
+    "query": "我们那个流程出问题了，你看着办。（编号26）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "流程名称",
+      "具体环节"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "legal_032",
+    "query": "员工拍摄宣传素材要注意哪些肝权条款？（场景32）",
+    "expected_agents": [
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "legal"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "肝权",
+      "合规"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "hr_019",
+    "query": "异地办公期间的考勤和请假怎么登记？（场景19）",
+    "expected_agents": [
+      "hr"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "考勤",
+      "请假"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_026",
+    "query": "费用报销涉及个人隐私票据时，凭证保留和合规审查如何平衡？（编号26）",
+    "expected_agents": [
+      "finance",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "报销",
+      "合规"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "tech_022",
+    "query": "微服务熔断和重试策略怎么配置？（场景22）",
+    "expected_agents": [
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "熔断",
+      "重试"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_049",
+    "query": "报销、审批、账号同步三个系统要怎么打通？（编号49）",
+    "expected_agents": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "报销",
+      "审批",
+      "账号"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_040",
+    "query": "“审批失败”到底是系统问题还是流程问题？（编号40）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "错误现象",
+      "问题归属"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "tech_037",
+    "query": "接口鉴权失败但日志显示权限正常，排查思路是什么？（场景37）",
+    "expected_agents": [
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "接口",
+      "日志",
+      "权限"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_003",
+    "query": "报销、入职、合同都顺手看看。（编号3）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "目标优先级",
+      "单一主问题"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_013",
+    "query": "新员工入职自动化机器人要同步 HR 系统和邮箱账号，怎么设计？（编号13）",
+    "expected_agents": [
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "入职",
+      "自动化"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "legal_040",
+    "query": "员工拍摄宣传素材要注意哪些肝权条款？（场景40）",
+    "expected_agents": [
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "legal"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "肝权",
+      "合规"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "legal_031",
+    "query": "合同里数据出境和保密期限怎么写？（场景31）",
+    "expected_agents": [
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "数据出境",
+      "保密"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_033",
+    "query": "这个问题很急，帮我处理一下。（编号33）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "业务范围",
+      "系统范围"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_011",
+    "query": "日志留存周期和个人信息脱敏在系统里怎么实现？（编号11）",
+    "expected_agents": [
+      "tech",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "tech",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "日志留存",
+      "脱敏"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "finance_033",
+    "query": "差旅报销里发票抬头和税号不一致怎么处理？（场景33）",
+    "expected_agents": [
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance"
+    ],
+    "difficulty": "easy",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "发票",
+      "税号"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_031",
+    "query": "这个流程谁负责？别问我是入职还是离职。（编号31）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "流程名称",
+      "业务对象"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_035",
+    "query": "报销、审批、账号同步三个系统要怎么打通？（编号35）",
+    "expected_agents": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "报销",
+      "审批",
+      "账号"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_009",
+    "query": "这个问题很急，帮我处理一下。（编号9）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "业务范围",
+      "系统范围"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_017",
+    "query": "员工福利补贴是否需要财务审批，和入职资料如何关联？（编号17）",
+    "expected_agents": [
+      "hr",
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "finance"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "福利",
+      "审批",
+      "入职"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_012",
+    "query": "费用报销涉及个人隐私票据时，凭证保留和合规审查如何平衡？（编号12）",
+    "expected_agents": [
+      "finance",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "报销",
+      "合规"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_032",
+    "query": "“审批失败”到底是系统问题还是流程问题？（编号32）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "错误现象",
+      "问题归属"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_025",
+    "query": "这个问题很急，帮我处理一下。（编号25）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "业务范围",
+      "系统范围"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "hr_003",
+    "query": "异地办公期间的考勤和请假怎么登记？（场景3）",
+    "expected_agents": [
+      "hr"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "考勤",
+      "请假"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_047",
+    "query": "这个流程谁负责？别问我是入职还是离职。（编号47）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "流程名称",
+      "业务对象"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_034",
+    "query": "我们那个流程出问题了，你看着办。（编号34）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "流程名称",
+      "具体环节"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_027",
+    "query": "新员工入职自动化机器人要同步 HR 系统和邮箱账号，怎么设计？（编号27）",
+    "expected_agents": [
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "入职",
+      "自动化"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "legal_015",
+    "query": "合同里数据出境和保密期限怎么写？（场景15）",
+    "expected_agents": [
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "数据出境",
+      "保密"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_028",
+    "query": "账号、权限、请假都不对劲，先给结论。（编号28）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "具体系统",
+      "错误现象"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_021",
+    "query": "报销、审批、账号同步三个系统要怎么打通？（编号21）",
+    "expected_agents": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "报销",
+      "审批",
+      "账号"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_016",
+    "query": "“审批失败”到底是系统问题还是流程问题？（编号16）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "错误现象",
+      "问题归属"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_022",
+    "query": "报销系统要对接 ERP 和审批流接口，费用归属规则怎么配置？（编号22）",
+    "expected_agents": [
+      "finance",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "系统对接",
+      "费用归属"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_039",
+    "query": "日志留存周期和个人信息脱敏在系统里怎么实现？（编号39）",
+    "expected_agents": [
+      "tech",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "tech",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "日志留存",
+      "脱敏"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_033",
+    "query": "费用报销涉及个人隐私票据时，凭证保留和合规审查如何平衡？（编号33）",
+    "expected_agents": [
+      "finance",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "报销",
+      "合规"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_027",
+    "query": "报销、入职、合同都顺手看看。（编号27）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "目标优先级",
+      "单一主问题"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_048",
+    "query": "新员工入职自动化机器人要同步 HR 系统和邮箱账号，怎么设计？（编号48）",
+    "expected_agents": [
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "入职",
+      "自动化"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_028",
+    "query": "报销、审批、账号同步三个系统要怎么打通？（编号28）",
+    "expected_agents": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "报销",
+      "审批",
+      "账号"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "hr_035",
+    "query": "异地办公期间的考勤和请假怎么登记？（场景35）",
+    "expected_agents": [
+      "hr"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "考勤",
+      "请假"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_042",
+    "query": "报销、审批、账号同步三个系统要怎么打通？（编号42）",
+    "expected_agents": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "报销",
+      "审批",
+      "账号"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_001",
+    "query": "报销系统要对接 ERP 和审批流接口，费用归属规则怎么配置？（编号1）",
+    "expected_agents": [
+      "finance",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "系统对接",
+      "费用归属"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "legal_039",
+    "query": "合同里数据出境和保密期限怎么写？（场景39）",
+    "expected_agents": [
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "数据出境",
+      "保密"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "tech_005",
+    "query": "接口鉴权失败但日志显示权限正常，排查思路是什么？（场景5）",
+    "expected_agents": [
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "接口",
+      "日志",
+      "权限"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_002",
+    "query": "离职员工的资产交接和保密协议冲突时，先走哪一步？（编号2）",
+    "expected_agents": [
+      "hr",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "离职",
+      "保密协议"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_010",
+    "query": "我们那个流程出问题了，你看着办。（编号10）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "流程名称",
+      "具体环节"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_020",
+    "query": "新员工入职自动化机器人要同步 HR 系统和邮箱账号，怎么设计？（编号20）",
+    "expected_agents": [
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "入职",
+      "自动化"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_004",
+    "query": "账号、权限、请假都不对劲，先给结论。（编号4）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "具体系统",
+      "错误现象"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "finance_018",
+    "query": "预算申请超标了，补充材料需要走哪个财务步骤？（场景18）",
+    "expected_agents": [
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "预算",
+      "审批"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_003",
+    "query": "员工福利补贴是否需要财务审批，和入职资料如何关联？（编号3）",
+    "expected_agents": [
+      "hr",
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "finance"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "福利",
+      "审批",
+      "入职"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_044",
+    "query": "账号、权限、请假都不对劲，先给结论。（编号44）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "具体系统",
+      "错误现象"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_005",
+    "query": "把这件事搞定。（编号5）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "low",
+    "expected_clarification_focus": [
+      "背景信息",
+      "期望结果"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_008",
+    "query": "报销系统要对接 ERP 和审批流接口，费用归属规则怎么配置？（编号8）",
+    "expected_agents": [
+      "finance",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "系统对接",
+      "费用归属"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_018",
+    "query": "我们那个流程出问题了，你看着办。（编号18）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "流程名称",
+      "具体环节"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_043",
+    "query": "报销系统要对接 ERP 和审批流接口，费用归属规则怎么配置？（编号43）",
+    "expected_agents": [
+      "finance",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "系统对接",
+      "费用归属"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_017",
+    "query": "这个问题很急，帮我处理一下。（编号17）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "业务范围",
+      "系统范围"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_042",
+    "query": "我们那个流程出问题了，你看着办。（编号42）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "流程名称",
+      "具体环节"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_047",
+    "query": "费用报销涉及个人隐私票据时，凭证保留和合规审查如何平衡？（编号47）",
+    "expected_agents": [
+      "finance",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "报销",
+      "合规"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_006",
+    "query": "我到底该找谁，但我不想说是财务还是法务。（编号6）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "主问题",
+      "责任部门"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_024",
+    "query": "“审批失败”到底是系统问题还是流程问题？（编号24）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "错误现象",
+      "问题归属"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_046",
+    "query": "日志留存周期和个人信息脱敏在系统里怎么实现？（编号46）",
+    "expected_agents": [
+      "tech",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "tech",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "日志留存",
+      "脱敏"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_030",
+    "query": "我到底该找谁，但我不想说是财务还是法务。（编号30）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "主问题",
+      "责任部门"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_037",
+    "query": "把这件事搞定。（编号37）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "low",
+    "expected_clarification_focus": [
+      "背景信息",
+      "期望结果"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_001",
+    "query": "这个问题很急，帮我处理一下。（编号1）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "业务范围",
+      "系统范围"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_041",
+    "query": "这个问题很急，帮我处理一下。（编号41）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "业务范围",
+      "系统范围"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "finance_025",
+    "query": "差旅报销里发票抬头和税号不一致怎么处理？（场景25）",
+    "expected_agents": [
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance"
+    ],
+    "difficulty": "easy",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "发票",
+      "税号"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_034",
+    "query": "新员工入职自动化机器人要同步 HR 系统和邮箱账号，怎么设计？（编号34）",
+    "expected_agents": [
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "入职",
+      "自动化"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_007",
+    "query": "报销、审批、账号同步三个系统要怎么打通？（编号7）",
+    "expected_agents": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "hr",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "报销",
+      "审批",
+      "账号"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_040",
+    "query": "费用报销涉及个人隐私票据时，凭证保留和合规审查如何平衡？（编号40）",
+    "expected_agents": [
+      "finance",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "报销",
+      "合规"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_041",
+    "query": "新员工入职自动化机器人要同步 HR 系统和邮箱账号，怎么设计？（编号41）",
+    "expected_agents": [
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "入职",
+      "自动化"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "tech_038",
+    "query": "微服务熔断和重试策略怎么配置？（场景38）",
+    "expected_agents": [
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "熔断",
+      "重试"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_048",
+    "query": "“审批失败”到底是系统问题还是流程问题？（编号48）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "错误现象",
+      "问题归属"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "hr_011",
+    "query": "异地办公期间的考勤和请假怎么登记？（场景11）",
+    "expected_agents": [
+      "hr"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "考勤",
+      "请假"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_007",
+    "query": "这个流程谁负责？别问我是入职还是离职。（编号7）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "流程名称",
+      "业务对象"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "legal_016",
+    "query": "员工拍摄宣传素材要注意哪些肝权条款？（场景16）",
+    "expected_agents": [
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "legal"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "肝权",
+      "合规"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_029",
+    "query": "报销系统要对接 ERP 和审批流接口，费用归属规则怎么配置？（编号29）",
+    "expected_agents": [
+      "finance",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "系统对接",
+      "费用归属"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_019",
+    "query": "费用报销涉及个人隐私票据时，凭证保留和合规审查如何平衡？（编号19）",
+    "expected_agents": [
+      "finance",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "报销",
+      "合规"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "tech_006",
+    "query": "微服务熔断和重试策略怎么配置？（场景6）",
+    "expected_agents": [
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "熔断",
+      "重试"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "finance_034",
+    "query": "预算申请超标了，补充材料需要走哪个财务步骤？（场景34）",
+    "expected_agents": [
+      "finance"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "预算",
+      "审批"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_035",
+    "query": "报销、入职、合同都顺手看看。（编号35）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "目标优先级",
+      "单一主问题"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_005",
+    "query": "费用报销涉及个人隐私票据时，凭证保留和合规审查如何平衡？（编号5）",
+    "expected_agents": [
+      "finance",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "报销",
+      "合规"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_006",
+    "query": "新员工入职自动化机器人要同步 HR 系统和邮箱账号，怎么设计？（编号6）",
+    "expected_agents": [
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "入职",
+      "自动化"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "tech_013",
+    "query": "接口鉴权失败但日志显示权限正常，排查思路是什么？（场景13）",
+    "expected_agents": [
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "tech"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "接口",
+      "日志",
+      "权限"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "multi_009",
+    "query": "离职员工的资产交接和保密协议冲突时，先走哪一步？（编号9）",
+    "expected_agents": [
+      "hr",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "离职",
+      "保密协议"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "hr_012",
+    "query": "离职面谈、资产归还和竞业限制分别要走什么流程？（场景12）",
+    "expected_agents": [
+      "hr"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "single",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "离职",
+      "资产归还",
+      "竞业"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "tech_014",
+    "query": "微服务熔断和重试策略怎么配置？（场景14）",
+    "expected_agents": [
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "single",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "熔断",
+      "重试"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "clarify_015",
+    "query": "这个流程谁负责？别问我是入职还是离职。（编号15）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "hard",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "流程名称",
+      "业务对象"
+    ],
+    "evaluation_tier": "strict"
+  },
+  {
+    "case_id": "retry_001",
+    "query": "离职员工的资产交接和保密协议冲突时，先走哪一步？（重试样本1）",
+    "expected_agents": [
+      "hr",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "离职",
+      "保密协议"
+    ],
+    "evaluation_tier": "retry",
+    "audit_feedback": "audit_agent 指出：hr 子代理遗漏了资产交接的执行细节，需要在重试轮补充；legal 子代理需要明确保密协议与离职交接的优先级。",
+    "retry_expected_agents": [
+      "hr",
+      "legal"
+    ],
+    "retry_expected_tool_chain": [
+      "invoke_sub_agent"
+    ]
+  },
+  {
+    "case_id": "retry_002",
+    "query": "报销系统里，隐私票据和合规审查冲突时怎么处理？（重试样本2）",
+    "expected_agents": [
+      "finance",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "finance",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "high",
+    "expected_clarification_focus": [
+      "报销",
+      "合规"
+    ],
+    "evaluation_tier": "retry",
+    "audit_feedback": "audit_agent 指出：finance 子代理需要补充票据留存规则，legal 子代理需要明确合规边界，禁止只给笼统结论。",
+    "retry_expected_agents": [
+      "finance",
+      "legal"
+    ],
+    "retry_expected_tool_chain": [
+      "invoke_sub_agent"
+    ]
+  },
+  {
+    "case_id": "retry_003",
+    "query": "新员工入职自动化机器人要同步 HR 系统和邮箱账号，怎么设计？（重试样本3）",
+    "expected_agents": [
+      "hr",
+      "tech"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "tech"
+    ],
+    "difficulty": "medium",
+    "scenario_type": "multi",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "入职",
+      "自动化"
+    ],
+    "evaluation_tier": "retry",
+    "audit_feedback": "audit_agent 指出：tech 子代理需要补充账号同步方案，hr 子代理需要补充入职流程节点，重试时要直接重新派发修正后的任务。",
+    "retry_expected_agents": [
+      "hr",
+      "tech"
+    ],
+    "retry_expected_tool_chain": [
+      "invoke_sub_agent"
+    ]
+  },
+  {
+    "case_id": "retry_004",
+    "query": "这个问题很急，帮我处理一下，但先别问细节。（重试样本4）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "easy",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "业务范围",
+      "系统范围"
+    ],
+    "evaluation_tier": "retry",
+    "audit_feedback": "audit_agent 指出：首次路由时追问不够聚焦，重试轮应直接用 human_in_loop 重新澄清问题边界，避免误分发。",
+    "retry_expected_agents": [],
+    "retry_expected_tool_chain": [
+      "human_in_loop"
+    ]
+  },
+  {
+    "case_id": "retry_005",
+    "query": "账号、权限、请假都不对劲，先给结论。（重试样本5）",
+    "expected_agents": [],
+    "needs_clarification": true,
+    "domain_tags": [],
+    "difficulty": "medium",
+    "scenario_type": "clarify",
+    "priority": "normal",
+    "expected_clarification_focus": [
+      "具体系统",
+      "错误现象"
+    ],
+    "evaluation_tier": "retry",
+    "audit_feedback": "audit_agent 指出：当前信息不足以分发，重试时仍然应先通过 human_in_loop 追问具体系统与错误现象。",
+    "retry_expected_agents": [],
+    "retry_expected_tool_chain": [
+      "human_in_loop"
+    ]
+  },
+  {
+    "case_id": "retry_006",
+    "query": "离职员工的资产交接和保密协议冲突时，先走哪一步？（重试样本6）",
+    "expected_agents": [
+      "hr",
+      "legal"
+    ],
+    "needs_clarification": false,
+    "domain_tags": [
+      "hr",
+      "legal"
+    ],
+    "difficulty": "hard",
+    "scenario_type": "multi",
+    "priority": "urgent",
+    "expected_clarification_focus": [
+      "离职",
+      "保密协议"
+    ],
+    "evaluation_tier": "retry",
+    "audit_feedback": "audit_agent 指出：重试轮必须同时修正 hr 与 legal 的指令，不能只改其中一个子代理。",
+    "retry_expected_agents": [
+      "hr",
+      "legal"
+    ],
+    "retry_expected_tool_chain": [
+      "invoke_sub_agent"
+    ]
+  }
+]
