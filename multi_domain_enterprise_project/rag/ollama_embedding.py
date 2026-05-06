@@ -4,16 +4,16 @@ from langchain_core.embeddings import Embeddings
 from typing import List
 
 # 异步客户端，用于 aembed_* 方法
-ollama_async_client = AsyncClient()
+ollama_async_client = AsyncClient(host=settings.ollama.base_url)
 # 同步客户端，用于 embed_* 方法
-ollama_sync_client = Client()
+ollama_sync_client = Client(host=settings.ollama.base_url)
 
 
 class OllamaEmbeddings(Embeddings):
     """
     一个使用Ollama本地模型并兼容LangChain的自定义Embedding类。
     """
-    model_name: str = 'qwen3-embedding:4b'
+    model_name: str = settings.ollama.embedding_model
 
     async def aembed_documents(self, texts: List[str], dims: int = settings.milvus.dims) -> List[List[float]]:
         """异步地为一组文档生成向量"""

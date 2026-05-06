@@ -209,3 +209,5 @@ data/
 document/
 .langgraph_api/
 test.py
+frontend/node_modules/
+frontend/dist/

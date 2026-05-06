@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Union
 
 import ollama
+from config import settings
 from multi_domain_enterprise_project.rag.documentParser.exception_handling import DocumentParsingError
 
 logging.basicConfig(
@@ -22,13 +23,14 @@ class EnterpriseLocalVLMParser:
     """
 
     file_max_size_mb = 50
-    support_file_types = [".png", ".jpg", ".jpeg", ".pdf"]
+    support_file_types = [".png", ".jpg", ".jpeg", ".bmp", ".pdf"]
 
-    def __init__(self, model_name: str = 'qwen2.5vl:3b'):
+    def __init__(self, model_name: str = settings.ollama.vlm_model):
         self.model_name = model_name
+        self.client = ollama.Client(host=settings.ollama.base_url)
         # 测试连接
         try:
-            ollama.list()
+            self.client.list()
             logger.info(f"✅ 已连接到本地 Ollama，使用模型: {self.model_name}")
         except Exception as e:
             logger.error("❌ 无法连接到 Ollama，请确保 Ollama 服务已启动。")
@@ -53,7 +55,7 @@ class EnterpriseLocalVLMParser:
         )
 
         try:
-            response = ollama.chat(
+            response = self.client.chat(
                 model=self.model_name,
                 messages=[{
                     'role': 'user',

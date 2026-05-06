@@ -109,6 +109,6 @@ async def tech_agent_node(state: TaskState, config: RunnableConfig):
         "sub_agent_messages": {
             SubAgentEnum.TECH.value: messages
         },
-        "finished_sub_agents": SubAgentEnum.TECH.value,
-        "pending_sub_agents": SubAgentEnum.TECH.value
+        "finished_sub_agents": [SubAgentEnum.TECH.value],
+        "pending_sub_agents": []
     }

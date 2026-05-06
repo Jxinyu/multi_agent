@@ -26,7 +26,21 @@ class EnterpriseDocParser:
     基于 LlamaParse 最新引擎的企业级文档解析服务
     """
     file_max_size_mb = 50
-    support_file_types = [".pdf", ".docx", ".xlsx", ".txt", ".md", ".png", ".jpg", ".jpeg", ".svg"]
+    support_file_types = [
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".ppt",
+        ".pptx",
+        ".xls",
+        ".xlsx",
+        ".txt",
+        ".md",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".svg",
+    ]
 
     def __init__(self):
         self.api_key = settings.llm_key.llamaParse

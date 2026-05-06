@@ -196,13 +196,13 @@ class DocumentParserRouter:
 
         try:
             # ================== 1. Office 文档路由 ==================
-            if ext in [".docx", ".xlsx", ".xls", ".pptx"]:
+            if ext in [".doc", ".docx", ".ppt", ".pptx", ".xlsx", ".xls"]:
                 if self.mode == "accurate":
                     logger.info("👉 决策: 强制高精模式，分发给 [LlamaParser]")
                     return await self.llama_parser.parse_file(file_path)
 
                 # 特别关照 PPT：幻灯片天生排版极其复杂，文本框随意放置，极易丢失空间语义
-                if ext == ".pptx":
+                if ext in [".ppt", ".pptx"]:
                     if self.mode == "fast":
                         logger.info("👉 决策: PPT幻灯片 (极速模式拦截)，牺牲排版交由本地 [OfficeParser]")
                         return await self.office_parser.parse_file(file_path)
@@ -273,7 +273,19 @@ class DocumentParserRouter:
         except Exception as e:
             logger.error(f"❌ 路由解析发生异常: {e}")
             # LlamaParse 兜底重试
-            if self.mode != "fast" and ext in [".pdf", ".docx", ".pptx", ".xlsx", ".png", ".jpg"]:
+            if self.mode != "fast" and ext in [
+                ".pdf",
+                ".doc",
+                ".docx",
+                ".ppt",
+                ".pptx",
+                ".xls",
+                ".xlsx",
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".bmp",
+            ]:
                 logger.warning("🔄 触发兜底机制: 尝试启用云端 LlamaParse 进行重试...")
                 try:
                     return await self.llama_parser.parse_file(file_path)

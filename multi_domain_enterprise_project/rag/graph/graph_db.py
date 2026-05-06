@@ -2,6 +2,8 @@
 import logging
 from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
 
+from config import settings
+
 # 增加这一行，设置日志级别为 INFO，并简单配置输出格式
 logging.basicConfig(
     level=logging.INFO,
@@ -13,10 +15,9 @@ logger = logging.getLogger(__name__)
 
 class EnterpriseGraphStore:
     def __init__(self):
-        # 实际使用中替换为配置文件 setting.neo4j.url 等
-        self.url = "bolt://localhost:7687"
-        self.username = "neo4j"
-        self.password = "12345678"
+        self.url = settings.neo4j.url
+        self.username = settings.neo4j.username
+        self.password = settings.neo4j.password
 
     def get_graph_store(self) -> Neo4jPropertyGraphStore:
         try:

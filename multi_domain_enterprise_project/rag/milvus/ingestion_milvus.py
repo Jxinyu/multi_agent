@@ -18,8 +18,8 @@ def get_base_index(collection_name: str):
     """提取公共的连接初始化代码"""
     # 连接本地向量模型
     embed_model = OllamaEmbedding(
-        model_name='qwen3-embedding:4b',
-        base_url="http://127.0.0.1:11434",
+        model_name=settings.ollama.embedding_model,
+        base_url=settings.ollama.base_url,
     )
     # 创建milvus管理器
     milvus_manager = EnterpriseMilvusStore(
@@ -71,9 +71,9 @@ class MilvusRetrieverService:
         self.index = get_base_index(collection_name)
         logger.info("⏳ 正在加载 BGE-Reranker 模型至显存...")
         self.reranker = FlagEmbeddingReranker(
-            top_n=3,
-            model="D:/Environment/model/bge-reranker-v2-m3",
-            use_fp16=True
+            top_n=settings.reranker.top_n,
+            model=settings.reranker.model_path,
+            use_fp16=settings.reranker.use_fp16
         )
         logger.info("✅ 检索服务初始化完毕！")
 

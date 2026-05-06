@@ -1,5 +1,6 @@
 import asyncio
 from typing import Annotated, Literal
+from pathlib import Path
 
 from fastmcp import FastMCP, Context
 from fastmcp.server.auth.providers.jwt import RSAKeyPair, JWTVerifier
@@ -7,19 +8,26 @@ from pydantic import SecretStr, Field
 import logging
 import aiofiles
 
+from config import settings
 from multi_domain_enterprise_project.rag.rag_main import query_milvus_pipeline, get_all_documents_name
 from multi_domain_enterprise_project.rag.rag_service import retrieve_service
 
 logger = logging.getLogger(__name__)
 
 
+def _key_path(configured_path: str, file_name: str) -> Path:
+    if configured_path:
+        return Path(configured_path).expanduser().resolve()
+    return Path(__file__).resolve().parent / file_name
+
+
 async def get_public_key():
-    async with aiofiles.open("./public_key", "r") as f:
+    async with aiofiles.open(_key_path(settings.mcp.public_key_path, "public_key"), "r") as f:
         return await f.read()
 
 
 async def get_private_key():
-    async with aiofiles.open("./private_key", "r") as f:
+    async with aiofiles.open(_key_path(settings.mcp.private_key_path, "private_key"), "r") as f:
         return await f.read()
 
 

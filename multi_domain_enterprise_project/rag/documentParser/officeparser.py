@@ -19,7 +19,7 @@ class EnterpriseOfficeParser:
     """
 
     file_max_size_mb = 50
-    support_file_types = [".docx", ".xlsx", ".xls", ".pptx", ".txt", ".md", ".csv", ".html"]
+    support_file_types = [".doc", ".docx", ".ppt", ".pptx", ".xlsx", ".xls", ".txt", ".md", ".csv", ".json", ".html"]
 
     def __init__(self):
         pass

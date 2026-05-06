@@ -43,7 +43,16 @@ async def upload_file_to_milvus_pipeline(file_path: str, tenant_id: str, user_id
     acl: 访问控制列表（通过用户的职别控制）
     mode: 默认是 'milvus' 表示只入向量数据库；'graph' 表示入向量数据库+构建知识图谱
     """
-    return await insert_document(file_path, tenant_id, user_id, title, acl, mode)
+    from multi_domain_enterprise_project.rag.rag_service import insert_service
+
+    return await insert_service(
+        file_path=file_path,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        title=title,
+        acl=acl,
+        mode=mode,
+    )
 
 
 async def get_all_documents_name(tenant_id: str, acl: str):

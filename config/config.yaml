@@ -1,8 +1,8 @@
 llm_key:
-  llamaParse: 'llx-YaUnPKRgcMQRDRgJxqRSi7CIE1Skla5Lzr3S7isPm3jl9fYr'
-  deepseek: 'sk-2bb46f04d60d4202b8badc6077f127ff'
-  xiaoAi: 'sk-XB8Wgvn66uZmJkcy65w9xBFsO9ZlrMtNhHOfG4f4Ljr8ZNal'
-  qwen: 'sk-5e27c67b8d06446d83b7ebb1c70cad94'
+  llamaParse: ''
+  deepseek: ''
+  xiaoAi: ''
+  qwen: ''
   postgressql: 'postgresql://postgres:123123@127.0.0.1:5432/langgraph-multi'
   redis: 'redis://127.0.0.1:6379'
 
@@ -12,3 +12,27 @@ llama_parser:
 milvus:
   uri: 'http://127.0.0.1:19530'
   dims: 2560  # qwen向量模型维度
+
+neo4j:
+  url: 'bolt://localhost:7687'
+  username: 'neo4j'
+  password: ''
+
+ollama:
+  base_url: 'http://127.0.0.1:11434'
+  embedding_model: 'qwen3-embedding:4b'
+  vlm_model: 'qwen2.5vl:3b'
+
+reranker:
+  model_path: 'D:/Environment/model/bge-reranker-v2-m3'
+  top_n: 3
+  use_fp16: true
+
+mcp:
+  rag_url: 'http://127.0.0.1:8010/rag-retriever'
+  document_token: ''
+  web_search_url: ''
+  finance_chart_url: ''
+  legal_url: ''
+  public_key_path: ''
+  private_key_path: ''

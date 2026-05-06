@@ -109,7 +109,9 @@ class GraphRetrieverService:
 
         # BGE-Reranker 来精排子图和文本
         self.reranker = FlagEmbeddingReranker(
-            top_n=3, model="D:/Environment/model/bge-reranker-v2-m3", use_fp16=True
+            top_n=settings.reranker.top_n,
+            model=settings.reranker.model_path,
+            use_fp16=settings.reranker.use_fp16
         )
 
     async def retrieve_answer(self, query_str: str, filters_dict: dict = None):
