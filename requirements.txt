@@ -11,6 +11,7 @@ langchain-openai
 langchain-pymupdf4llm
 langgraph
 langgraph-checkpoint-redis
+lightgbm
 llama-index
 llama-index-embeddings-langchain
 llama-index-embeddings-ollama
@@ -30,6 +31,7 @@ pymilvus
 pymupdf
 pyyaml
 redis
+rapidocr-onnxruntime
 short-unique-id
 tenacity
 uvicorn

@@ -72,9 +72,10 @@ class EnterpriseDocParser:
             api_key=self.api_key,
             result_type=mode,  # 输出格式
 
-            auto_mode=True,  # 系统自动判断使用哪个解析引擎
-            auto_mode_trigger_on_image_in_page=True,  # 页面有图片时，自动升级
-            auto_mode_trigger_on_table_in_page=True,  # 页面有表格时，自动升级
+            # LlamaParse 已弃用旧 auto_mode 上传接口，当前云端要求使用 tier-based job。
+            # agentic 适合复杂表格、扫描件和版面较复杂的企业文档。
+            tier="agentic",
+            aggressive_table_extraction=True,
 
             continuous_mode=True,  # 针对超长文档，防止中间解析中断，自动处理分片逻辑
             high_res_ocr=True,  # 针对图表使用高精度OCR

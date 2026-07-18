@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { createThreadId, fileToAttachmentPayload, streamChat } from '../api/chat';
-import type { AttachmentDraft, AttachmentPayload, ChatMessage, ChatSession, MessageAttachment } from '../types';
+import type {
+  AttachmentDraft,
+  AttachmentPayload,
+  ChatMessage,
+  ChatSession,
+  MessageAttachment
+} from '../types';
 
 interface StoredSession {
   threadId: string;
@@ -52,6 +58,8 @@ function saveHistory(history: StoredSession[]) {
     // Ignore storage quota or privacy-mode failures. The in-memory history still works.
   }
 }
+
+
 
 async function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -126,6 +134,7 @@ export function useChatSession() {
     saveHistory(history);
   }, [history]);
 
+
   const appendMessage = (message: Omit<ChatMessage, 'id'>) => {
     setMessages((current) => [...current, { ...message, id: createId() }]);
   };
@@ -151,6 +160,10 @@ export function useChatSession() {
     setMessages([WELCOME_MESSAGE]);
     setActiveHistoryThreadId(null);
     setAttachments([]);
+  };
+
+  const createNewChat = () => {
+    resetThread();
   };
 
   const stop = () => {
@@ -271,6 +284,7 @@ export function useChatSession() {
     send,
     stop,
     resetThread,
+    createNewChat,
     resumeSession,
     addAttachments,
     removeAttachment,

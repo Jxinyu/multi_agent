@@ -1,5 +1,4 @@
-import type { StreamEvent } from '../types';
-import type { AttachmentPayload } from '../types';
+import type { AttachmentPayload, StreamEvent } from '../types';
 
 export async function streamChat(
   query: string,

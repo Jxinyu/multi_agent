@@ -22,6 +22,7 @@ export function MessageItem({ message }: MessageItemProps) {
 
   return (
     <div className={`message-row ${isUser ? 'message-row-user' : 'message-row-ai'}`}>
+      <div className={`message-avatar ${isUser ? 'user-avatar' : 'assistant-avatar'}`}>{isUser ? 'You' : 'AI'}</div>
       <div
         className={`message-bubble ${
           isUser ? 'message-bubble-user' : isStatus ? 'message-bubble-status' : 'message-bubble-ai'
@@ -59,7 +60,7 @@ export function MessageItem({ message }: MessageItemProps) {
             >
               {referencesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               <Link size={14} />
-              <span>引用来源</span>
+              <span>Sources</span>
             </button>
             {referencesOpen ? (
               <ul>

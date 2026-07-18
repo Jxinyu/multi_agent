@@ -211,3 +211,22 @@ document/
 test.py
 frontend/node_modules/
 frontend/dist/
+
+# Local IDE / AI assistant state
+.idea/
+.cursor/
+.claude/
+
+# Local runtime logs
+*.stdout.log
+*.stderr.log
+frontend-vite.*.log
+mcp-rag.*.log
+
+# Local MCP signing keys. Generate these per environment.
+multi_domain_enterprise_project/mcp_server/private_key
+multi_domain_enterprise_project/mcp_server/public_key
+
+# Evaluation caches and generated raw outputs are too large for Git.
+evals/data/
+evals/results/

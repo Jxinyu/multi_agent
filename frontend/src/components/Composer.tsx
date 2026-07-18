@@ -1,4 +1,4 @@
-import { Paperclip, RotateCcw, Send, Square, X } from 'lucide-react';
+import { Paperclip, Send, Square, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import type { AttachmentDraft } from '../types';
@@ -7,7 +7,6 @@ interface ComposerProps {
   disabled?: boolean;
   attachments: AttachmentDraft[];
   onSend: (value: string) => void;
-  onReset: () => void;
   onStop: () => void;
   onAddAttachments: (files: FileList | File[]) => void;
   onRemoveAttachment: (id: string) => void;
@@ -23,7 +22,6 @@ export function Composer({
   disabled,
   attachments,
   onSend,
-  onReset,
   onStop,
   onAddAttachments,
   onRemoveAttachment
@@ -33,31 +31,48 @@ export function Composer({
   const canSubmit = !disabled && (value.trim().length > 0 || attachments.length > 0);
 
   const submit = () => {
-    const text = value.trim();
     if (!canSubmit) return;
-    onSend(text || '请分析附件内容，并给出要点总结。');
+    onSend(value.trim() || '请分析附件内容，并给出要点总结。');
     setValue('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
-    <footer className="composer-shell">
-      <div className="composer">
+    <footer className="composer-shell chatgpt-composer-shell">
+      <div className="composer chatgpt-composer">
         <div className="composer-main">
-          <textarea
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                submit();
-              }
-            }}
-            className="composer-input"
-            placeholder="输入业务问题，Enter 发送，Shift+Enter 换行"
-            rows={2}
-            disabled={disabled}
-          />
+          <div className="composer-hint">Press Enter to send, Shift+Enter for a new line</div>
+          <div className="composer-input-wrap">
+            <textarea
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  submit();
+                }
+              }}
+              className="composer-input"
+              placeholder="Message..."
+              rows={2}
+              disabled={disabled}
+            />
+            <div className="composer-attach-slot">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="sr-file-input"
+                accept="image/png,image/jpeg,image/bmp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.json"
+                onChange={(event) => {
+                  if (event.target.files?.length) onAddAttachments(event.target.files);
+                }}
+              />
+              <button type="button" className="attach-button" onClick={() => fileInputRef.current?.click()}>
+                <Paperclip size={15} />
+              </button>
+            </div>
+          </div>
 
           {attachments.length > 0 ? (
             <div className="attachment-strip">
@@ -68,12 +83,7 @@ export function Composer({
                     <span className="attachment-name">{item.name}</span>
                     <span className="attachment-size">{formatSize(item.size)}</span>
                   </div>
-                  <button
-                    type="button"
-                    className="attachment-remove"
-                    onClick={() => onRemoveAttachment(item.id)}
-                    title="移除附件"
-                  >
+                  <button type="button" className="attachment-remove" onClick={() => onRemoveAttachment(item.id)}>
                     <X size={14} />
                   </button>
                 </div>
@@ -83,33 +93,15 @@ export function Composer({
         </div>
 
         <div className="composer-actions">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="sr-file-input"
-            accept="image/png,image/jpeg,image/bmp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.json"
-            onChange={(event) => {
-              if (event.target.files?.length) {
-                onAddAttachments(event.target.files);
-              }
-            }}
-          />
-          <button type="button" className="icon-button secondary" onClick={() => fileInputRef.current?.click()}>
-            <Paperclip size={16} />
-            <span>附件</span>
-          </button>
           {disabled ? (
-            <button type="button" className="icon-button danger" onClick={onStop} title="停止">
+            <button type="button" className="icon-button danger" onClick={onStop}>
               <Square size={15} />
+              Stop
             </button>
           ) : null}
-          <button type="button" className="icon-button secondary" onClick={onReset} title="新会话">
-            <RotateCcw size={16} />
-          </button>
           <button type="button" className="icon-button primary" onClick={submit} disabled={!canSubmit}>
             <Send size={16} />
-            <span>发送</span>
+            <span>Send</span>
           </button>
         </div>
       </div>

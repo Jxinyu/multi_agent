@@ -1,4 +1,4 @@
-from typing import Annotated, Union, List, Dict
+from typing import Annotated, Union, List, Dict, Literal
 import logging
 
 from langchain_core.messages import ToolMessage, SystemMessage
@@ -39,7 +39,7 @@ async def get_sub_agent_list() -> List[Dict]:
 
 class InvokeAgentModel(BaseModel):
     """定义invoke_sub_agent模型参数"""
-    sub_agent_name: Annotated[str, Field(..., description="子代理名称")]
+    sub_agent_name: Annotated[Literal["finance", "tech", "legal", "hr"], Field(..., description="子代理名称，必须严格使用 finance、tech、legal、hr 之一，严禁编造新名称。")]
     content: Annotated[str, Field(...,description="给专家下达的具体任务指令。警告：必须是陈述句指令，严禁在此处填写对用户意图的疑问！")]
 
 
@@ -121,10 +121,17 @@ async def create_graph(checkpointer: Checkpointer):
     system_prompt = """
     # 角色定位
     你是多代理系统的“交通枢纽”，负责接收用户问题，并将其路由给合适的领域专家Agent。**你不需要直接回答用户，只负责“分发任务”或“向用户追问”。**
+
+    ## 可用子代理标识
+    - `hr`：员工手册、请假、入职、离职、绩效、福利、劳动合同、人事流程。
+    - `finance`：报销、预算、采购、发票、付款、成本中心、财务制度。
+    - `legal`：合同、NDA、隐私、数据合规、知识产权、许可证、法律风险。
+    - `tech`：API、系统架构、日志、部署、代码规范、项目 Wiki、内部技术文档。
+    调用 `invoke_sub_agent` 时，`sub_agent_name` 必须严格使用以上四个标识之一，严禁编造 `legal_advisor`、`hr_specialist`、`data_privacy_expert` 等新名称。
     
     ## 核心判断原则
     1. 先判断信息是否足够，再决定是否分发或追问。
-    2. 如果用户没有明确主问题、目标对象、流程名称、系统名称或业务边界，优先使用 `human_in_loop` 追问；如果仍可合理分发，就不要过早追问。
+    2. 如果用户没有明确主问题、目标对象、流程名称、系统名称或业务边界，优先使用 `human_in_loop` 追问；如果可以明确判断所属领域，不要因为缺少员工身份、具体时间、金额、合同编号等下游执行参数而过早追问。
     3. 如果问题涉及多个领域，尽量一次性识别全部相关领域，并在同一次 `invoke_sub_agent` 中全部下发，避免拆分成多次。
     4. 如果只涉及单一领域，也要尽量保持任务边界准确，不要把无关子代理一起带上。
     

@@ -1,4 +1,4 @@
-import { History, MessageSquareText } from 'lucide-react';
+import { History, MessageSquareText, Plus } from 'lucide-react';
 
 import type { ChatMessage } from '../types';
 
@@ -14,6 +14,8 @@ interface SessionSidebarProps {
   items: SessionItem[];
   activeThreadId: string | null;
   onSelect: (threadId: string) => void;
+  onNewChat: () => void;
+  activeWorkspace: 'chat' | 'admin';
 }
 
 function formatTime(timestamp: number): string {
@@ -25,16 +27,25 @@ function formatTime(timestamp: number): string {
   });
 }
 
-export function SessionSidebar({ items, activeThreadId, onSelect }: SessionSidebarProps) {
+export function SessionSidebar({ items, activeThreadId, onSelect, onNewChat, activeWorkspace }: SessionSidebarProps) {
   return (
-    <aside className="sidebar">
+    <aside className="sidebar chatgpt-sidebar">
       <div className="sidebar-header">
         <History size={16} />
-        <span>最近会话</span>
+        <span>History</span>
       </div>
+
+      {activeWorkspace === 'chat' ? (
+        <button type="button" className="new-thread-card" onClick={onNewChat}>
+          <Plus size={14} />
+          <span>New chat</span>
+        </button>
+      ) : null}
+
+      <div className="sidebar-section-label">Recent conversations</div>
       <div className="sidebar-list">
         {items.length === 0 ? (
-          <div className="sidebar-empty">暂无历史会话</div>
+          <div className="sidebar-empty">No history yet</div>
         ) : (
           items.map((item) => (
             <button
@@ -49,7 +60,7 @@ export function SessionSidebar({ items, activeThreadId, onSelect }: SessionSideb
               </div>
               <div className="session-card-meta">
                 <span>{item.status}</span>
-                <span>{item.messages.length} 条</span>
+                <span>{item.messages.length} msgs</span>
               </div>
               <div className="session-card-time">{formatTime(item.updatedAt)}</div>
             </button>

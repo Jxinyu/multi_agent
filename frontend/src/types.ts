@@ -39,6 +39,34 @@ export type StreamEvent =
   | { type: 'interrupt'; message: string; references?: ChatReference[] }
   | { type: 'error'; message: string };
 
+export interface CurrentUser {
+  user_id: string;
+  username: string;
+  tenant_id: string;
+  role: string;
+  permissions: string[];
+}
+
+export interface KnowledgeBaseItem {
+  id: string;
+  file_name: string;
+  title: string;
+  tenant_id: string;
+  owner_id: string;
+  acl: string;
+  upload_time: string;
+  mode: string;
+  file_path: string;
+  file_path_md?: string | null;
+  status: string;
+  chunk_count: number;
+  error?: string | null;
+  ingest_progress?: number;
+  ingest_total?: number;
+  ingest_message?: string | null;
+  batch_id?: string | null;
+}
+
 export interface ChatSession {
   threadId: string;
   status: string;

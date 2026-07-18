@@ -10,6 +10,7 @@ import fitz
 from multi_domain_enterprise_project.rag.documentParser.llamaparser import EnterpriseDocParser
 from multi_domain_enterprise_project.rag.documentParser.officeparser import EnterpriseOfficeParser
 from multi_domain_enterprise_project.rag.documentParser.pymupdfparser import EnterprisePyMuPDFParser
+from multi_domain_enterprise_project.rag.documentParser.rapidocrparser import EnterpriseRapidOCRParser
 from multi_domain_enterprise_project.rag.documentParser.qwenparser import EnterpriseLocalVLMParser
 from multi_domain_enterprise_project.rag.documentParser.exception_handling import DocumentParsingError
 
@@ -38,6 +39,7 @@ class DocumentParserRouter:
         # 懒加载初始化解析器，避免启动路由器时占用过多内存或显存
         self._office_parser = None
         self._pymupdf_parser = None
+        self._rapidocr_parser = None
         self._qwen_parser = None
         self._llama_parser = None
 
@@ -61,6 +63,13 @@ class DocumentParserRouter:
             logger.info("🔧 初始化 [EnterpriseLocalVLMParser] (Qwen2.5-VL)")
             self._qwen_parser = EnterpriseLocalVLMParser()
         return self._qwen_parser
+
+    @property
+    def rapidocr_parser(self):
+        if not self._rapidocr_parser:
+            logger.info("🔧 初始化 [EnterpriseRapidOCRParser] (RapidOCR)")
+            self._rapidocr_parser = EnterpriseRapidOCRParser()
+        return self._rapidocr_parser
 
     @property
     def llama_parser(self):
@@ -230,8 +239,8 @@ class DocumentParserRouter:
                     logger.info("👉 决策: 强制高精模式，分发给[LlamaParser]")
                     return await self.llama_parser.parse_file(file_path)
                 else:
-                    logger.info("👉 决策: 图片文件 (Auto/Fast)，分发给本地视觉大模型[QwenParser]")
-                    return await self.qwen_parser.parse_file(file_path)
+                    logger.info("👉 决策: 图片文件 (Auto/Fast)，分发给本地 OCR [RapidOCRParser]")
+                    return await self.rapidocr_parser.parse_file(file_path)
 
             # ================== 3. PDF 动态路由 ==================
             elif ext == ".pdf":
@@ -243,12 +252,11 @@ class DocumentParserRouter:
                 route_decision = self._probe_pdf(file_path)
 
                 if route_decision == "scanned":
-                    if self.mode == "fast":
-                        logger.info("👉 决策: PDF 扫描件 (极速模式)，分发给本地视觉[QwenParser]")
-                        return await self.qwen_parser.parse_file(file_path)
-                    else:
-                        logger.info("👉 决策: PDF 扫描件 (Auto)，分发给[LlamaParser]")
+                    if self.mode == "accurate":
+                        logger.info("👉 决策: PDF 扫描件 (高精模式)，分发给[LlamaParser]")
                         return await self.llama_parser.parse_file(file_path)
+                    logger.info("👉 决策: PDF 扫描件 (Auto/Fast)，分发给本地 OCR [RapidOCRParser]")
+                    return await self.rapidocr_parser.parse_file(file_path)
 
                 elif route_decision == "complex":
                     if self.mode == "fast":
