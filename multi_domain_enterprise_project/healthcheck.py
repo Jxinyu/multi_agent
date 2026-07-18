@@ -56,12 +56,15 @@ async def check_ollama() -> CheckResult:
 
 
 async def check_milvus() -> CheckResult:
-    try:
+    def probe() -> int:
         from pymilvus import MilvusClient
 
         client = MilvusClient(uri=settings.milvus.uri)
-        collections = client.list_collections()
-        return CheckResult("milvus", True, f"{len(collections)} collections")
+        return len(client.list_collections())
+
+    try:
+        collection_count = await asyncio.wait_for(asyncio.to_thread(probe), timeout=5)
+        return CheckResult("milvus", True, f"{collection_count} collections")
     except Exception as exc:
         return CheckResult("milvus", False, str(exc))
 
@@ -69,18 +72,23 @@ async def check_milvus() -> CheckResult:
 async def check_neo4j() -> CheckResult:
     if not settings.neo4j.password:
         return CheckResult("neo4j", False, "NEO4J_PASSWORD is not configured")
-    try:
+    def probe() -> int:
         from neo4j import GraphDatabase
 
         driver = GraphDatabase.driver(
             settings.neo4j.url,
             auth=(settings.neo4j.username, settings.neo4j.password),
+            connection_timeout=3,
         )
         try:
             with driver.session() as session:
                 value = session.run("RETURN 1 AS ok").single()["ok"]
         finally:
             driver.close()
+        return value
+
+    try:
+        value = await asyncio.wait_for(asyncio.to_thread(probe), timeout=5)
         return CheckResult("neo4j", value == 1, "query ok" if value == 1 else "query failed")
     except Exception as exc:
         return CheckResult("neo4j", False, str(exc))

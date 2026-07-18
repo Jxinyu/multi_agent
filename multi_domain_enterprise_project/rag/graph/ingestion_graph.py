@@ -1,45 +1,106 @@
+import asyncio
+import hashlib
 import logging
-from typing import List
+import re
+from functools import lru_cache
 
 from llama_index.core import PropertyGraphIndex
+from llama_index.core.graph_stores.types import EntityNode, Relation
+from llama_index.core.indices.property_graph import SimpleLLMPathExtractor, VectorContextRetriever
 from llama_index.core.schema import BaseNode, QueryBundle
-from llama_index.core.indices.property_graph import SimpleLLMPathExtractor, LLMSynonymRetriever, VectorContextRetriever
-from llama_index.core.vector_stores import MetadataFilter, FilterOperator, MetadataFilters, FilterCondition
 from llama_index.embeddings.langchain import LangchainEmbedding
 from llama_index.llms.dashscope import DashScope
-from llama_index.llms.openai_like import OpenAILike
-from llama_index.postprocessor.flag_embedding_reranker import FlagEmbeddingReranker
 
 from config import settings
-from multi_domain_enterprise_project.rag.graph.graph_db import EnterpriseGraphStore
+from multi_domain_enterprise_project.rag.authorization import (
+    build_authorized_filter_branches,
+    filter_authorized_nodes,
+)
+from multi_domain_enterprise_project.rag.graph.graph_db import get_graph_store
 from multi_domain_enterprise_project.rag.ollama_embedding import ollama_embedding_function
+from multi_domain_enterprise_project.rag.retrieval import deduplicate_node_results
+from multi_domain_enterprise_project.rag.runtime import get_reranker
 
 logger = logging.getLogger(__name__)
+
+
+class TenantScopedLLMPathExtractor(SimpleLLMPathExtractor):
+    """避免同名图实体在不同文档之间共享授权边界。"""
+
+    async def _aextract(self, node: BaseNode) -> BaseNode:
+        node = await super()._aextract(node)
+        tenant_id = str(node.metadata.get("tenant_id") or "")
+        document_id = str(node.metadata.get("document_id") or "")
+        version = str(node.metadata.get("version", 1))
+        if not tenant_id or not document_id:
+            raise ValueError("图谱抽取节点缺少 tenant_id 或 document_id")
+
+        scope = hashlib.sha256(
+            f"{tenant_id}\0{document_id}\0{version}".encode()
+        ).hexdigest()[:16]
+        entity_map = {}
+        scoped_entities = []
+        for entity in node.metadata.get("nodes", []):
+            if not isinstance(entity, EntityNode):
+                scoped_entities.append(entity)
+                continue
+            scoped_entity = EntityNode(
+                name=f"{scope}::{entity.name}",
+                label=entity.label,
+                embedding=entity.embedding,
+                properties={**entity.properties, "entity_name": entity.name},
+            )
+            entity_map[entity.id] = scoped_entity.id
+            scoped_entities.append(scoped_entity)
+
+        scoped_relations = []
+        for relation in node.metadata.get("relations", []):
+            if not isinstance(relation, Relation):
+                scoped_relations.append(relation)
+                continue
+            scoped_relations.append(
+                Relation(
+                    label=relation.label,
+                    source_id=entity_map.get(relation.source_id, relation.source_id),
+                    target_id=entity_map.get(relation.target_id, relation.target_id),
+                    properties=relation.properties,
+                )
+            )
+        node.metadata["nodes"] = scoped_entities
+        node.metadata["relations"] = scoped_relations
+        return node
+
+
+@lru_cache(maxsize=1)
+def get_graph_embedding_model() -> LangchainEmbedding:
+    return LangchainEmbedding(ollama_embedding_function)
+
+
+@lru_cache(maxsize=1)
+def get_graph_llm() -> DashScope:
+    return DashScope(model_name="qwen-max", api_key=settings.llm_key.qwen)
 
 
 class GraphStorePipelineService:
     def __init__(self):
         # 1. 准备 Embedding
-        self.embed_model = LangchainEmbedding(ollama_embedding_function)
+        self.embed_model = get_graph_embedding_model()
 
         # 2. 准备大语言模型 (用于抽取，推荐用大参数模型)
-        self.llm = DashScope(
-            model_name="qwen-max",
-            api_key=settings.llm_key.qwen
-        )
+        self.llm = get_graph_llm()
 
         # 3. 配置图谱存储
-        self.graph_store = EnterpriseGraphStore().get_graph_store()
+        self.graph_store = get_graph_store()
 
         # 4. 配置三元组抽取器
         # SimpleLLMPathExtractor 会提取实体及其关联，构建诸如 (李四, 汇报给, 张三) 的关系
-        self.kg_extractor = SimpleLLMPathExtractor(
+        self.kg_extractor = TenantScopedLLMPathExtractor(
             llm=self.llm,
             max_paths_per_chunk=10,  # 每个文本块最多抽取10个关系
             num_workers=2  # 并发抽取
         )
 
-    async def insert_nodes(self, nodes: List[BaseNode]):
+    async def insert_nodes(self, nodes: list[BaseNode]):
         """执行图谱抽取和入库"""
         if not nodes:
             return
@@ -71,7 +132,7 @@ class GraphStorePipelineService:
         try:
             # PropertyGraphIndex.from_nodes 会自动执行:
             # 文本块 -> 抽取器(LLM) -> 生成图结构 -> 向量化实体/文本块 -> 存入图数据库
-            index = PropertyGraphIndex(
+            PropertyGraphIndex(
                 nodes,  # 节点列表
                 llm=self.llm,  # LLM
                 use_async=True,  # 异步执行
@@ -85,20 +146,25 @@ class GraphStorePipelineService:
             logger.error(f"❌ 图谱入库失败: {e}")
             raise
 
+    async def delete_document(self, tenant_id: str, document_id: str) -> None:
+        if not tenant_id or not document_id:
+            raise ValueError("删除 Neo4j 数据必须提供 tenant_id 和 document_id")
+        await asyncio.to_thread(
+            self.graph_store.delete,
+            properties={"tenant_id": tenant_id, "document_id": document_id},
+        )
+
 
 class GraphRetrieverService:
     def __init__(self):
         # 1. 准备 Embedding
-        self.embed_model = LangchainEmbedding(ollama_embedding_function)
+        self.embed_model = get_graph_embedding_model()
 
         # 2. 准备大语言模型 (用于抽取，推荐用大参数模型)
-        self.llm = DashScope(
-            model_name="qwen-max",
-            api_key=settings.llm_key.qwen
-        )
+        self.llm = get_graph_llm()
 
         # 3. 配置图谱存储
-        self.graph_store = EnterpriseGraphStore().get_graph_store()
+        self.graph_store = get_graph_store()
 
         # 获取数据库索引，用于检索
         self.index = PropertyGraphIndex.from_existing(
@@ -108,55 +174,28 @@ class GraphRetrieverService:
         )
 
         # BGE-Reranker 来精排子图和文本
-        self.reranker = FlagEmbeddingReranker(
-            top_n=settings.reranker.top_n,
-            model=settings.reranker.model_path,
-            use_fp16=settings.reranker.use_fp16
+        self.reranker = get_reranker()
+
+    async def retrieve_nodes(self, query_str: str, filters_dict: dict = None):
+        logger.info("正在向 Neo4j 发起授权检索")
+        scope, filter_branches = build_authorized_filter_branches(filters_dict)
+        retrievers = [
+            VectorContextRetriever(
+                self.index.property_graph_store,
+                embed_model=self.embed_model,
+                include_text=True,
+                similarity_top_k=30,
+                filters=filters,
+            )
+            for filters in filter_branches
+        ]
+        branch_results = await asyncio.gather(
+            *(retriever.aretrieve(query_str) for retriever in retrievers)
         )
-
-    async def retrieve_answer(self, query_str: str, filters_dict: dict = None):
-        logger.info(f"⚙️ 正在向 Neo4j 图数据库 发起混合检索: {query_str}。 过滤字段: {filters_dict}")
-
-        filters = None
-        # 构造元数据过滤器
-        if filters_dict:
-            # 先把字典里 value 为 None 的键值对剔除掉！
-            cleaned_filters = {str(k): str(v) for k, v in filters_dict.items() if v is not None}
-
-            if cleaned_filters:
-                filter_list = [
-                    MetadataFilter(key=k, value=v, operator=FilterOperator.IN if k == 'acl' else FilterOperator.EQ)
-                    for k, v in cleaned_filters.items()
-                ]
-
-                filters = MetadataFilters(
-                    filters=filter_list,
-                    condition=FilterCondition.AND
-                )
-
-        # 策略 1: 基于 LLM 的同义词扩展和图谱实体  关键词检索
-        synonym_retriever = LLMSynonymRetriever(
-            self.index.property_graph_store,
-            llm=self.llm,
-            include_text=True
+        final_nodes = deduplicate_node_results(
+            [node for branch in branch_results for node in branch]
         )
-
-        # 策略 2: 基于向量的图谱内容检索 (匹配节点描述或边描述)  向量语义检索
-        vector_retriever = VectorContextRetriever(
-            self.index.property_graph_store,
-            embed_model=self.embed_model,
-            include_text=True,
-            similarity_top_k=30,
-            filters=filters
-        )
-
-        # 构建自定义检索器 (LlamaIndex 自带的混合检索功能)
-        hybrid_retriever = self.index.as_retriever(
-            sub_retrievers=[synonym_retriever, vector_retriever]
-        )
-
-        # 多路召回与融合(内部使用RRF重排)
-        final_nodes = await hybrid_retriever.aretrieve(query_str)
+        final_nodes = filter_authorized_nodes(final_nodes, scope)
 
         if not final_nodes:
             logger.warning("⚠️ 检索结果为空！")
@@ -168,8 +207,12 @@ class GraphRetrieverService:
             nodes=final_nodes,
             query_bundle=query_bundle
         )
+        return filter_authorized_nodes(final_nodes, scope)
 
-        return await format_graph_retrieval_results(final_nodes)
+    async def retrieve_answer(self, query_str: str, filters_dict: dict = None):
+        return await format_graph_retrieval_results(
+            await self.retrieve_nodes(query_str, filters_dict)
+        )
 
 
 async def format_graph_retrieval_results(nodes):
@@ -185,25 +228,39 @@ async def format_graph_retrieval_results(nodes):
     seen_ids = set()
     for node_with_score in nodes:
         node = node_with_score.node
-        if node.node_id in seen_ids: continue
+        if node.node_id in seen_ids:
+            continue
         seen_ids.add(node.node_id)
 
         score = node_with_score.score
+        score_text = f"{score:.4f}" if score is not None else "N/A"
         file_name = node.metadata.get('file_name', '未知文件')
-        content = node.get_content().strip()
+        content = re.sub(r"\b[a-f0-9]{16}::", "", node.get_content().strip())
 
         # 判定是三元组事实还是原始文本
         if "facts extracted from the provided text" in content:
             # 这里的 content 已经包含了 "Here are some facts..."
-            header = f"--- [来源: {file_name} | 类型: 关系事实 | 匹配分值: {score:.4f}] ---"
+            header = f"--- [来源: {file_name} | 类型: 关系事实 | 匹配分值: {score_text}] ---"
             kg_parts.append(f"{header}\n{content}")
         else:
-            header = f"--- [来源: {file_name} | 类型: 关联文本 | 匹配分值: {score:.4f}] ---"
+            header = f"--- [来源: {file_name} | 类型: 关联文本 | 匹配分值: {score_text}] ---"
             text_parts.append(f"{header}\n{content}")
 
     # 合并输出
     result = []
-    if len(kg_parts) > 1: result.append("\n\n".join(kg_parts))
-    if len(text_parts) > 1: result.append("\n\n".join(text_parts))
+    if len(kg_parts) > 1:
+        result.append("\n\n".join(kg_parts))
+    if len(text_parts) > 1:
+        result.append("\n\n".join(text_parts))
 
     return "\n\n".join(result)
+
+
+@lru_cache(maxsize=1)
+def get_graph_store_pipeline_service() -> GraphStorePipelineService:
+    return GraphStorePipelineService()
+
+
+@lru_cache(maxsize=1)
+def get_graph_retriever_service() -> GraphRetrieverService:
+    return GraphRetrieverService()

@@ -1,137 +1,141 @@
 from __future__ import annotations
 
-import asyncio
-import base64
 import json
 import logging
 import os
 import tempfile
-from datetime import datetime, timezone
+import time
+import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Annotated, Any, Literal
 
 import uvicorn
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
-from redis.asyncio import Redis
-from starlette.responses import StreamingResponse
-
-from config import settings
 from langgraph.checkpoint.redis import AsyncRedisSaver
+from prometheus_client import make_asgi_app
+from pydantic import BaseModel, Field, field_validator, model_validator
+from redis.asyncio import Redis
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from config import settings, validate_runtime_settings
 from multi_domain_enterprise_project.agent.agent_main import run_agent_stream
-from multi_domain_enterprise_project.core.task_state import TaskStatus
-from multi_domain_enterprise_project.rag.documentParser.parser_route import DocumentParserRouter
-from multi_domain_enterprise_project.rag.document_in_database import insert_document
-from multi_domain_enterprise_project.rag.kb_admin import (
-    KnowledgeDocument,
-    clear_knowledge_base,
-    create_document_id,
-    delete_document,
-    ensure_kb_root,
-    load_registry,
-    patch_document,
-    upsert_document,
+from multi_domain_enterprise_project.core.auth import (
+    AuthTokenResponse,
+    CurrentUser,
+    create_development_token,
+    get_current_user,
+    require_permissions,
 )
+from multi_domain_enterprise_project.core.database import (
+    IngestionJobRecord,
+    SessionFactory,
+    close_database,
+    create_document,
+    create_job,
+    create_upload_session,
+    get_document,
+    get_session,
+    get_upload_session,
+    init_database,
+    list_documents,
+    remove_upload_session,
+    update_document,
+    update_job,
+    utc_now,
+)
+from multi_domain_enterprise_project.core.jobs import enqueue_job, ensure_job_group
+from multi_domain_enterprise_project.core.observability import (
+    RequestContextMiddleware,
+    configure_logging,
+    configure_tracing,
+)
+from multi_domain_enterprise_project.core.storage import (
+    combine_chunks,
+    decode_attachment,
+    document_path,
+    ensure_storage_roots,
+    normalized_extension,
+    remove_upload_session_files,
+    stream_upload,
+    upload_session_dir,
+    validate_file_signature,
+)
+from multi_domain_enterprise_project.healthcheck import run_checks
+from multi_domain_enterprise_project.rag.documentParser.parser_route import DocumentParserRouter
 
-os.environ.setdefault("NO_PROXY", "localhost,127.0.0.1,modelscope.net,bigmodel.cn,xiaoai.plus")
-
-logging.basicConfig(level=logging.INFO)
+configure_logging()
+configure_tracing()
 logger = logging.getLogger(__name__)
-logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-logging.getLogger("watchfiles.main").setLevel(logging.WARNING)
-logging.getLogger("redisvl.index.index").setLevel(logging.WARNING)
-logging.getLogger("langgraph.checkpoint.redis.aio").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("mcp.client.streamable_http").setLevel(logging.WARNING)
-
-redis_conn: Redis | None = None
-global_checkpointer = None
+os.environ.setdefault("NO_PROXY", "localhost,127.0.0.1,modelscope.net,bigmodel.cn,xiaoai.plus")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
 FRONTEND_INDEX = FRONTEND_DIST / "index.html"
+RESUMABLE_CHUNK_SIZE = 2 * 1024 * 1024
+
+redis_conn: Redis | None = None
+global_checkpointer: Any = None
 
 
+@asynccontextmanager
 async def lifespan(app: FastAPI):
     global redis_conn, global_checkpointer
+    validate_runtime_settings(settings)
+    ensure_storage_roots()
+    await init_database()
 
-    redis_url = settings.llm_key.redis
-    redis_conn = Redis.from_url(redis_url, decode_responses=False)
+    redis_conn = Redis.from_url(settings.llm_key.redis, decode_responses=False)
+    await redis_conn.ping()
+    await ensure_job_group(redis_conn)
     app.state.redis = redis_conn
 
-    async with AsyncRedisSaver.from_conn_string(redis_url) as checkpointer:
+    async with AsyncRedisSaver.from_conn_string(settings.llm_key.redis) as checkpointer:
         await checkpointer.asetup()
         global_checkpointer = checkpointer
-        logger.info("Redis Checkpointer 初始化成功")
+        logger.info("应用依赖初始化完成")
         yield
 
-    if redis_conn:
-        await redis_conn.aclose()
-    logger.info("服务关闭，Redis 连接池已释放")
+    global_checkpointer = None
+    await redis_conn.aclose()
+    redis_conn = None
+    await close_database()
+    logger.info("应用资源已释放")
 
 
-app = FastAPI(title="企业多智能体助手", lifespan=lifespan)
-
-
-async def write_to_redis_cache(thread_id: str, query: str):
-    try:
-        cache_key = f"cache:request:{thread_id}"
-        await redis_conn.setex(cache_key, 3600, query)  # type: ignore[union-attr]
-    except Exception as exc:
-        logger.error("写入 Redis 缓存失败: %s", exc)
-
-
-async def worker_write_to_postgres(thread_id: str, query: str):
-    try:
-        await asyncio.sleep(0.5)
-        logger.info("异步持久化请求成功: %s", thread_id)
-    except Exception as exc:
-        logger.error("写入 PG 请求表失败: %s", exc)
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+app = FastAPI(title="企业多智能体助手", version="1.0.0", lifespan=lifespan)
+app.add_middleware(RequestContextMiddleware)
+if settings.runtime.cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.runtime.cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "DELETE"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    )
+app.mount("/metrics", make_asgi_app(), name="metrics")
 
 
 class AttachmentPayload(BaseModel):
-    name: str
-    mime_type: str
-    data_base64: str
+    name: str = Field(min_length=1, max_length=255)
+    mime_type: str = Field(max_length=128)
+    data_base64: str = Field(min_length=1)
 
 
 class ChatRequest(BaseModel):
-    query: str
-    thread_id: str
+    query: str = Field(min_length=1, max_length=8000)
+    thread_id: str = Field(pattern=r"^[A-Za-z0-9_-]{8,128}$")
     attachments: list[AttachmentPayload] = Field(default_factory=list)
 
-
-class ChatResponse(BaseModel):
-    status: str
-    message: str
-    references: Optional[List[Any]] = None
-
-
-class CurrentUser(BaseModel):
-    user_id: str
-    username: str
-    tenant_id: str
-    role: str
-    permissions: list[str]
-
-
-MOCK_CURRENT_USER = CurrentUser(
-    user_id='user_admin_001',
-    username='admin',
-    tenant_id='tenant_default',
-    role='admin',
-    permissions=['kb:read', 'kb:write', 'kb:delete'],
-)
-
-
-def get_current_user() -> CurrentUser:
-    return MOCK_CURRENT_USER
+    @model_validator(mode="after")
+    def validate_attachment_count(self) -> ChatRequest:
+        if len(self.attachments) > settings.upload.max_attachments_per_request:
+            raise ValueError("附件数量超过限制")
+        return self
 
 
 class CurrentUserResponse(BaseModel):
@@ -144,39 +148,23 @@ class KnowledgeBaseItem(BaseModel):
     title: str
     tenant_id: str
     owner_id: str
-    acl: str
+    acl: list[str]
     upload_time: str
     mode: str
-    file_path: str
-    file_path_md: Optional[str] = None
-    status: str = 'uploaded'
+    status: str = "uploaded"
     chunk_count: int = 0
-    error: Optional[str] = None
+    error: str | None = None
     ingest_progress: int = 0
     ingest_total: int = 0
-    ingest_message: Optional[str] = None
-    batch_id: Optional[str] = None
+    ingest_message: str | None = None
+    batch_id: str | None = None
+    version: int = 1
+    checksum: str
+    backend_status: dict[str, str] = Field(default_factory=dict)
 
 
 class KnowledgeBaseListResponse(BaseModel):
     items: list[KnowledgeBaseItem]
-
-
-class KnowledgeBaseGetResponse(BaseModel):
-    item: KnowledgeBaseItem
-
-
-class IngestRequest(BaseModel):
-    mode: str = Field(default='rag')
-
-
-class BulkIngestRequest(BaseModel):
-    ids: list[str]
-    mode: str = Field(default='rag')
-
-
-class BulkDeleteRequest(BaseModel):
-    ids: list[str]
 
 
 class UploadResponse(BaseModel):
@@ -184,11 +172,29 @@ class UploadResponse(BaseModel):
     items: list[KnowledgeBaseItem] | None = None
 
 
+class IngestRequest(BaseModel):
+    mode: Literal["rag", "graphrag", "hybrid"] = "rag"
+
+
+class BulkIngestRequest(IngestRequest):
+    ids: list[str] = Field(min_length=1, max_length=100)
+
+
+class BulkDeleteRequest(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=100)
+
+
 class ResumableUploadInitRequest(BaseModel):
-    file_name: str
-    file_size: int
-    title: str = ''
-    mode: str = 'rag'
+    file_name: str = Field(min_length=1, max_length=255)
+    file_size: int = Field(gt=0)
+    title: str = Field(default="", max_length=512)
+    mode: Literal["rag", "graphrag", "hybrid"] = "rag"
+
+    @field_validator("file_name")
+    @classmethod
+    def validate_file_name(cls, value: str) -> str:
+        normalized_extension(value)
+        return Path(value).name
 
 
 class ResumableUploadInitResponse(BaseModel):
@@ -205,68 +211,60 @@ class ResumableUploadStatusResponse(BaseModel):
 
 
 class ResumableUploadCompleteRequest(BaseModel):
-    upload_id: str
+    upload_id: str = Field(pattern=r"^[A-Za-z0-9_-]{16,64}$")
 
 
 class DeleteResponse(BaseModel):
     success: bool
 
 
-RESUMABLE_CHUNK_SIZE = 2 * 1024 * 1024
+class JobResponse(BaseModel):
+    id: str
+    document_id: str
+    operation: str
+    mode: str
+    status: str
+    attempts: int
+    error: str | None
 
 
-def _upload_sessions_root() -> Path:
-    return Path('data') / 'knowledge_base' / 'upload_sessions'
+Session = Annotated[AsyncSession, Depends(get_session)]
+Authenticated = Annotated[CurrentUser, Depends(get_current_user)]
+ChatUser = Annotated[CurrentUser, Depends(require_permissions("chat:use"))]
+KbReader = Annotated[CurrentUser, Depends(require_permissions("kb:read"))]
+KbWriter = Annotated[CurrentUser, Depends(require_permissions("kb:write"))]
+KbDeleter = Annotated[CurrentUser, Depends(require_permissions("kb:delete"))]
 
 
-async def _load_item(doc_id: str) -> dict[str, Any] | None:
-    return next((doc for doc in load_registry() if doc.get('id') == doc_id), None)
+def _item(payload: dict[str, Any]) -> KnowledgeBaseItem:
+    return KnowledgeBaseItem(**payload)
 
 
-def _filter_items_for_user(items: list[dict[str, Any]], current_user: CurrentUser) -> list[dict[str, Any]]:
-    return [item for item in items if item.get('tenant_id') == current_user.tenant_id]
-
-
-def _ensure_user_can_access_item(item: dict[str, Any] | None, current_user: CurrentUser) -> dict[str, Any]:
+async def _require_document(session: AsyncSession, document_id: str, user: CurrentUser) -> dict[str, Any]:
+    item = await get_document(session, document_id, user.tenant_id)
     if item is None:
-        raise HTTPException(status_code=404, detail='文档不存在')
-    if item.get('tenant_id') != current_user.tenant_id:
-        raise HTTPException(status_code=404, detail='文档不存在')
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="文档不存在")
     return item
 
 
-def _session_dir(upload_id: str) -> Path:
-    if not upload_id.replace('-', '').replace('_', '').isalnum():
-        raise HTTPException(status_code=400, detail='非法 upload_id')
-    return _upload_sessions_root() / upload_id
-
-
-def _session_meta_path(upload_id: str) -> Path:
-    return _session_dir(upload_id) / 'meta.json'
-
-
-def _load_upload_meta(upload_id: str, current_user: CurrentUser) -> dict[str, Any]:
-    meta_path = _session_meta_path(upload_id)
-    if not meta_path.exists():
-        raise HTTPException(status_code=404, detail='上传会话不存在')
-    meta = json.loads(meta_path.read_text(encoding='utf-8'))
-    if meta.get('tenant_id') != current_user.tenant_id or meta.get('owner_id') != current_user.user_id:
-        raise HTTPException(status_code=404, detail='上传会话不存在')
-    return meta
-
-
-def _save_upload_meta(upload_id: str, meta: dict[str, Any]) -> None:
-    session_dir = _session_dir(upload_id)
-    session_dir.mkdir(parents=True, exist_ok=True)
-    _session_meta_path(upload_id).write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding='utf-8')
+async def _rate_limit(user: CurrentUser, action: str) -> None:
+    if redis_conn is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="限流服务未初始化")
+    minute = int(time.time() // 60)
+    key = f"rate:{user.tenant_id}:{user.user_id}:{action}:{minute}"
+    count = await redis_conn.incr(key)
+    if count == 1:
+        await redis_conn.expire(key, 120)
+    if count > settings.runtime.request_rate_limit_per_minute:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="请求过于频繁")
 
 
 def _uploaded_chunk_indexes(upload_id: str) -> list[int]:
-    chunks_dir = _session_dir(upload_id) / 'chunks'
+    chunks_dir = upload_session_dir(upload_id) / "chunks"
     if not chunks_dir.exists():
         return []
     indexes: list[int] = []
-    for path in chunks_dir.glob('*.part'):
+    for path in chunks_dir.glob("*.part"):
         try:
             indexes.append(int(path.stem))
         except ValueError:
@@ -274,281 +272,404 @@ def _uploaded_chunk_indexes(upload_id: str) -> list[int]:
     return sorted(indexes)
 
 
-def _decode_attachment_data(data_base64: str) -> bytes:
-    if "," in data_base64 and data_base64.startswith("data:"):
-        data_base64 = data_base64.split(",", 1)[1]
-    return base64.b64decode(data_base64)
-
-
-def _attachment_suffix(name: str, mime_type: str) -> str:
-    suffix = Path(name).suffix
-    if suffix:
-        return suffix
-    if "pdf" in mime_type:
-        return ".pdf"
-    if "png" in mime_type:
-        return ".png"
-    if "jpeg" in mime_type or "jpg" in mime_type:
-        return ".jpg"
-    return ".bin"
-
-
-async def build_attachment_context(attachments: list[AttachmentPayload]) -> tuple[str, list[str]]:
+async def _build_attachment_context(attachments: list[AttachmentPayload]) -> tuple[str, list[str]]:
     if not attachments:
         return "", []
     router = DocumentParserRouter(mode="auto")
     sections: list[str] = []
     names: list[str] = []
     with tempfile.TemporaryDirectory(prefix="rag-upper-attachments-") as temp_dir:
-        temp_dir_path = Path(temp_dir)
-        for item in attachments:
-            names.append(item.name)
-            temp_path = temp_dir_path / f"{Path(item.name).stem[:64]}{_attachment_suffix(item.name, item.mime_type)}"
-            temp_path.write_bytes(_decode_attachment_data(item.data_base64))
-            parsed = await router.route_and_parse(str(temp_path))
-            sections.append(f"### 附件: {item.name}\n{parsed}")
+        root = Path(temp_dir)
+        for attachment in attachments:
+            extension = normalized_extension(attachment.name)
+            data = decode_attachment(attachment.data_base64, settings.upload.max_attachment_size_bytes)
+            path = root / f"{uuid.uuid4().hex}{extension}"
+            path.write_bytes(data)
+            validate_file_signature(path, extension)
+            parsed = await router.route_and_parse(str(path))
+            sections.append(f"### 附件: {Path(attachment.name).name}\n{parsed}")
+            names.append(Path(attachment.name).name)
     return "\n\n".join(sections), names
 
 
-@app.post("/api/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
-    background_tasks.add_task(write_to_redis_cache, request.thread_id, request.query)
-    background_tasks.add_task(worker_write_to_postgres, request.thread_id, request.query)
+async def _queue_document_job(
+    session: AsyncSession,
+    item: dict[str, Any],
+    *,
+    operation: str,
+    mode: str,
+) -> None:
+    if redis_conn is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="任务队列未初始化")
+    job_id = uuid.uuid4().hex
+    await create_job(
+        session,
+        job_id=job_id,
+        document_id=item["id"],
+        tenant_id=item["tenant_id"],
+        operation=operation,
+        mode=mode,
+    )
+    try:
+        await enqueue_job(
+            redis_conn,
+            job_id=job_id,
+            document_id=item["id"],
+            tenant_id=item["tenant_id"],
+            operation=operation,
+            mode=mode,
+        )
+    except Exception as exc:
+        await update_job(session, job_id, status="failed", error="任务入队失败")
+        await update_document(
+            session,
+            item["id"],
+            item["tenant_id"],
+            status="delete_failed" if operation == "delete" else "failed",
+            error="任务入队失败",
+            ingest_message="任务未进入队列",
+        )
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="任务入队失败") from exc
+
+
+@app.post("/api/auth/development-token", response_model=AuthTokenResponse)
+async def development_token() -> AuthTokenResponse:
+    return create_development_token()
+
+
+@app.get("/api/auth/me", response_model=CurrentUserResponse)
+async def get_me(current_user: Authenticated) -> CurrentUserResponse:
+    return CurrentUserResponse(user=current_user)
+
+
+@app.post("/api/chat")
+async def chat_endpoint(request: ChatRequest, current_user: ChatUser):
+    await _rate_limit(current_user, "chat")
+    internal_thread_id = f"{current_user.tenant_id}:{current_user.user_id}:{request.thread_id}"
     config: dict[str, Any] = {
         "configurable": {
-            "thread_id": request.thread_id,
-            "user_info": {"user_id": "123123", "position": "CEO", "department": "老板"},
-            "task_status": TaskStatus.ROUTING.value,
+            "thread_id": internal_thread_id,
+            "access_token": current_user.access_token,
+            "user_info": {
+                "user_id": current_user.user_id,
+                "tenant_id": current_user.tenant_id,
+                "role": current_user.role,
+                "groups": current_user.groups,
+            },
         }
     }
 
     async def event_generator():
         if global_checkpointer is None:
-            yield f"data: {json.dumps({'type': 'error', 'message': '检查点服务未初始化'}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': '会话服务未就绪'}, ensure_ascii=False)}\n\n"
             return
-        attachment_context = ""
-        if request.attachments:
-            yield f"data: {json.dumps({'type': 'status', 'message': f'正在解析 {len(request.attachments)} 个附件...'}, ensure_ascii=False)}\n\n"
-            attachment_context, attachment_names = await build_attachment_context(request.attachments)
+        try:
+            attachment_context, names = await _build_attachment_context(request.attachments)
+            if names:
+                yield f"data: {json.dumps({'type': 'status', 'message': f'已解析 {len(names)} 个附件'}, ensure_ascii=False)}\n\n"
+            query = request.query
             if attachment_context:
-                joined_names = "、".join(attachment_names)
-                yield f"data: {json.dumps({'type': 'status', 'message': f'附件解析完成：{joined_names}'}, ensure_ascii=False)}\n\n"
-        query_text = request.query
-        if attachment_context:
-            query_text = f"{request.query}\n\n【附件解析内容】\n{attachment_context}\n\n请结合附件内容回答用户问题。"
-        async for chunk in run_agent_stream(query=query_text, config=config, checkpointer=global_checkpointer):
-            yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                query = f"{query}\n\n【附件解析内容】\n{attachment_context}\n\n请结合附件内容回答。"
+            async for chunk in run_agent_stream(query=query, config=config, checkpointer=global_checkpointer):
+                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+        except HTTPException as exc:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc.detail)}, ensure_ascii=False)}\n\n"
+        except Exception:
+            logger.exception("聊天流处理失败")
+            yield f"data: {json.dumps({'type': 'error', 'message': '请求处理失败，请稍后重试'}, ensure_ascii=False)}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
-
-
-@app.get("/api/health")
-async def api_health():
-    return {"status": "ok"}
-
-
-@app.get("/api/auth/me", response_model=CurrentUserResponse)
-async def get_me(current_user: CurrentUser = Depends(get_current_user)):
-    return CurrentUserResponse(user=current_user)
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/api/admin/documents", response_model=KnowledgeBaseListResponse)
-async def list_documents(current_user: CurrentUser = Depends(get_current_user)):
-    ensure_kb_root()
-    items = _filter_items_for_user(load_registry(), current_user)
-    return KnowledgeBaseListResponse(items=[KnowledgeBaseItem(**item) for item in items])
+async def api_list_documents(current_user: KbReader, session: Session):
+    items = await list_documents(session, current_user.tenant_id)
+    return KnowledgeBaseListResponse(items=[_item(item) for item in items])
 
 
-@app.get("/api/admin/documents/{doc_id}")
-async def get_document(doc_id: str, current_user: CurrentUser = Depends(get_current_user)):
-    item = _ensure_user_can_access_item(await _load_item(doc_id), current_user)
-    return {"item": KnowledgeBaseItem(**item)}
+@app.get("/api/admin/documents/{document_id}")
+async def api_get_document(document_id: str, current_user: KbReader, session: Session):
+    return {"item": _item(await _require_document(session, document_id, current_user))}
 
 
 @app.post("/api/admin/documents/upload", response_model=UploadResponse)
-async def upload_document(
+async def upload_documents(
+    current_user: KbWriter,
+    session: Session,
     files: list[UploadFile] = File(...),
-    title: str = Form(''),
-    mode: str = Form('rag'),
-    current_user: CurrentUser = Depends(get_current_user),
+    title: str = Form(""),
+    mode: Literal["rag", "graphrag", "hybrid"] = Form("rag"),
 ):
-    ensure_kb_root()
+    await _rate_limit(current_user, "upload")
+    if not files or len(files) > settings.upload.max_files_per_request:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="上传文件数量无效")
     created: list[KnowledgeBaseItem] = []
-    for file in files:
-        document_id = create_document_id()
-        suffix = Path(file.filename or '').suffix or '.bin'
-        file_name = file.filename or f'document{suffix}'
-        stored_file = Path('data') / 'knowledge_base' / 'files' / f'{document_id}{suffix}'
-        stored_file.parent.mkdir(parents=True, exist_ok=True)
-        contents = await file.read()
-        stored_file.write_bytes(contents)
-        item = KnowledgeDocument(
-            id=document_id,
-            file_name=file_name,
-            title=title or Path(file_name).stem,
-            tenant_id=current_user.tenant_id,
-            owner_id=current_user.user_id,
-            acl='private',
-            upload_time=_now_iso(),
-            mode=mode,
-            file_path=str(stored_file),
-        )
-        upsert_document(item)
-        created.append(KnowledgeBaseItem(**item.__dict__))
+    for upload in files:
+        file_name = Path(upload.filename or "").name
+        extension = normalized_extension(file_name)
+        document_id = uuid.uuid4().hex
+        target = document_path(document_id, file_name)
+        try:
+            _, checksum = await stream_upload(upload, target, max_bytes=settings.upload.max_file_size_bytes)
+            validate_file_signature(target, extension)
+            payload = {
+                "id": document_id,
+                "file_name": file_name,
+                "title": title[:512] or Path(file_name).stem,
+                "tenant_id": current_user.tenant_id,
+                "owner_id": current_user.user_id,
+                "acl": ["private"],
+                "upload_time": utc_now(),
+                "mode": mode,
+                "file_path": str(target),
+                "checksum": checksum,
+            }
+            created.append(_item(await create_document(session, payload)))
+        except Exception:
+            target.unlink(missing_ok=True)
+            raise
     return UploadResponse(items=created)
 
 
 @app.post("/api/admin/uploads/resumable/init", response_model=ResumableUploadInitResponse)
-async def init_resumable_upload(payload: ResumableUploadInitRequest, current_user: CurrentUser = Depends(get_current_user)):
-    ensure_kb_root()
-    upload_id = create_document_id()
-    meta = {
-        'upload_id': upload_id,
-        'file_name': payload.file_name,
-        'file_size': payload.file_size,
-        'title': payload.title,
-        'mode': payload.mode,
-        'tenant_id': current_user.tenant_id,
-        'owner_id': current_user.user_id,
-        'acl': 'private',
-        'chunk_size': RESUMABLE_CHUNK_SIZE,
-        'created_at': _now_iso(),
-    }
-    _save_upload_meta(upload_id, meta)
-    (_session_dir(upload_id) / 'chunks').mkdir(parents=True, exist_ok=True)
-    return ResumableUploadInitResponse(upload_id=upload_id, uploaded_chunks=[], chunk_size=RESUMABLE_CHUNK_SIZE)
+async def init_resumable_upload(payload: ResumableUploadInitRequest, current_user: KbWriter, session: Session):
+    await _rate_limit(current_user, "upload")
+    if payload.file_size > settings.upload.max_file_size_bytes:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="文件超过大小限制")
+    upload_id = uuid.uuid4().hex
+    await create_upload_session(
+        session,
+        {
+            "id": upload_id,
+            "file_name": payload.file_name,
+            "file_size": payload.file_size,
+            "title": payload.title,
+            "mode": payload.mode,
+            "tenant_id": current_user.tenant_id,
+            "owner_id": current_user.user_id,
+            "acl": ["private"],
+            "chunk_size": RESUMABLE_CHUNK_SIZE,
+        },
+    )
+    (upload_session_dir(upload_id) / "chunks").mkdir(parents=True, exist_ok=False)
+    return ResumableUploadInitResponse(upload_id=upload_id, chunk_size=RESUMABLE_CHUNK_SIZE)
 
 
 @app.get("/api/admin/uploads/resumable/{upload_id}/status", response_model=ResumableUploadStatusResponse)
-async def resumable_upload_status(upload_id: str, current_user: CurrentUser = Depends(get_current_user)):
-    meta = _load_upload_meta(upload_id, current_user)
+async def resumable_upload_status(upload_id: str, current_user: KbWriter, session: Session):
+    meta = await get_upload_session(session, upload_id, current_user.tenant_id, current_user.user_id)
+    if meta is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="上传会话不存在")
     return ResumableUploadStatusResponse(
         upload_id=upload_id,
         uploaded_chunks=_uploaded_chunk_indexes(upload_id),
-        chunk_size=int(meta.get('chunk_size') or RESUMABLE_CHUNK_SIZE),
-        file_size=int(meta.get('file_size') or 0),
+        chunk_size=meta.chunk_size,
+        file_size=meta.file_size,
     )
 
 
 @app.post("/api/admin/uploads/resumable/{upload_id}/chunk")
 async def upload_resumable_chunk(
     upload_id: str,
-    chunk_index: int = Form(...),
+    current_user: KbWriter,
+    session: Session,
+    chunk_index: int = Form(..., ge=0),
     chunk: UploadFile = File(...),
-    current_user: CurrentUser = Depends(get_current_user),
 ):
-    _load_upload_meta(upload_id, current_user)
-    chunks_dir = _session_dir(upload_id) / 'chunks'
-    chunks_dir.mkdir(parents=True, exist_ok=True)
-    chunk_path = chunks_dir / f'{chunk_index}.part'
-    chunk_path.write_bytes(await chunk.read())
-    return {'success': True, 'uploaded_chunks': _uploaded_chunk_indexes(upload_id)}
+    meta = await get_upload_session(session, upload_id, current_user.tenant_id, current_user.user_id)
+    if meta is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="上传会话不存在")
+    expected_chunks = (meta.file_size + meta.chunk_size - 1) // meta.chunk_size
+    if chunk_index >= expected_chunks:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="分片索引超出范围")
+    expected_size = meta.chunk_size
+    if chunk_index == expected_chunks - 1:
+        expected_size = meta.file_size - (chunk_index * meta.chunk_size)
+    chunk_path = upload_session_dir(upload_id) / "chunks" / f"{chunk_index}.part"
+    await stream_upload(chunk, chunk_path, max_bytes=meta.chunk_size, expected_bytes=expected_size)
+    return {"success": True, "uploaded_chunks": _uploaded_chunk_indexes(upload_id)}
 
 
 @app.post("/api/admin/uploads/resumable/complete", response_model=UploadResponse)
-async def complete_resumable_upload(payload: ResumableUploadCompleteRequest, current_user: CurrentUser = Depends(get_current_user)):
-    meta = _load_upload_meta(payload.upload_id, current_user)
-    chunk_size = int(meta.get('chunk_size') or RESUMABLE_CHUNK_SIZE)
-    file_size = int(meta.get('file_size') or 0)
-    expected_chunks = max(1, (file_size + chunk_size - 1) // chunk_size)
-    uploaded = set(_uploaded_chunk_indexes(payload.upload_id))
-    missing = [index for index in range(expected_chunks) if index not in uploaded]
-    if missing:
-        raise HTTPException(status_code=409, detail={'message': '分片未上传完整', 'missing_chunks': missing})
-
-    document_id = create_document_id()
-    file_name = str(meta.get('file_name') or 'document.bin')
-    suffix = Path(file_name).suffix or '.bin'
-    stored_file = Path('data') / 'knowledge_base' / 'files' / f'{document_id}{suffix}'
-    stored_file.parent.mkdir(parents=True, exist_ok=True)
-    chunks_dir = _session_dir(payload.upload_id) / 'chunks'
-    with stored_file.open('wb') as target:
-        for index in range(expected_chunks):
-            target.write((chunks_dir / f'{index}.part').read_bytes())
-
-    item = KnowledgeDocument(
-        id=document_id,
-        file_name=file_name,
-        title=str(meta.get('title') or Path(file_name).stem),
-        tenant_id=current_user.tenant_id,
-        owner_id=current_user.user_id,
-        acl='private',
-        upload_time=_now_iso(),
-        mode=str(meta.get('mode') or 'rag'),
-        file_path=str(stored_file),
-    )
-    upsert_document(item)
+async def complete_resumable_upload(
+    payload: ResumableUploadCompleteRequest,
+    current_user: KbWriter,
+    session: Session,
+):
+    meta = await get_upload_session(session, payload.upload_id, current_user.tenant_id, current_user.user_id)
+    if meta is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="上传会话不存在")
+    expected_chunks = (meta.file_size + meta.chunk_size - 1) // meta.chunk_size
+    if _uploaded_chunk_indexes(payload.upload_id) != list(range(expected_chunks)):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="分片未上传完整")
+    document_id = uuid.uuid4().hex
+    target = document_path(document_id, meta.file_name)
+    checksum = combine_chunks(payload.upload_id, expected_chunks, target, meta.file_size)
+    validate_file_signature(target, normalized_extension(meta.file_name))
     try:
-        import shutil
-        shutil.rmtree(_session_dir(payload.upload_id), ignore_errors=True)
+        item = await create_document(
+            session,
+            {
+                "id": document_id,
+                "file_name": meta.file_name,
+                "title": meta.title or Path(meta.file_name).stem,
+                "tenant_id": current_user.tenant_id,
+                "owner_id": current_user.user_id,
+                "acl": meta.acl,
+                "upload_time": utc_now(),
+                "mode": meta.mode,
+                "file_path": str(target),
+                "checksum": checksum,
+            },
+        )
     except Exception:
-        pass
-    return UploadResponse(items=[KnowledgeBaseItem(**item.__dict__)])
+        target.unlink(missing_ok=True)
+        raise
+    await remove_upload_session(session, payload.upload_id)
+    remove_upload_session_files(payload.upload_id)
+    return UploadResponse(items=[_item(item)])
 
 
-@app.post("/api/admin/documents/{doc_id}/ingest", response_model=UploadResponse)
-async def ingest_document(doc_id: str, payload: IngestRequest, current_user: CurrentUser = Depends(get_current_user)):
-    _ensure_user_can_access_item(await _load_item(doc_id), current_user)
-    patch_document(doc_id, status='processing', mode=payload.mode, error=None, ingest_progress=0, ingest_total=1, ingest_message='开始入库')
-    refreshed = await _load_item(doc_id)
-    try:
-        mapped_mode = 'graph' if payload.mode == 'graphrag' else 'milvus' if payload.mode == 'rag' else payload.mode
-        await insert_document(refreshed, mode=mapped_mode)  # type: ignore[arg-type]
-        patch_document(doc_id, status='completed', chunk_count=max(1, int((refreshed or {}).get('chunk_count', 0) or 1)), ingest_progress=1, ingest_total=1, ingest_message='入库完成')
-    except Exception as exc:
-        patch_document(doc_id, status='error', error=str(exc), ingest_message='入库失败')
-        raise HTTPException(status_code=500, detail=f'入库失败: {exc}')
-    updated = await _load_item(doc_id)
-    return UploadResponse(items=[KnowledgeBaseItem(**updated)])
+def _ingest_mode(mode: str) -> str:
+    return {"rag": "milvus", "graphrag": "graph", "hybrid": "mg"}[mode]
 
 
-@app.post("/api/admin/documents/bulk/ingest", response_model=UploadResponse)
-async def bulk_ingest_documents(payload: BulkIngestRequest, current_user: CurrentUser = Depends(get_current_user)):
+@app.post("/api/admin/documents/{document_id}/ingest", response_model=UploadResponse, status_code=202)
+async def ingest_document(document_id: str, payload: IngestRequest, current_user: KbWriter, session: Session):
+    item = await _require_document(session, document_id, current_user)
+    if item["status"] in {"queued", "processing", "delete_queued"}:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="文档已有进行中的任务")
+    mode = _ingest_mode(payload.mode)
+    item = await update_document(
+        session,
+        document_id,
+        current_user.tenant_id,
+        status="queued",
+        mode=payload.mode,
+        error=None,
+        ingest_progress=0,
+        ingest_total=1,
+        ingest_message="等待入库 Worker",
+    )
+    await _queue_document_job(session, item, operation="ingest", mode=mode)  # type: ignore[arg-type]
+    return UploadResponse(items=[_item(item)])  # type: ignore[arg-type]
+
+
+@app.post("/api/admin/documents/bulk/ingest", response_model=UploadResponse, status_code=202)
+async def bulk_ingest_documents(payload: BulkIngestRequest, current_user: KbWriter, session: Session):
     items: list[KnowledgeBaseItem] = []
-    for doc_id in payload.ids:
-        try:
-            response = await ingest_document(doc_id, IngestRequest(mode=payload.mode), current_user)
-            items.extend(response.items or [])
-        except HTTPException:
+    for document_id in dict.fromkeys(payload.ids):
+        item = await _require_document(session, document_id, current_user)
+        if item["status"] in {"queued", "processing", "delete_queued"}:
             continue
+        updated = await update_document(
+            session,
+            document_id,
+            current_user.tenant_id,
+            status="queued",
+            mode=payload.mode,
+            error=None,
+            ingest_message="等待入库 Worker",
+        )
+        await _queue_document_job(session, updated, operation="ingest", mode=_ingest_mode(payload.mode))  # type: ignore[arg-type]
+        items.append(_item(updated))  # type: ignore[arg-type]
     return UploadResponse(items=items)
 
 
-@app.delete("/api/admin/documents/{doc_id}", response_model=DeleteResponse)
-async def remove_document(doc_id: str, current_user: CurrentUser = Depends(get_current_user)):
-    _ensure_user_can_access_item(await _load_item(doc_id), current_user)
-    if not delete_document(doc_id):
-        raise HTTPException(status_code=404, detail='文档不存在')
+async def _queue_delete(session: AsyncSession, item: dict[str, Any]) -> None:
+    updated = await update_document(
+        session,
+        item["id"],
+        item["tenant_id"],
+        status="delete_queued",
+        ingest_message="等待清理检索数据",
+    )
+    await _queue_document_job(session, updated, operation="delete", mode="mg")  # type: ignore[arg-type]
+
+
+@app.delete("/api/admin/documents/{document_id}", response_model=DeleteResponse, status_code=202)
+async def remove_document(document_id: str, current_user: KbDeleter, session: Session):
+    item = await _require_document(session, document_id, current_user)
+    await _queue_delete(session, item)
     return DeleteResponse(success=True)
 
 
-@app.post("/api/admin/documents/bulk/delete", response_model=DeleteResponse)
-async def bulk_remove_documents(payload: BulkDeleteRequest, current_user: CurrentUser = Depends(get_current_user)):
-    removed = 0
-    for doc_id in payload.ids:
-        try:
-            _ensure_user_can_access_item(await _load_item(doc_id), current_user)
-        except HTTPException:
+@app.post("/api/admin/documents/bulk/delete", response_model=DeleteResponse, status_code=202)
+async def bulk_remove_documents(payload: BulkDeleteRequest, current_user: KbDeleter, session: Session):
+    queued = 0
+    for document_id in dict.fromkeys(payload.ids):
+        item = await get_document(session, document_id, current_user.tenant_id)
+        if item is None or item["status"] == "delete_queued":
             continue
-        if delete_document(doc_id):
-            removed += 1
-    return DeleteResponse(success=removed > 0)
+        await _queue_delete(session, item)
+        queued += 1
+    return DeleteResponse(success=queued > 0)
 
 
-@app.delete("/api/admin/knowledge-base", response_model=DeleteResponse)
-async def remove_knowledge_base(current_user: CurrentUser = Depends(get_current_user)):
-    registry = load_registry()
-    removed = 0
-    for item in _filter_items_for_user(registry, current_user):
-        if delete_document(item.get('id')):
-            removed += 1
-    return DeleteResponse(success=removed > 0)
+@app.delete("/api/admin/knowledge-base", response_model=DeleteResponse, status_code=202)
+async def remove_knowledge_base(current_user: KbDeleter, session: Session):
+    items = await list_documents(session, current_user.tenant_id)
+    for item in items:
+        if item["status"] != "delete_queued":
+            await _queue_delete(session, item)
+    return DeleteResponse(success=bool(items))
 
 
-@app.post("/api/admin/documents/{doc_id}/refresh")
-async def refresh_document(doc_id: str, current_user: CurrentUser = Depends(get_current_user)):
-    item = _ensure_user_can_access_item(await _load_item(doc_id), current_user)
-    return {"item": KnowledgeBaseItem(**item)}
+@app.get("/api/admin/jobs/{job_id}", response_model=JobResponse)
+async def get_job_status(job_id: str, current_user: KbReader, session: Session):
+    job = await session.scalar(
+        select(IngestionJobRecord).where(
+            IngestionJobRecord.id == job_id,
+            IngestionJobRecord.tenant_id == current_user.tenant_id,
+        )
+    )
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="任务不存在")
+    return JobResponse(
+        id=job.id,
+        document_id=job.document_id,
+        operation=job.operation,
+        mode=job.mode,
+        status=job.status,
+        attempts=job.attempts,
+        error=job.error,
+    )
+
+
+@app.get("/api/health/live")
+async def liveness():
+    return {"status": "ok"}
+
+
+async def _readiness_payload() -> tuple[bool, dict[str, Any]]:
+    checks: dict[str, Any] = {}
+    try:
+        checks["redis"] = bool(redis_conn and await redis_conn.ping())
+    except Exception:
+        checks["redis"] = False
+    try:
+        async with SessionFactory() as session:
+            checks["database"] = (await session.execute(text("SELECT 1"))).scalar_one() == 1
+    except Exception:
+        checks["database"] = False
+    checks["checkpointer"] = global_checkpointer is not None
+    external = await run_checks({"milvus", "neo4j", "ollama", "mcp-rag"})
+    checks.update({result.name: result.ok for result in external})
+    return all(checks.values()), checks
+
+
+@app.get("/api/health/ready")
+@app.get("/api/health")
+async def readiness():
+    ready, checks = await _readiness_payload()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"status": "ok" if ready else "not_ready", "checks": checks},
+    )
 
 
 app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets"), check_dir=False), name="assets")
@@ -558,17 +679,22 @@ app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets"), check_
 async def get_frontend():
     if FRONTEND_INDEX.exists():
         return FileResponse(FRONTEND_INDEX)
-    return HTMLResponse("<html><body><h1>Frontend not built</h1><p>Run `cd frontend && npm install && npm run build`.</p></body></html>")
+    return HTMLResponse("<html><body><h1>Frontend not built</h1></body></html>", status_code=503)
 
 
 @app.get("/{path:path}")
 async def spa_fallback(path: str):
     if path.startswith("api/"):
-        return {"detail": "Not Found"}
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     if FRONTEND_INDEX.exists():
         return FileResponse(FRONTEND_INDEX)
-    return HTMLResponse("<html><body><h1>Frontend not built</h1><p>Run `cd frontend && npm install && npm run build`.</p></body></html>")
+    return HTMLResponse("<html><body><h1>Frontend not built</h1></body></html>", status_code=503)
 
 
 if __name__ == "__main__":
-    uvicorn.run("multi_domain_enterprise_project.main:app", host="0.0.0.0", port=8080, reload=os.getenv("UVICORN_RELOAD") == "1")
+    uvicorn.run(
+        "multi_domain_enterprise_project.main:app",
+        host="0.0.0.0",
+        port=8080,
+        reload=os.getenv("UVICORN_RELOAD") == "1",
+    )

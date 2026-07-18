@@ -3,18 +3,21 @@ llm_key:
   deepseek: ''
   xiaoAi: ''
   qwen: ''
-  postgressql: 'postgresql://postgres:123123@127.0.0.1:5432/langgraph-multi'
   redis: 'redis://127.0.0.1:6379'
 
 llama_parser:
   invalidate_cache: false
+  tier: 'agentic'
+  version: 'latest'
+  timeout_seconds: 180
+  max_retries: 2
 
 milvus:
   uri: 'http://127.0.0.1:19530'
   dims: 2560  # qwen向量模型维度
 
 neo4j:
-  url: 'bolt://localhost:7687'
+  url: 'bolt://127.0.0.1:7687'
   username: 'neo4j'
   password: ''
 
@@ -30,9 +33,44 @@ reranker:
 
 mcp:
   rag_url: 'http://127.0.0.1:8010/rag-retriever'
-  document_token: ''
   web_search_url: ''
   finance_chart_url: ''
   legal_url: ''
-  public_key_path: ''
-  private_key_path: ''
+  host: '127.0.0.1'
+  port: 8010
+  log_level: 'info'
+
+auth:
+  mode: 'development'
+  issuer: 'https://rag-upper.local'
+  audience: 'rag-upper-api'
+  jwks_url: ''
+  public_key_path: 'multi_domain_enterprise_project/mcp_server/public_key'
+  private_key_path: 'multi_domain_enterprise_project/mcp_server/private_key'
+  algorithms: ['RS256']
+  development_user_id: 'user_admin_001'
+  development_username: 'admin'
+  development_tenant_id: 'tenant_default'
+  development_role: 'admin'
+  development_permissions: ['chat:use', 'kb:read', 'kb:write', 'kb:delete']
+  token_ttl_seconds: 900
+
+database:
+  url: 'sqlite+aiosqlite:///./data/rag_upper.db'
+  echo: false
+
+upload:
+  max_file_size_bytes: 52428800
+  max_attachment_size_bytes: 10485760
+  max_files_per_request: 10
+  max_attachments_per_request: 5
+  allowed_extensions: ['.pdf', '.png', '.jpg', '.jpeg', '.bmp', '.docx', '.pptx', '.xlsx', '.txt', '.md', '.csv', '.json']
+
+runtime:
+  environment: 'development'
+  request_rate_limit_per_minute: 60
+  worker_max_attempts: 3
+  worker_block_ms: 5000
+  cors_origins: []
+  service_name: 'rag-upper-api'
+  otel_endpoint: ''

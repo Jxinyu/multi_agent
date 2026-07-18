@@ -1,17 +1,16 @@
 import logging
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import SummarizationMiddleware
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
-from langchain.agents.middleware import SummarizationMiddleware
-from langgraph.types import interrupt
 
 from multi_domain_enterprise_project.core.model import qwen_model
-from multi_domain_enterprise_project.core.task_state import TaskState
 from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 from multi_domain_enterprise_project.core.sub_agent_output_format import SubAgentOutputFormat
+from multi_domain_enterprise_project.core.task_state import TaskState
 from multi_domain_enterprise_project.tools.mcp_tools import document_retriever_mcp_client
 
 logger = logging.getLogger(__name__)
@@ -20,10 +19,7 @@ logger = logging.getLogger(__name__)
 @tool
 async def get_document(runtime: ToolRuntime):
     """获取内部相关资料"""
-    config = runtime.config  # 获取运行时配置
-    user_info = config['configurable']["user_info"]  # 获取用户信息
-
-    logger.info(f"【HR Agent中】的user_info: {user_info}")
+    logger.info("HR 文档目录查询")
 
     # decision = interrupt({
     #     "action": "human_decision",
@@ -47,12 +43,9 @@ async def hr_agent(state: TaskState, config: RunnableConfig):
     content = state.sub_agent_input_content[SubAgentEnum.HR.value]
 
     # 获取子agent的历史对话消息
-    try:
-        messages = state.sub_agent_messages[SubAgentEnum.HR.value]
-    except:
-        messages = []
+    messages = state.sub_agent_messages.get(SubAgentEnum.HR.value, [])
 
-    logger.info(f"【HR Agent】的输入: {content[:10]}...")
+    logger.info("HR Agent 开始处理任务")
 
     system_prompt = """
 # 角色定位
@@ -67,7 +60,8 @@ async def hr_agent(state: TaskState, config: RunnableConfig):
     """
 
     # MCP客户端
-    mcp_client = await document_retriever_mcp_client()
+    access_token = str(config.get("configurable", {}).get("access_token") or "")
+    mcp_client = await document_retriever_mcp_client(access_token)
 
     # 创建agent
     try:
@@ -100,7 +94,7 @@ async def hr_agent(state: TaskState, config: RunnableConfig):
     messages = response['messages']
     structured_response = response['structured_response']
 
-    logger.info(f"【HR Agent】的输出: {structured_response.result[:10]}...")
+    logger.info("HR Agent 已生成回复")
 
     return {
         "sub_agent_response": {
@@ -115,5 +109,3 @@ async def hr_agent(state: TaskState, config: RunnableConfig):
         "finished_sub_agents": [SubAgentEnum.HR.value],
         "pending_sub_agents": []
     }
-
-

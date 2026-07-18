@@ -5,13 +5,12 @@ from langchain.agents.middleware import SummarizationMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
-from pydantic import Field
 
+from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 from multi_domain_enterprise_project.core.sub_agent_output_format import SubAgentOutputFormat
-from multi_domain_enterprise_project.tools.mcp_tools import legal_mcp_client
-from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.task_state import TaskState
+from multi_domain_enterprise_project.tools.mcp_tools import legal_mcp_client
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +18,6 @@ logger = logging.getLogger(__name__)
 @tool
 async def get_document(runtime: ToolRuntime):
     """获取公司内部文档列表"""
-    config = runtime.config  # 获取运行时配置
-    user_info = config['configurable']["user_info"]  # 获取用户信息
     # 接下来的流程
     # 根据不同用户的定位，搜索出不同的文档列表，然后return
     return {
@@ -45,12 +42,9 @@ async def legal_agent(state: TaskState, config: RunnableConfig):
     content = state.sub_agent_input_content[SubAgentEnum.LEGAL.value]
 
     # 获取子agent的历史对话消息
-    try:
-        messages = state.sub_agent_messages[SubAgentEnum.LEGAL.value]
-    except:
-        messages = []
+    messages = state.sub_agent_messages.get(SubAgentEnum.LEGAL.value, [])
 
-    logger.info(f"【Legal Agent】的输入: {content[:10]}...")
+    logger.info("Legal Agent 开始处理任务")
 
     system_prompt = """
 # 角色定位
@@ -65,7 +59,8 @@ async def legal_agent(state: TaskState, config: RunnableConfig):
 - 免责声明：在每次回答的末尾，必须强制加上这句话：```免责声明：以上回答基于公司内部知识库生成，仅供参考，不作为最终的法律意见。如遇重大法务决策，请务必提交流程由法务部人工复核。```
     """
 
-    mcp_client = await legal_mcp_client()
+    access_token = str(config.get("configurable", {}).get("access_token") or "")
+    mcp_client = await legal_mcp_client(access_token)
 
     # 创建agent
     try:
@@ -97,7 +92,7 @@ async def legal_agent(state: TaskState, config: RunnableConfig):
     messages = response['messages']
     structured_response = response['structured_response']
 
-    logger.info(f"【Legal Agent】的回复: {structured_response.result[:10]}...")
+    logger.info("Legal Agent 已生成回复")
 
     return {
         "sub_agent_response": {

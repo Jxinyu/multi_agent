@@ -1,5 +1,7 @@
 # graph_db.py
 import logging
+from functools import lru_cache
+
 from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
 
 from config import settings
@@ -31,6 +33,11 @@ class EnterpriseGraphStore:
         except Exception as e:
             logger.error(f"❌ 连接 Neo4j 失败: {e}")
             raise
+
+
+@lru_cache(maxsize=1)
+def get_graph_store() -> Neo4jPropertyGraphStore:
+    return EnterpriseGraphStore().get_graph_store()
 
 
 if __name__ == '__main__':

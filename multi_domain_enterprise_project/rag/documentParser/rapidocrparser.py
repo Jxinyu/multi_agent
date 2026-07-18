@@ -64,11 +64,11 @@ class EnterpriseRapidOCRParser:
         path = Path(file_path)
         self._validate_file(path)
         start_time = time.time()
-        logger.info("开始本地 OCR 解析: %s", path.name)
+        logger.info("开始本地 OCR 解析")
         try:
             loop = asyncio.get_event_loop()
             text = await loop.run_in_executor(None, self._parse_sync, file_path)
-            logger.info("本地 OCR 解析完成: %s，耗时 %.1fs", path.name, time.time() - start_time)
+            logger.info("本地 OCR 解析完成，耗时 %.1fs", time.time() - start_time)
             return text
         except Exception as exc:
             logger.error("本地 OCR 解析失败: %s", exc)

@@ -1,37 +1,46 @@
-from typing import Annotated, Union, List, Dict, Literal
 import logging
+from typing import Annotated, Literal
 
-from langchain_core.messages import ToolMessage, SystemMessage
+from langchain_core.messages import SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool, InjectedToolCallId
+from langchain_core.tools import InjectedToolCallId, tool
 from langgraph.constants import END
 from langgraph.graph import StateGraph
-from langgraph.prebuilt import ToolNode, tools_condition, ToolRuntime
+from langgraph.prebuilt import ToolNode, ToolRuntime, tools_condition
 from langgraph.types import Checkpointer, Command, interrupt
-from pydantic import Field, BaseModel
+from pydantic import BaseModel, Field
 
-from multi_domain_enterprise_project.agent.tech_agent import tech_agent_node
 from multi_domain_enterprise_project.agent.aggregator_agent import aggregator_agent
 from multi_domain_enterprise_project.agent.audit_agent import audit_agent
 from multi_domain_enterprise_project.agent.finance_agent import finance_agent
 from multi_domain_enterprise_project.agent.hr_agent import hr_agent
 from multi_domain_enterprise_project.agent.legal_agent import legal_agent
+from multi_domain_enterprise_project.agent.tech_agent import tech_agent_node
 from multi_domain_enterprise_project.core.model import qwen_model
-from multi_domain_enterprise_project.core.task_state import TaskState, TaskStatus
 from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
+from multi_domain_enterprise_project.core.task_state import TaskState, TaskStatus
 
 logger = logging.getLogger(__name__)
 
 
+def _prepare_supervisor_state(state: TaskState) -> dict:
+    """确定 supervisor 本次执行前需要写入的轮次状态。"""
+    if state.task_status in {TaskStatus.IDLE, TaskStatus.COMPLETED, TaskStatus.FAILED}:
+        return TaskState.round_reset_update()
+    if state.audit_feedback:
+        return {"task_status": TaskStatus.RETRYING}
+    return {"task_status": state.task_status}
+
+
 @tool
-async def get_sub_agent_list() -> List[Dict]:
+async def get_sub_agent_list() -> list[dict]:
     """获取当前系统中所有可用的子代理专家列表及其能力描述。
 
     当你需要了解可用的专业子代理及其负责领域时，调用此工具。返回的列表中每个元素包含：
     - sub_agent_name: 子代理标识符（用于后续 invoke_sub_agent 工具调用）
     - description: 子代理的职责和能力说明
     在路由决策不确定时，可先调用此工具获取完整列表，以帮助判断将用户问题分发给哪个子代理。"""
-    logger.info(f"【get_sub_agent_list】")
+    logger.info("【get_sub_agent_list】")
     return [
         {"sub_agent_name": i.value, "description": i.description} for i in SubAgentEnum
     ]
@@ -44,7 +53,7 @@ class InvokeAgentModel(BaseModel):
 
 
 @tool
-async def invoke_sub_agent(sub_agents: List[InvokeAgentModel],
+async def invoke_sub_agent(sub_agents: list[InvokeAgentModel],
                            runtime: ToolRuntime,
                            tool_call_id: Annotated[str, InjectedToolCallId]):
     """向领域专家下发任务。"""
@@ -99,14 +108,14 @@ async def invoke_sub_agent(sub_agents: List[InvokeAgentModel],
 @tool
 async def human_in_loop(content: Annotated[str, Field(..., description="发送给用户的内容")], runtime: ToolRuntime):
     """当用户问题模糊或置信度低时，使用此工具向用户提问以获取更多信息。"""
-    if not content:
-        return "输入的内容为空"
+    if not content.strip():
+        raise ValueError("追问内容不能为空")
     decision = interrupt({
         "action": "human_decision",
         "content": content
     })
-    if not decision:
-        return "用户没有输入内容"
+    if not isinstance(decision, dict) or not str(decision.get("content") or "").strip():
+        raise ValueError("用户回复为空")
     return {"用户的回复": decision['content']}
 
 
@@ -163,28 +172,22 @@ async def create_graph(checkpointer: Checkpointer):
         """它是整个多代理系统的“大脑”和“交通枢纽”，直接面向用户输入。"""
         sys_prompt = SystemMessage(content=system_prompt)
         messages = [sys_prompt] + state.messages
+        state_update = _prepare_supervisor_state(state)
+        next_status = state_update["task_status"]
 
-        if state.audit_feedback:
-            next_status = TaskStatus.RETRYING
-        elif state.task_status in {TaskStatus.IDLE, TaskStatus.COMPLETED, TaskStatus.FAILED}:
-            next_status = TaskStatus.ROUTING
-        else:
-            next_status = state.task_status
-
-        logger.info(f"【supervisor_agent】开始执行: {state.messages[-1] if state.messages else 'EMPTY'} | status={next_status}")
+        logger.info("Supervisor 开始执行 status=%s", next_status)
         response = []
         try:
             response = await agent.ainvoke(messages, config=config)
-        except Exception as e:
-            logger.error(f"【supervisor_agent】执行错误: {e}")
+        except Exception:
+            logger.exception("【supervisor_agent】执行错误")
             return {
                 "task_status": TaskStatus.FAILED,
-                "messages": [SystemMessage(content=f"supervisor 执行失败: {e}")]
+                "messages": [SystemMessage(content="supervisor 执行失败")]
             }
 
-        return {
+        return state_update | {
             "messages": [response],
-            "task_status": next_status,
         }
 
     def audit_router(state: TaskState, config: RunnableConfig):
@@ -193,7 +196,7 @@ async def create_graph(checkpointer: Checkpointer):
         if state.task_status in terminal_statuses:
             return END
         if state.audit_feedback:
-            logger.info(f"【audit_router】需要重试：{state.messages[-1].content[:10] if state.messages else ''}")
+            logger.info("Audit Router 要求重试")
             return "supervisor"
         return END
 

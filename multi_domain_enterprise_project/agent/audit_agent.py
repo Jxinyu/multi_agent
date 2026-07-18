@@ -1,14 +1,12 @@
 import logging
-from typing import Annotated, Dict, List
 
 from langchain.agents import create_agent
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.task_state import TaskState, TaskStatus
-from multi_domain_enterprise_project.core.task_state import TaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +37,7 @@ async def audit_agent(state: TaskState, config: RunnableConfig):
             "messages": [HumanMessage(content="【系统提示】当前没有可审核的聚合结果。")]
         }
 
-    logger.info(f"【Audit Agent的输入】: {content.get('回复内容', '')[:10]}...")
+    logger.info("Audit Agent 开始审核")
 
     system_prompt = """
     # 角色定位
@@ -89,17 +87,32 @@ async def audit_agent(state: TaskState, config: RunnableConfig):
     retry_count = state.retry_count
     max_retries = state.max_retries
 
-    if (not response.is_pass) and (retry_count < max_retries):
-        # 审核不通过，保留聚合结果并生成结构化反馈
+    if not response.is_pass:
         feedback_text = f'审计反馈：\n"correction_targets": {response.correction_targets}'
-        return {
-            "messages": [HumanMessage(content=feedback_text)],
-            "task_status": TaskStatus.RETRYING,
-            "audit_feedback": {
-                "correction_targets": response.correction_targets,
+        if retry_count < max_retries:
+            # 审核不通过，保留聚合结果并生成结构化反馈
+            return {
+                "messages": [HumanMessage(content=feedback_text)],
+                "task_status": TaskStatus.RETRYING,
+                "audit_feedback": {
+                    "correction_targets": response.correction_targets,
+                    "retry_count": retry_count + 1
+                },
                 "retry_count": retry_count + 1
-            },
-            "retry_count": retry_count + 1
+            }
+
+        exhausted_feedback = {
+            "correction_targets": response.correction_targets,
+            "retry_count": retry_count,
+            "max_retries": max_retries,
+            "exhausted": True,
+        }
+        return {
+            "messages": [HumanMessage(content=f"{feedback_text}\n已达到最大重试次数，任务失败。")],
+            "task_status": TaskStatus.FAILED,
+            "audit_feedback": exhausted_feedback,
+            "retry_count": retry_count,
+            "result": None,
         }
 
     # 审核通过：统一输出键名，和 run_agent/run_agent_stream 的读取逻辑保持一致
@@ -110,6 +123,7 @@ async def audit_agent(state: TaskState, config: RunnableConfig):
         "audit_feedback": None,
         "sub_agent_response": {},
         "sub_agent_input_content": {},
+        "requested_agents": [],
         "pending_sub_agents": [],
         "finished_sub_agents": [],
         "result": {

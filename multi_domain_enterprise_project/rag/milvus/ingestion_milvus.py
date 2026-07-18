@@ -1,19 +1,26 @@
+import asyncio
 import logging
-from typing import List
+from functools import lru_cache
 
-from llama_index.core import VectorStoreIndex, QueryBundle
+from llama_index.core import QueryBundle, VectorStoreIndex
 from llama_index.core.schema import BaseNode
-from llama_index.core.vector_stores import MetadataFilter, MetadataFilters, FilterCondition, FilterOperator
+from llama_index.core.vector_stores import FilterCondition, FilterOperator, MetadataFilter, MetadataFilters
 from llama_index.embeddings.ollama import OllamaEmbedding
-from llama_index.postprocessor.flag_embedding_reranker import FlagEmbeddingReranker
 
-from multi_domain_enterprise_project.rag.milvus.milvus_db import EnterpriseMilvusStore
 from config import settings
+from multi_domain_enterprise_project.rag.authorization import (
+    build_authorized_filter_branches,
+    filter_authorized_nodes,
+)
+from multi_domain_enterprise_project.rag.milvus.milvus_db import EnterpriseMilvusStore
+from multi_domain_enterprise_project.rag.retrieval import deduplicate_node_results
+from multi_domain_enterprise_project.rag.runtime import get_reranker
 
 logger = logging.getLogger(__name__)
 
 
 # 全局共享的基础配置获取函数
+@lru_cache(maxsize=4)
 def get_base_index(collection_name: str):
     """提取公共的连接初始化代码"""
     # 连接本地向量模型
@@ -43,7 +50,7 @@ class MilvusStorePipelineService:
     def __init__(self, collection_name: str = "company_knowledge_base"):
         self.index = get_base_index(collection_name)
 
-    async def insert_nodes(self, nodes: List[BaseNode], batch_size: int = 100):
+    async def insert_nodes(self, nodes: list[BaseNode], batch_size: int = 100):
         if not nodes:
             return
 
@@ -61,6 +68,18 @@ class MilvusStorePipelineService:
             logger.error(f"❌ 入库失败: {e}")
             raise
 
+    async def delete_document(self, tenant_id: str, document_id: str) -> None:
+        if not tenant_id or not document_id:
+            raise ValueError("删除 Milvus 数据必须提供 tenant_id 和 document_id")
+        filters = MetadataFilters(
+            filters=[
+                MetadataFilter(key="tenant_id", value=tenant_id, operator=FilterOperator.EQ),
+                MetadataFilter(key="document_id", value=document_id, operator=FilterOperator.EQ),
+            ],
+            condition=FilterCondition.AND,
+        )
+        await asyncio.to_thread(self.index.vector_store.delete_nodes, filters=filters)
+
 
 class MilvusRetrieverService:
     """
@@ -69,49 +88,32 @@ class MilvusRetrieverService:
 
     def __init__(self, collection_name: str = "company_knowledge_base"):
         self.index = get_base_index(collection_name)
-        logger.info("⏳ 正在加载 BGE-Reranker 模型至显存...")
-        self.reranker = FlagEmbeddingReranker(
-            top_n=settings.reranker.top_n,
-            model=settings.reranker.model_path,
-            use_fp16=settings.reranker.use_fp16
-        )
-        logger.info("✅ 检索服务初始化完毕！")
+        self.reranker = get_reranker()
 
-    async def retrieve_answer(self, query_str: str, filters_dict: dict = None):
+    async def retrieve_nodes(self, query_str: str, filters_dict: dict = None):
         """
         检索数据库
         :param query_str: 搜索的内容
         :param filters_dict: 按字段过滤
         :return:
         """
-        logger.info(f"⚙️ 正在向 Milvus 发起混合检索: {query_str}。 过滤字段: {filters_dict}")
-        filters = None
-        # 构造元数据过滤器
-        if filters_dict:
-            # 先把字典里 value 为 None 的键值对剔除掉！
-            cleaned_filters = {k: v for k, v in filters_dict.items() if v is not None}
-
-            if cleaned_filters:
-                filter_list = [
-                    MetadataFilter(key=k, value=v, operator=FilterOperator.IN if k == 'acl' else FilterOperator.EQ)
-                    for k, v in cleaned_filters.items()
-                ]
-
-                filters = MetadataFilters(
-                    filters=filter_list,
-                    condition=FilterCondition.AND
-                )
-
-        # 必须显式声明 vector_store_query_mode="hybrid", 否则milvus中的 BM25 搜索不生效
-        hybrid_retriever = self.index.as_retriever(
-            similarity_top_k=30,
-            # similarity_top_k=3,
-            vector_store_query_mode="hybrid",
-            filters=filters
+        logger.info("正在向 Milvus 发起授权检索")
+        scope, filter_branches = build_authorized_filter_branches(filters_dict)
+        retrievers = [
+            self.index.as_retriever(
+                similarity_top_k=30,
+                vector_store_query_mode="hybrid",
+                filters=filters,
+            )
+            for filters in filter_branches
+        ]
+        branch_results = await asyncio.gather(
+            *(retriever.aretrieve(query_str) for retriever in retrievers)
         )
-
-        # 多路召回与融合(内部使用RRF重排)
-        final_nodes = await hybrid_retriever.aretrieve(query_str)
+        final_nodes = deduplicate_node_results(
+            [node for branch in branch_results for node in branch]
+        )
+        final_nodes = filter_authorized_nodes(final_nodes, scope)
 
         if not final_nodes:
             logger.warning("⚠️ 检索结果为空！")
@@ -123,8 +125,10 @@ class MilvusRetrieverService:
             nodes=final_nodes,
             query_bundle=query_bundle
         )
+        return filter_authorized_nodes(final_nodes, scope)
 
-        return await format_milvus_context(final_nodes)
+    async def retrieve_answer(self, query_str: str, filters_dict: dict = None):
+        return await format_milvus_context(await self.retrieve_nodes(query_str, filters_dict))
 
 
 async def format_milvus_context(nodes):
@@ -138,17 +142,33 @@ async def format_milvus_context(nodes):
 
     # 按照分值排序并去重
     seen_ids = set()
-    for i, node_with_score in enumerate(nodes, 1):
+    for node_with_score in nodes:
         node = node_with_score.node
-        if node.node_id in seen_ids: continue
+        if node.node_id in seen_ids:
+            continue
         seen_ids.add(node.node_id)
 
         score = node_with_score.score
+        score_text = f"{score:.4f}" if score is not None else "N/A"
         file_name = node.metadata.get('file_name', '未知文件')
         content = node.get_content().strip()
 
         # 统一 Header 样式
-        header = f"--- [来源: {file_name} | 类型: 原始文本块 | 匹配分值: {score:.4f}] ---"
+        header = f"--- [来源: {file_name} | 类型: 原始文本块 | 匹配分值: {score_text}] ---"
         context_parts.append(f"{header}\n{content}")
 
     return "\n\n".join(context_parts)
+
+
+@lru_cache(maxsize=4)
+def get_milvus_store_pipeline_service(
+    collection_name: str = "company_knowledge_base",
+) -> MilvusStorePipelineService:
+    return MilvusStorePipelineService(collection_name)
+
+
+@lru_cache(maxsize=4)
+def get_milvus_retriever_service(
+    collection_name: str = "company_knowledge_base",
+) -> MilvusRetrieverService:
+    return MilvusRetrieverService(collection_name)

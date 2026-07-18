@@ -68,9 +68,11 @@ export function AdminPanel() {
   const stats = useMemo(
     () => ({
       total: filteredItems.length,
-      ready: filteredItems.filter((item) => item.status === 'completed').length,
-      failed: filteredItems.filter((item) => item.status === 'error').length,
-      processing: filteredItems.filter((item) => item.status === 'processing').length
+      ready: filteredItems.filter((item) => item.status === 'ready').length,
+      failed: filteredItems.filter((item) => item.status.endsWith('failed')).length,
+      processing: filteredItems.filter((item) =>
+        ['queued', 'processing', 'delete_queued', 'deleting'].includes(item.status)
+      ).length
     }),
     [filteredItems]
   );
@@ -182,7 +184,7 @@ export function AdminPanel() {
           <div>
             <div className="admin-breadcrumb">后台管理 / 知识库管理</div>
             <h1>知识库管理</h1>
-            <p>当前为模拟登录模式。上传文档时系统会自动使用当前用户 ID、租户 ID 和默认 ACL，不再要求人工填写租户信息。</p>
+            <p>上传文档时系统会自动使用当前认证用户的用户 ID、租户 ID 和默认 ACL，不再要求人工填写租户信息。</p>
           </div>
           <div className="admin-hero-actions">
             <button type="button" onClick={() => void refresh()} disabled={loading}>

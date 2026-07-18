@@ -9,7 +9,7 @@ import type {
   MessageAttachment
 } from '../types';
 
-interface StoredSession {
+interface SessionHistoryItem {
   threadId: string;
   title: string;
   updatedAt: number;
@@ -38,28 +38,6 @@ function titleFromMessages(messages: ChatMessage[]): string {
   const text = firstUser.content.trim().replace(/\s+/g, ' ');
   return text.length > 18 ? `${text.slice(0, 18)}...` : text;
 }
-
-function loadHistory(): StoredSession[] {
-  try {
-    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as StoredSession[];
-    if (!Array.isArray(parsed)) return [];
-    return parsed.slice(0, 8);
-  } catch {
-    return [];
-  }
-}
-
-function saveHistory(history: StoredSession[]) {
-  try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-  } catch {
-    // Ignore storage quota or privacy-mode failures. The in-memory history still works.
-  }
-}
-
-
 
 async function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -100,7 +78,7 @@ export function useChatSession() {
   const [status, setStatus] = useState('就绪');
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
-  const [history, setHistory] = useState<StoredSession[]>(() => loadHistory());
+  const [history, setHistory] = useState<SessionHistoryItem[]>([]);
   const [activeHistoryThreadId, setActiveHistoryThreadId] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const abortRef = useRef<AbortController | null>(null);
@@ -117,8 +95,16 @@ export function useChatSession() {
   );
 
   useEffect(() => {
+    try {
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+    } catch {
+      // In-memory history remains available when browser storage is inaccessible.
+    }
+  }, []);
+
+  useEffect(() => {
     setHistory((current) => {
-      const entry: StoredSession = {
+      const entry: SessionHistoryItem = {
         threadId,
         title: titleFromMessages(messages),
         updatedAt: Date.now(),
@@ -129,11 +115,6 @@ export function useChatSession() {
       return [entry, ...others].slice(0, 8);
     });
   }, [messages, status, threadId]);
-
-  useEffect(() => {
-    saveHistory(history);
-  }, [history]);
-
 
   const appendMessage = (message: Omit<ChatMessage, 'id'>) => {
     setMessages((current) => [...current, { ...message, id: createId() }]);

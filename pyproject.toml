@@ -1,0 +1,103 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rag-upper"
+version = "1.0.0"
+description = "面向企业多领域知识问答的多智能体 GraphRAG 系统"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "aiofiles==25.1.0",
+  "aiosqlite==0.22.1",
+  "alembic==1.18.5",
+  "fastapi==0.135.2",
+  "fastmcp==3.1.0",
+  "FlagEmbedding==1.3.5",
+  "httpx==0.28.1",
+  "langchain==1.2.10",
+  "langchain-core==1.2.16",
+  "langchain-mcp-adapters==0.2.1",
+  "langchain-openai==1.1.10",
+  "langchain-pymupdf4llm==0.5.0",
+  "langgraph==1.0.10",
+  "langgraph-checkpoint-redis==0.4.0",
+  "llama-index-core==0.14.15",
+  "llama-index-embeddings-langchain==0.4.1",
+  "llama-index-embeddings-ollama==0.8.6",
+  "llama-index-graph-stores-neo4j==0.7.0",
+  "llama-index-llms-dashscope==0.5.2",
+  "llama-index-llms-openai-like==0.7.1",
+  "llama-index-llms-openai==0.7.3",
+  "llama-index-postprocessor-flag-embedding-reranker==0.4.1",
+  "llama-index-vector-stores-milvus==1.0.0",
+  "llama-cloud==2.11.0",
+  "markitdown==0.1.5",
+  "neo4j==5.28.3",
+  "ollama==0.6.1",
+  "opentelemetry-api==1.40.0",
+  "opentelemetry-exporter-otlp-proto-http==1.40.0",
+  "opentelemetry-sdk==1.40.0",
+  "prometheus-client==0.24.1",
+  "psycopg[binary]==3.3.3",
+  "pydantic==2.12.5",
+  "pydantic-settings==2.13.1",
+  "PyJWT[crypto]==2.11.0",
+  "pymilvus==2.6.9",
+  "PyMuPDF==1.27.1",
+  "python-multipart==0.0.22",
+  "PyYAML==6.0.3",
+  "rapidocr-onnxruntime==1.4.4",
+  "redis==7.1.1",
+  "short-unique-id==0.2.1",
+  "SQLAlchemy==2.0.47",
+  "tenacity==9.1.4",
+  "torch==2.13.0",
+  "uvicorn[standard]==0.41.0",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[dependency-groups]
+dev = [
+  "pytest==9.0.2",
+  "pytest-asyncio==1.3.0",
+  "ruff==0.15.2",
+]
+eval = [
+  "datasets>=4.0,<5.0",
+  "lightgbm==4.6.0",
+  "numpy>=2.0,<3.0",
+  "pillow>=11.0,<13.0",
+  "scikit-learn>=1.7,<2.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["config", "multi_domain_enterprise_project"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"config/config.yaml" = "config/config.yaml"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q -p no:cacheprovider"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+exclude = ["algorithm", "chain_graph", "evals"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"multi_domain_enterprise_project/main.py" = ["B008"]

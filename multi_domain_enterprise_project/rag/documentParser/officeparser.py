@@ -1,9 +1,11 @@
 import asyncio
-import os
 import logging
+import os
 import time
 from pathlib import Path
+
 from markitdown import MarkItDown
+
 from multi_domain_enterprise_project.rag.documentParser.exception_handling import DocumentParsingError
 
 logging.basicConfig(
@@ -30,7 +32,7 @@ class EnterpriseOfficeParser:
         """
         if not file_path.exists():
             raise FileNotFoundError(f"找不到文件: {file_path}")
-        if not file_path.suffix in self.support_file_types:
+        if file_path.suffix not in self.support_file_types:
             raise ValueError(f"不支持的文件格式: {file_path.suffix}")
         file_size_mb = os.path.getsize(file_path) / 1024 / 1024  # MB
         if file_size_mb == 0:
@@ -53,7 +55,7 @@ class EnterpriseOfficeParser:
 
         self._validate_file(path_obj)
 
-        logger.info(f"🚀 开始解析任务: {path_obj.name}[Trace ID: {id(self)}]")
+        logger.info("开始 Office 文档解析")
 
         try:
             # 转换为 Markdown
@@ -65,7 +67,7 @@ class EnterpriseOfficeParser:
             documents = result.text_content
 
             if not documents:
-                logger.error(f"⚠️ 解析完成，但是没有提取到任何内容: {path_obj.name}")
+                logger.error("Office 文档解析完成但未提取到内容")
                 return ''
 
             logger.info(
@@ -74,10 +76,10 @@ class EnterpriseOfficeParser:
             return documents
 
         except FileNotFoundError as fe:
-            logger.error(f"⚠️ 文件 {path_obj.name} 不存在: {fe}")
+            logger.error("Office 文档不存在")
             raise DocumentParsingError(f"文档不存在：{str(fe)}") from fe
         except ValueError as ve:
-            logger.error(f"⚠️ 文件 {path_obj.name} 检验错误: {ve}")
+            logger.error("Office 文档校验失败")
             raise DocumentParsingError(f"文件校验错误：{str(ve)}") from ve
         except Exception as e:
             logger.error(f"❌ 发生未知严重错误: {str(e)}")

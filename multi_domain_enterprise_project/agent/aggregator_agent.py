@@ -1,13 +1,13 @@
 import logging
 
 from langchain.agents import create_agent
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
 from multi_domain_enterprise_project.core.model import qwen_model
-from multi_domain_enterprise_project.core.task_state import TaskState, TaskStatus
 from multi_domain_enterprise_project.core.sub_agent_output_format import SubAgentOutputFormat
+from multi_domain_enterprise_project.core.task_state import TaskState, TaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ async def aggregator_agent(state: TaskState, config: RunnableConfig):
     final_result = getattr(response, "result", "")
     final_references = getattr(response, "references", [])
 
-    logger.info(f"【aggregator Agent的回复】: {final_result[:10]}")
+    logger.info("Aggregator Agent 已生成回复")
 
     return {
         "task_status": TaskStatus.AUDITING,

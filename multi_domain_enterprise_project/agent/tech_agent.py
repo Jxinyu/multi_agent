@@ -5,13 +5,12 @@ from langchain.agents.middleware import SummarizationMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
-from pydantic import Field
 
+from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 from multi_domain_enterprise_project.core.sub_agent_output_format import SubAgentOutputFormat
-from multi_domain_enterprise_project.tools.mcp_tools import tech_mcp_client
-from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.task_state import TaskState
+from multi_domain_enterprise_project.tools.mcp_tools import tech_mcp_client
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +18,6 @@ logger = logging.getLogger(__name__)
 @tool
 async def get_document(runtime: ToolRuntime):
     """获取内部文档列表"""
-    config = runtime.config  # 获取运行时配置
-    user_info = config['configurable']["user_info"]  # 获取用户信息
     # 接下来的流程
     # 根据不同用户的定位，搜索出不同的文档列表，然后return
     return {
@@ -41,11 +38,8 @@ async def tech_agent_node(state: TaskState, config: RunnableConfig):
 
     content = state.sub_agent_input_content[SubAgentEnum.TECH.value]  # 获取主代理传进来的问题
     # 获取子agent的历史对话消息
-    try:
-        messages = state.sub_agent_messages[SubAgentEnum.TECH.value]
-    except:
-        messages = []
-    logger.info(f"【Tech Agent】的输入：{content[:10]}...")
+    messages = state.sub_agent_messages.get(SubAgentEnum.TECH.value, [])
+    logger.info("Tech Agent 开始处理任务")
 
     system_prompt = """
 # 角色定位
@@ -64,7 +58,8 @@ async def tech_agent_node(state: TaskState, config: RunnableConfig):
 - 知识边界：如果工具返回的信息不足以回答问题，或完全没有相关信息，请明确回答：“抱歉，根据现有资料无法找到该问题的确切答案，建议联系相关团队或查阅最新文档。” 绝不允许猜测未提供的参数或虚构信息。
     """
 
-    mcp_client = await tech_mcp_client()
+    access_token = str(config.get("configurable", {}).get("access_token") or "")
+    mcp_client = await tech_mcp_client(access_token)
 
     # 创建agent
     try:
@@ -97,7 +92,7 @@ async def tech_agent_node(state: TaskState, config: RunnableConfig):
     structured_response = response['structured_response']
 
     final_result = structured_response.result
-    logger.info(f"【Tech Agent】最终回复：{final_result[:10]}...")
+    logger.info("Tech Agent 已生成回复")
 
     return {
         "sub_agent_response": {

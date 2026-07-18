@@ -6,11 +6,11 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
 
+from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 from multi_domain_enterprise_project.core.sub_agent_output_format import SubAgentOutputFormat
-from multi_domain_enterprise_project.tools.mcp_tools import finance_mcp_client
-from multi_domain_enterprise_project.core.model import qwen_model
 from multi_domain_enterprise_project.core.task_state import TaskState
+from multi_domain_enterprise_project.tools.mcp_tools import finance_mcp_client
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +20,6 @@ async def get_document(runtime: ToolRuntime):
     """获取当前用户有权限查看的内部财务文档列表及大纲。
     注意：本工具只返回文档的目录和简要说明，绝不包含具体的报销标准、数字和详细条款！
     详细条款必须通过企业知识库检索工具获取。"""
-    config = runtime.config  # 获取运行时配置
-    user_info = config['configurable']["user_info"]  # 获取用户信息
     # 接下来的流程
     # 根据不同用户的定位，搜索出不同的文档列表，然后return
     return {
@@ -40,12 +38,9 @@ async def finance_agent(state: TaskState, config: RunnableConfig):
     content = state.sub_agent_input_content[SubAgentEnum.FINANCE.value]  # 获取主代理传进来的问题
 
     # 获取子agent的历史对话消息
-    try:
-        messages = state.sub_agent_messages[SubAgentEnum.FINANCE.value]
-    except:
-        messages = []
+    messages = state.sub_agent_messages.get(SubAgentEnum.FINANCE.value, [])
 
-    logger.info(f"【Finance Agent的输入】: {content[:10]}...")
+    logger.info("Finance Agent 开始处理任务")
 
     system_prompt = """
 你是公司极其严谨的财务合规官。你的任务是解答员工关于报销、预算和财务制度的问题。
@@ -63,7 +58,8 @@ async def finance_agent(state: TaskState, config: RunnableConfig):
 第四步：**严禁偷懒** -> 绝不能仅凭 `get_document` 返回的寥寥几句摘要就直接回答用户，你必须看到检索工具返回的详细正文后，才能开始撰写最终回答！如果检索出来的内容不足以回答用户问题时，就换种问题再次检索知识库，超过三次检索就直接回答用户
     """
 
-    mcp_client = await finance_mcp_client()
+    access_token = str(config.get("configurable", {}).get("access_token") or "")
+    mcp_client = await finance_mcp_client(access_token)
     try:
         mcp_tools = await mcp_client.get_tools()
         agent = create_agent(
@@ -92,7 +88,7 @@ async def finance_agent(state: TaskState, config: RunnableConfig):
     messages = response['messages']
     structured_response = response['structured_response']
 
-    logger.info(f"【Finance Agent的回复】: {structured_response.result[:10]}...")
+    logger.info("Finance Agent 已生成回复")
 
     return {
         "sub_agent_response": {

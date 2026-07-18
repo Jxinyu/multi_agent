@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.29"
+          enable-cache: true
+      - run: uv sync --frozen --dev
+      - run: uv run python scripts/generate_dev_keys.py --if-missing
+      - run: uv run python scripts/secret_scan.py
+      - run: >-
+          uv run ruff check config
+          multi_domain_enterprise_project/core/auth.py
+          multi_domain_enterprise_project/core/database.py
+          multi_domain_enterprise_project/core/jobs.py
+          multi_domain_enterprise_project/core/observability.py
+          multi_domain_enterprise_project/core/storage.py
+          multi_domain_enterprise_project/core/task_state.py
+          multi_domain_enterprise_project/main.py
+          multi_domain_enterprise_project/worker.py
+          multi_domain_enterprise_project/healthcheck.py
+          multi_domain_enterprise_project/mcp_server
+          multi_domain_enterprise_project/tools
+          multi_domain_enterprise_project/agent
+          multi_domain_enterprise_project/rag/authorization.py
+          multi_domain_enterprise_project/rag/chunker.py
+          multi_domain_enterprise_project/rag/document_in_database.py
+          multi_domain_enterprise_project/rag/documentParser
+          multi_domain_enterprise_project/rag/exceptions.py
+          multi_domain_enterprise_project/rag/graph/graph_db.py
+          multi_domain_enterprise_project/rag/graph/ingestion_graph.py
+          multi_domain_enterprise_project/rag/milvus/ingestion_milvus.py
+          multi_domain_enterprise_project/rag/retrieval.py
+          multi_domain_enterprise_project/rag/runtime.py
+          multi_domain_enterprise_project/rag/rag_service.py
+          tests
+      - run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+
+  container:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: rag-upper:${{ github.sha }}

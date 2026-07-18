@@ -1,4 +1,5 @@
 import type { AttachmentPayload, StreamEvent } from '../types';
+import { authFetch } from './auth';
 
 export async function streamChat(
   query: string,
@@ -7,7 +8,7 @@ export async function streamChat(
   onEvent: (event: StreamEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const response = await fetch('/api/chat', {
+  const response = await authFetch('/api/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

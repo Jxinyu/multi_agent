@@ -2,13 +2,16 @@ import { useState } from 'react';
 
 import { AdminPanel } from './components/AdminPanel';
 import { AppHeader } from './components/AppHeader';
+import { AuthState } from './components/AuthState';
 import { Composer } from './components/Composer';
 import { MessageList } from './components/MessageList';
 import { SessionSidebar } from './components/SessionSidebar';
+import { useAuth } from './hooks/useAuth';
 import { useChatSession } from './hooks/useChatSession';
 
 export default function App() {
   const [activeWorkspace, setActiveWorkspace] = useState<'chat' | 'admin'>('chat');
+  const auth = useAuth();
   const {
     session,
     history,
@@ -21,6 +24,10 @@ export default function App() {
     addAttachments,
     removeAttachment
   } = useChatSession();
+
+  if (auth.status !== 'authenticated') {
+    return <AuthState auth={auth} onRetry={auth.retryDevelopmentAuth} />;
+  }
 
   if (activeWorkspace === 'admin') {
     return (

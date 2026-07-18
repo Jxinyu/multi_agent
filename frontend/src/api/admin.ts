@@ -1,7 +1,8 @@
 import type { CurrentUser, KnowledgeBaseItem } from '../types';
+import { authFetch, openAuthenticatedXhr } from './auth';
 
 export async function fetchCurrentUser(): Promise<CurrentUser> {
-  const response = await fetch('/api/auth/me');
+  const response = await authFetch('/api/auth/me');
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
@@ -10,7 +11,7 @@ export async function fetchCurrentUser(): Promise<CurrentUser> {
 }
 
 export async function fetchKnowledgeBaseItems(): Promise<KnowledgeBaseItem[]> {
-  const response = await fetch('/api/admin/documents');
+  const response = await authFetch('/api/admin/documents');
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
@@ -19,7 +20,7 @@ export async function fetchKnowledgeBaseItems(): Promise<KnowledgeBaseItem[]> {
 }
 
 export async function fetchKnowledgeBaseProgress(id: string): Promise<KnowledgeBaseItem> {
-  const response = await fetch(`/api/admin/documents/${id}`);
+  const response = await authFetch(`/api/admin/documents/${id}`);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
@@ -39,8 +40,7 @@ function uploadChunkWithProgress(
   onProgress: (loaded: number, total: number) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
+    const xhr = openAuthenticatedXhr('POST', url);
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
         onProgress(event.loaded, event.total);
@@ -68,7 +68,7 @@ async function parseUploadResponse(response: Response): Promise<KnowledgeBaseIte
 }
 
 export async function uploadKnowledgeBaseDocuments(formData: FormData): Promise<KnowledgeBaseItem[]> {
-  const response = await fetch('/api/admin/documents/upload', {
+  const response = await authFetch('/api/admin/documents/upload', {
     method: 'POST',
     body: formData
   });
@@ -76,7 +76,7 @@ export async function uploadKnowledgeBaseDocuments(formData: FormData): Promise<
 }
 
 async function uploadSingleResumableFile(file: File, options: ResumableUploadOptions): Promise<KnowledgeBaseItem[]> {
-  const initResponse = await fetch('/api/admin/uploads/resumable/init', {
+  const initResponse = await authFetch('/api/admin/uploads/resumable/init', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ file_name: file.name, file_size: file.size, title: options.title ?? '', mode: options.mode })
@@ -119,7 +119,7 @@ async function uploadSingleResumableFile(file: File, options: ResumableUploadOpt
     });
   }
 
-  const completeResponse = await fetch('/api/admin/uploads/resumable/complete', {
+  const completeResponse = await authFetch('/api/admin/uploads/resumable/complete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ upload_id: initData.upload_id })
@@ -136,7 +136,7 @@ export async function uploadKnowledgeBaseDocumentsResumable(files: File[], optio
 }
 
 export async function ingestKnowledgeBaseDocument(id: string, mode: 'rag' | 'graphrag'): Promise<KnowledgeBaseItem> {
-  const response = await fetch(`/api/admin/documents/${id}/ingest`, {
+  const response = await authFetch(`/api/admin/documents/${id}/ingest`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mode })
@@ -144,12 +144,14 @@ export async function ingestKnowledgeBaseDocument(id: string, mode: 'rag' | 'gra
   if (!response.ok) {
     throw new Error(await response.text());
   }
-  const data = (await response.json()) as { item: KnowledgeBaseItem };
-  return data.item;
+  const data = (await response.json()) as { items?: KnowledgeBaseItem[]; item?: KnowledgeBaseItem };
+  const item = data.item ?? data.items?.[0];
+  if (!item) throw new Error('入库响应缺少文档数据');
+  return item;
 }
 
 export async function bulkIngestKnowledgeBaseDocuments(ids: string[], mode: 'rag' | 'graphrag'): Promise<KnowledgeBaseItem[]> {
-  const response = await fetch('/api/admin/documents/bulk/ingest', {
+  const response = await authFetch('/api/admin/documents/bulk/ingest', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids, mode })
@@ -162,7 +164,7 @@ export async function bulkIngestKnowledgeBaseDocuments(ids: string[], mode: 'rag
 }
 
 export async function deleteKnowledgeBaseDocument(id: string): Promise<void> {
-  const response = await fetch(`/api/admin/documents/${id}`, {
+  const response = await authFetch(`/api/admin/documents/${id}`, {
     method: 'DELETE'
   });
   if (!response.ok) {
@@ -171,7 +173,7 @@ export async function deleteKnowledgeBaseDocument(id: string): Promise<void> {
 }
 
 export async function bulkDeleteKnowledgeBaseDocuments(ids: string[]): Promise<void> {
-  const response = await fetch('/api/admin/documents/bulk/delete', {
+  const response = await authFetch('/api/admin/documents/bulk/delete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids })
@@ -182,7 +184,7 @@ export async function bulkDeleteKnowledgeBaseDocuments(ids: string[]): Promise<v
 }
 
 export async function deleteKnowledgeBase(): Promise<void> {
-  const response = await fetch('/api/admin/knowledge-base', {
+  const response = await authFetch('/api/admin/knowledge-base', {
     method: 'DELETE'
   });
   if (!response.ok) {

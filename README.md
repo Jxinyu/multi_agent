@@ -1,205 +1,131 @@
-# multi-agent RAG
+# 企业多智能体 RAG
 
-企业多智能体 + RAG + MCP 示例项目，已拆分为 React 前端和 FastAPI 后端。
+面向 HR、财务、法务、技术等企业知识场景的多智能体问答系统。系统使用 LangGraph 分层 Supervisor 完成意图识别、动态路由与人工追问，使用 Milvus、Neo4j 和重排序完成授权范围内的混合检索，并按文档特征选择本地解析、OCR、视觉模型或云解析器。
 
-## 项目介绍
+## 当前能力
 
-本项目面向企业 HR、财务、法务、技术等多领域知识问答场景，采用 LangGraph 分层 Supervisor 架构进行意图识别、动态路由和跨域任务编排；知识库侧结合 Milvus 向量检索、Neo4j 知识图谱和重排序策略；文档解析侧通过路由器在 PyMuPDF、MarkItDown、RapidOCR、Qwen2.5-VL、LlamaParse 等解析方式之间动态选择。
-
-核心目标：
-
-- 减少跨领域问题被错误路由到单一 agent。
-- 提升多跳问题的证据文档召回率。
-- 降低扫描件、图片表格和复杂 Office 文档解析时的字段丢失。
-- 通过 FastAPI SSE、MCP、JWT、多租户字段和状态持久化支撑企业部署形态。
+- 身份与权限：Bearer JWT，支持 OIDC/JWKS 或 RSA 公钥校验；接口按 `chat:use`、`kb:read`、`kb:write`、`kb:delete` 执行 RBAC。
+- 租户隔离：API、PostgreSQL 元数据、LangGraph thread、Milvus 和 Neo4j 检索均绑定 `tenant_id`；检索执行 `tenant AND (owner OR ACL)`。
+- 状态机：Supervisor 支持跨域 fan-out、Human-in-the-Loop、汇总与审核；新一轮会清理旧轮终态，重试耗尽进入失败态。
+- RAG：Milvus/Neo4j 双路检索、稳定节点 ID、授权后置复核、结果去重融合、双写失败显式上报、完整删除。
+- 文档：流式限量上传、扩展名与文件签名校验、分片续传、确定性解析文件路径、异步入库。
+- 可靠性：PostgreSQL 元数据、Redis Streams Worker、重试与死信、Alembic 迁移、真实 readiness、结构化日志和 Prometheus 指标。
+- 交付：精确依赖与 `uv.lock`、多阶段 Dockerfile、Compose、GitHub Actions、后端测试与前端构建检查。
 
 ## 架构
 
-主工程在 `multi_domain_enterprise_project`：
-
-1. `main.py` 提供 FastAPI + SSE 聊天 API，并托管前端构建产物。
-2. `agent/supervisor_agent.py` 定义 LangGraph 调度图。
-3. `agent/*_agent.py` 是 HR、财务、法务、技术领域专家。
-4. `rag/` 负责文档解析、切片、Milvus/Neo4j 入库和检索。
-5. `mcp_server/` 将 RAG 检索暴露为 FastMCP 工具。
-
-`frontend` 是独立 React 前端。`chain_graph` 和 `algorithm` 是实验/练习代码，不是主服务入口。
-
-## 技术栈
-
-- 后端：FastAPI、LangChain、LangGraph、LlamaIndex、FastMCP
-- 检索：Milvus、Neo4j、BM25、LambdaMART rerank
-- 文档解析：PyMuPDF、MarkItDown、RapidOCR、Qwen2.5-VL、LlamaParse
-- 状态与权限：Redis、JWT、多租户 metadata/ACL
-- 前端：React、Vite、TypeScript、SSE 流式响应
-
-## 前端目录
-
-- `frontend/src/api`：后端 API 与 SSE 流式解析。
-- `frontend/src/hooks`：聊天会话状态、停止请求、重置会话、历史会话持久化。
-- `frontend/src/components`：Header、消息列表、输入区、会话侧栏等 UI 组件。
-- `frontend/src/types.ts`：前端共享类型。
-
-当前前端能力：
-
-- React + Vite + TypeScript。
-- SSE 流式读取 `/api/chat`。
-- 最近会话侧栏，使用 `localStorage` 持久化。
-- 引用来源折叠/展开。
-- 请求中可停止，支持新会话重置。
-- 支持上传图片、PDF、Office 文档和文本类附件，后端复用 `DocumentParserRouter` 自动解析后注入对话上下文。
-- 当前视觉风格偏内部工作台：低饱和配色、紧凑布局、弱装饰。
-
-## 本地依赖
-
-需要先启动：
-
-- Redis
-- Milvus
-- Neo4j
-- Ollama，并拉取 `qwen3-embedding:4b`
-- 可选：本地 VLM 模型 `qwen2.5vl:3b`
-- 可选：本地 reranker 模型，默认路径 `D:/Environment/model/bge-reranker-v2-m3`
-
-安装 Python 依赖：
-
-```bash
-pip install -r requirements.txt
+```mermaid
+flowchart LR
+    U["企业用户 / OIDC"] --> API["FastAPI + JWT/RBAC"]
+    API --> LG["LangGraph Supervisor"]
+    LG --> A["HR / 财务 / 法务 / 技术 Agent"]
+    A --> MCP["FastMCP RAG 工具"]
+    MCP --> MV["Milvus"]
+    MCP --> N4J["Neo4j"]
+    API --> PG["PostgreSQL 元数据"]
+    API --> RS["Redis Checkpoint / Streams"]
+    RS --> W["入库 Worker"]
+    W --> MV
+    W --> N4J
+    W --> PG
 ```
 
-安装前端依赖：
+主工程目录：
 
-```bash
-cd frontend
-npm install
+- `multi_domain_enterprise_project/main.py`：FastAPI、SSE、上传、知识库管理和健康检查。
+- `multi_domain_enterprise_project/worker.py`：Redis Streams 入库与删除 Worker。
+- `multi_domain_enterprise_project/agent/`：Supervisor 和领域 Agent。
+- `multi_domain_enterprise_project/rag/`：解析、切片、授权检索、融合和双后端读写。
+- `multi_domain_enterprise_project/mcp_server/`：带 JWT 校验的 RAG MCP 服务。
+- `frontend/`：React + TypeScript 企业工作台。
+- `evals/`：量化实验脚本与中文报告。
+
+`chain_graph/` 和 `algorithm/` 仅为学习代码，不是生产入口；包含历史明文凭据的样例已删除。
+
+## 本地启动
+
+项目默认使用 Conda 的 `rag` 环境。首次运行：
+
+```powershell
+conda activate rag
+python -m pip install uv==0.11.29
+python -m uv sync --frozen --active --dev
+python scripts/generate_dev_keys.py --if-missing
+Copy-Item .env.example .env
 ```
 
-## 配置
+开发模式使用 SQLite；Redis、Milvus、Neo4j 和 Ollama 需要提前启动。Ollama 至少需要 `qwen3-embedding:4b`，GraphRAG 还需要配置 `QWEN_API_KEY`。
 
-复制 `.env.example` 为 `.env`，填入本地密钥和服务地址。仓库内 `config/config.yaml` 只保留非敏感默认值；真实密钥必须放在 `.env`。
-
-常用变量：
-
-- `QWEN_API_KEY`
-- `LLAMA_PARSE_API_KEY`
-- `REDIS_URL`
-- `MILVUS_URI`
-- `NEO4J_URL`
-- `NEO4J_USERNAME`
-- `NEO4J_PASSWORD`
-- `MCP_RAG_URL`
-- `MCP_DOCUMENT_TOKEN`
-- `MCP_PUBLIC_KEY_PATH`
-- `MCP_PRIVATE_KEY_PATH`
-
-MCP JWT 签名密钥不要提交到 Git。可以在本地生成：
-
-```bash
-openssl genrsa -out multi_domain_enterprise_project/mcp_server/private_key 2048
-openssl rsa -in multi_domain_enterprise_project/mcp_server/private_key -pubout -out multi_domain_enterprise_project/mcp_server/public_key
-```
-
-如果密钥放在其他目录，通过 `.env` 中的 `MCP_PRIVATE_KEY_PATH` 和 `MCP_PUBLIC_KEY_PATH` 指定。
-
-## 启动
-
-启动 RAG MCP 服务：
-
-```bash
+```powershell
+python -m alembic upgrade head
 python -m multi_domain_enterprise_project.mcp_server.run_mcp
-```
-
-启动聊天 API：
-
-```bash
+python -m multi_domain_enterprise_project.worker
 python -m multi_domain_enterprise_project.main
 ```
 
-默认使用单进程启动，避免 Windows 下 reload 子进程残留导致端口仍挂在旧代码上。需要自动重载时再设置 `UVICORN_RELOAD=1`。
+浏览器访问 [http://127.0.0.1:8080](http://127.0.0.1:8080)。开发模式前端会从 `/api/auth/development-token` 获取短期令牌；生产模式该接口固定返回 404。
 
-浏览器打开：
+## 生产部署
 
-```text
-http://127.0.0.1:8080
+生产环境禁止 development JWT 和 SQLite。准备独立公钥、PostgreSQL/Neo4j/MinIO 密码与外部 Ollama 后：
+
+```powershell
+$env:AUTH_ISSUER='https://id.example.com/'
+$env:AUTH_AUDIENCE='rag-upper-api'
+$env:AUTH_PUBLIC_KEY_HOST_PATH='D:\secrets\jwt-public.pem'
+$env:POSTGRES_PASSWORD='<strong-password>'
+$env:NEO4J_PASSWORD='<strong-password>'
+$env:MINIO_PASSWORD='<strong-password>'
+$env:QWEN_API_KEY='<dashscope-api-key>'
+$env:LLAMA_PARSE_API_KEY='<llama-cloud-api-key>'
+$env:RERANKER_MODEL_HOST_PATH='D:\models\bge-reranker-v2-m3'
+docker compose up -d --build
 ```
 
-前端开发模式：
+OIDC 推荐改用 `AUTH_MODE=oidc` 和 `AUTH_JWKS_URL`。生产发布、备份和回滚步骤见 [部署与运维手册](docs/部署与运维手册.md)，当前企业化边界及剩余工作见 [企业化改造与上线清单](docs/企业化改造与上线清单.md)。
 
-```bash
+## 验证
+
+```powershell
+python scripts/secret_scan.py
+python -m pytest
+python -m ruff check config multi_domain_enterprise_project/core multi_domain_enterprise_project/main.py multi_domain_enterprise_project/worker.py tests
 cd frontend
-npm run dev
-```
-
-默认代理到 `http://127.0.0.1:8080/api`。
-
-生产构建：
-
-```bash
-cd frontend
-npm run build
-```
-
-后端会优先托管 `frontend/dist`。
-
-## 检查
-
-本地服务健康检查：
-
-```bash
-python -m multi_domain_enterprise_project.healthcheck
-```
-
-只检查部分服务：
-
-```bash
-python -m multi_domain_enterprise_project.healthcheck --only redis milvus ollama
-```
-
-后端语法检查：
-
-```bash
-python -m compileall config multi_domain_enterprise_project
-```
-
-前端检查：
-
-```bash
-cd frontend
+npm ci
 npm run typecheck
 npm run build
 ```
 
-评估脚本：
+运行时探针：
 
-```bash
-python -m multi_domain_enterprise_project.tests.eval_supervisor.eval_supervisor_llm
-python -m multi_domain_enterprise_project.tests.eval_rag_recall.eval_rag_recall_llm
-```
+- `/api/health/live`：进程存活。
+- `/api/health/ready`：数据库、Redis、checkpointer、Milvus、Neo4j、Ollama 和 MCP 均可用才返回 200。
+- `/metrics`：Prometheus 指标。
 
 ## 量化实验
 
-项目级评估脚本和报告在 `evals/` 下。`evals/data/` 与 `evals/results/` 是下载数据、embedding 缓存和原始实验输出，不入库；保留入库的是可复现实验脚本和中文报告。
+统一口径见 [最终简历量化指标汇总](evals/reports/final_resume_metrics.md)，实验设计见 [企业多智能体 RAG 项目量化实验方案](EVALUATION_PLAN.md)。数据与结论如下：
 
-简历可引用口径以 `evals/reports/final_resume_metrics.md` 为准：
-
-| 模块 | 实验基准 | 当前结果 |
+| 模块 | 数据与基线 | 结果 |
 | --- | --- | --- |
-| 意图识别与动态路由 | 单层 LLM 路由 | 企业场景路由准确率相对提升 19.60% |
-| 多跳 RAG 检索 | 文档级向量检索 | MultiHop-RAG holdout Recall@10 相对提升 22.34% |
-| 复杂表格解析 | 固定本地快速解析 | 控制样本表格保留分数相对提升 49.99% |
-| 解析成本 | 固定云解析 | 云解析调用次数从 30 次降至 0 次 |
+| 路由 | 120 条脚本标注企业样本；单层 LLM 路由 | 80.83% 到 96.67%，相对提升 19.60% |
+| 多跳检索 | MultiHop-RAG 755 条 holdout；文档级向量检索 | Recall@10 由 78.97% 到 96.61%，相对提升 22.34% |
+| 表格解析 | 脚本控制样本；固定本地快速解析 | 保留分数 66.67% 到 100%，相对提升 49.99% |
+| 公开解析补充 | PubTables-1M OTSL test 抽样 50 条 | 自动路由表格保留分数 86.94% |
+| 成本代理 | 30 条控制样本；固定云解析 | 云解析调用 30 次降到 0 次 |
 
-数据来源：
+注意：`22.34%` 来自 chunk 候选生成、BM25 和监督式 LambdaMART 的离线实验，不应写成“仅由 Milvus + Neo4j 双路检索带来”。成本数字是云调用次数，不是真实账单金额。
 
-- 路由：CLINC150/OOS 公开数据 + 项目自建企业路由样本。
-- RAG：MultiHop-RAG 官方 `MultiHopRAG.json` 与 `corpus.json`。
-- 文档解析：脚本生成控制样本 + PubTables-1M OTSL 公开 test split 抽样。
+## 简历写法
 
-复现命令：
+> 基于 LangGraph 构建分层多智能体系统，实现意图识别、动态路由与 Human-in-the-Loop；在 120 条企业路由集上，相较单层 LLM 路由准确率提升 19.60%。
 
-```bash
-python evals/routing/run_routing_eval.py --clinc-limit 200 --enterprise-limit 120 --concurrency 6
-python evals/rag/run_multihop_lambdamart_eval.py --query-limit 2556 --train-size 1300 --dev-size 200 --candidate-top-k 100 --chunk-top-k 400 --num-leaves 63 --n-estimators 650
-python evals/parsing/run_document_parsing_eval.py --sample-limit 30
-python evals/parsing/run_pubtables_parsing_eval.py --limit 50 --run-id pubtables_public_50_20260707 --parser-timeout-s 90
-```
+> 构建租户隔离的 Milvus + Neo4j 混合 RAG，并通过 chunk 候选召回、BM25 与 LambdaMART 重排序，在 MultiHop-RAG 755 条 holdout 上将 Recall@10 从 78.97% 提升至 96.61%（相对提升 22.34%）。
+
+> 设计文档解析路由，动态选择 PyMuPDF、MarkItDown、RapidOCR、Qwen2.5-VL 与 LlamaParse；控制样本表格保留分数提升 49.99%，PubTables-1M 50 条公开样本达到 86.94%，云解析调用由 30 次降至 0 次。
+
+> 使用 FastAPI SSE、JWT/OIDC、RBAC、PostgreSQL、Redis Streams 与 MCP，实现多租户会话隔离、异步入库、失败重试、死信和可观测部署。
+
+## 安全说明
+
+当前工作树已通过跟踪文件凭据扫描，但旧 Git 历史曾包含凭据。必须先在对应平台吊销并轮换，再按 [安全说明](SECURITY.md) 处理历史；普通提交无法删除已经公开的历史对象。

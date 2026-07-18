@@ -1,11 +1,12 @@
 import asyncio
+import logging
 import os
 import time
-
-import logging
 from pathlib import Path
-from multi_domain_enterprise_project.rag.documentParser.exception_handling import DocumentParsingError
+
 from langchain_pymupdf4llm import PyMuPDF4LLMLoader
+
+from multi_domain_enterprise_project.rag.documentParser.exception_handling import DocumentParsingError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,7 +33,7 @@ class EnterprisePyMuPDFParser:
         """
         if not file_path.exists():
             raise FileNotFoundError(f"找不到文件: {file_path}")
-        if not file_path.suffix in self.support_file_types:
+        if file_path.suffix not in self.support_file_types:
             raise ValueError(f"不支持的文件格式: {file_path.suffix}")
         file_size_mb = os.path.getsize(file_path) / 1024 / 1024  # MB
         if file_size_mb == 0:
@@ -49,14 +50,14 @@ class EnterprisePyMuPDFParser:
 
         self._validate_file(path_obj)
 
-        logger.info(f"🚀 开始解析任务: {path_obj.name}[Trace ID: {id(self)}]")
+        logger.info("开始 PDF 文档解析")
 
         try:
             document_parser = PyMuPDF4LLMLoader(path_obj)
             documents = await document_parser.aload()
 
             if not documents:
-                logger.error(f"⚠️ 解析完成，但是没有提取到任何内容: {path_obj.name}")
+                logger.error("PDF 文档解析完成但未提取到内容")
                 return ''
 
             docs = "\n".join([doc.page_content for doc in documents])
@@ -66,10 +67,10 @@ class EnterprisePyMuPDFParser:
                 f"耗时: {time.time() - start_time:.1f}s)")
             return docs
         except FileNotFoundError as fe:
-            logger.error(f"⚠️ 文件 {path_obj.name} 不存在: {fe}")
+            logger.error("PDF 文档不存在")
             raise DocumentParsingError(f"文档不存在：{str(fe)}") from fe
         except ValueError as ve:
-            logger.error(f"⚠️ 文件 {path_obj.name} 检验错误: {ve}")
+            logger.error("PDF 文档校验失败")
             raise DocumentParsingError(f"文件校验错误：{str(ve)}") from ve
         except Exception as e:
             logger.error(f"❌ 发生未知严重错误: {str(e)}")

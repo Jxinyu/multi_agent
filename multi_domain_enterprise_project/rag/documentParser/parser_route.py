@@ -1,18 +1,17 @@
-import os
-import time
-import logging
 import asyncio
+import logging
+import os
 import zipfile
 from pathlib import Path
 
 import fitz
 
+from multi_domain_enterprise_project.rag.documentParser.exception_handling import DocumentParsingError
 from multi_domain_enterprise_project.rag.documentParser.llamaparser import EnterpriseDocParser
 from multi_domain_enterprise_project.rag.documentParser.officeparser import EnterpriseOfficeParser
 from multi_domain_enterprise_project.rag.documentParser.pymupdfparser import EnterprisePyMuPDFParser
-from multi_domain_enterprise_project.rag.documentParser.rapidocrparser import EnterpriseRapidOCRParser
 from multi_domain_enterprise_project.rag.documentParser.qwenparser import EnterpriseLocalVLMParser
-from multi_domain_enterprise_project.rag.documentParser.exception_handling import DocumentParsingError
+from multi_domain_enterprise_project.rag.documentParser.rapidocrparser import EnterpriseRapidOCRParser
 
 logging.basicConfig(
     level=logging.INFO,
@@ -109,13 +108,10 @@ class DocumentParserRouter:
                 "chart_count": chart_count,
                 "is_complex": is_complex
             }
-        except zipfile.BadZipFile:
-            # 如果不是标准的 OOXML (比如老版本的 .doc 或已被破坏的结构)，安全起见走复杂路线
-            logger.warning(f"⚠️ 无法将文件作为 ZIP 读取(可能是旧版 .doc)，默认判定为复杂模式")
-            return {"is_complex": True}
+        except zipfile.BadZipFile as exc:
+            raise DocumentParsingError("Office 文件不是有效的 OOXML 文档") from exc
         except Exception as e:
-            logger.warning(f"⚠️ Office 探针分析失败: {e}")
-            return {"is_complex": True}
+            raise DocumentParsingError(f"Office 文档特征探测失败: {e}") from e
 
     def _probe_pdf(self, file_path: str) -> str:
         """
@@ -187,8 +183,7 @@ class DocumentParserRouter:
             return "simple"
 
         except Exception as e:
-            logger.warning(f"⚠️ PDF 探针分析失败，强制降级为 complex 处理: {e}")
-            return "complex"  # 探针异常时，安全降级给最强的解析器
+            raise DocumentParsingError(f"PDF 文档特征探测失败: {e}") from e
 
     async def route_and_parse(self, file_path: str) -> str:
         """
@@ -197,8 +192,7 @@ class DocumentParserRouter:
         path_obj = Path(file_path)
         ext = path_obj.suffix.lower()
 
-        start_time = time.time()
-        logger.info(f"🚦 路由器接收到任务: {path_obj.name} | 策略模式: [{self.mode.upper()}]")
+        logger.info("解析路由开始，策略模式: %s", self.mode.upper())
 
         if not path_obj.exists():
             raise FileNotFoundError(f"文件不存在: {file_path}")
@@ -278,30 +272,11 @@ class DocumentParserRouter:
             else:
                 raise ValueError(f"不支持的文件扩展名: {ext}")
 
-        except Exception as e:
-            logger.error(f"❌ 路由解析发生异常: {e}")
-            # LlamaParse 兜底重试
-            if self.mode != "fast" and ext in [
-                ".pdf",
-                ".doc",
-                ".docx",
-                ".ppt",
-                ".pptx",
-                ".xls",
-                ".xlsx",
-                ".png",
-                ".jpg",
-                ".jpeg",
-                ".bmp",
-            ]:
-                logger.warning("🔄 触发兜底机制: 尝试启用云端 LlamaParse 进行重试...")
-                try:
-                    return await self.llama_parser.parse_file(file_path)
-                except Exception as fallback_e:
-                    logger.error(f"❌ 兜底解析亦失败: {fallback_e}")
-                    raise DocumentParsingError(f"所有路由均告失败。原始错误: {e}, 兜底错误: {fallback_e}")
-            # 抛出最终业务异常
-            raise DocumentParsingError(f"路由解析任务中断: {str(e)}")
+        except DocumentParsingError:
+            raise
+        except Exception as exc:
+            logger.exception("路由解析发生异常")
+            raise DocumentParsingError("路由解析任务中断") from exc
 
 
 if __name__ == "__main__":

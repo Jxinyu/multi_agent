@@ -1,21 +1,27 @@
-import asyncio
-import datetime
-import sys
 import logging
+import os
 
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.types import Command
 
-from config import settings
 from multi_domain_enterprise_project.agent.supervisor_agent import create_graph
-from multi_domain_enterprise_project.core.task_state import TaskStatus
-
-import os
 
 os.environ["NO_PROXY"] = "localhost,127.0.0.1,modelscope.net,bigmodel.cn,xiaoai.plus"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _extract_result(values: dict) -> tuple[str, list[str]]:
+    result = values.get("result")
+    if not isinstance(result, dict):
+        raise RuntimeError("LangGraph 终态缺少结构化 result")
+    reply = result.get("最终回复")
+    if not isinstance(reply, str) or not reply.strip():
+        raise RuntimeError("LangGraph 终态缺少最终回复")
+    references = result.get("参考资料", [])
+    if not isinstance(references, list):
+        raise RuntimeError("LangGraph 终态参考资料格式无效")
+    return reply, [str(item) for item in references]
 
 
 async def run_agent(query: str, config: dict, checkpointer) -> dict:
@@ -35,7 +41,7 @@ async def run_agent(query: str, config: dict, checkpointer) -> dict:
         # ==========================================
         if state and state.next:
             # 场景 A: 存在挂起的 Interrupt。说明用户现在的 query 是对 Agent 上一轮追问的【回复】
-            logger.info(f"🧵[Thread {config['configurable']['thread_id']}] 从中断处恢复，提交人机协作数据: {query}")
+            logger.info("从中断处恢复")
 
             decision = {
                 "content": query,
@@ -47,7 +53,7 @@ async def run_agent(query: str, config: dict, checkpointer) -> dict:
         else:
             # 场景 B: 正常的新问题 / 正常的多轮追加提问
             # 因为带有 thread_id，LangGraph 会自动把历史 message 拼在前面，不用你自己管理历史记录！
-            logger.info(f"🧵 [Thread {config['configurable']['thread_id']}] 发起新一轮对话指令: {query}")
+            logger.info("发起新一轮对话")
 
             response = await agent.ainvoke(
                 {"messages": [{"role": "user", "content": query}]},
@@ -69,29 +75,18 @@ async def run_agent(query: str, config: dict, checkpointer) -> dict:
                 }
 
         # 如果没有 interrupt，说明 Graph 走到了 END，提取最终答案
-        try:
-            final_reply = response['result']['最终回复']
-            references = response['result'].get('参考资料', [])
-            return {
-                "status": "completed",
-                "message": final_reply,
-                "references": references
-            }
-        except KeyError:
-            last_msg = response['messages'][-1].content
-            fallback_status = TaskStatus.COMPLETED if last_msg else TaskStatus.FAILED
-            return {
-                "status": fallback_status.value,
-                "message": str(last_msg),
-                "references": []
-            }
+        final_reply, references = _extract_result(response)
+        return {
+            "status": "completed",
+            "message": final_reply,
+            "references": references,
+        }
 
-    except Exception as e:
-        logger.exception(f"❌ [Thread {config['configurable']['thread_id']}] 运行异常: {str(e)}")
-        # 这里不要抛死，优雅地告诉前端发生了什么
+    except Exception:
+        logger.exception("Agent 运行异常")
         return {
             "status": "error",
-            "message": f"系统开小差了，请稍后再试。错误信息: {str(e)}",
+            "message": "请求处理失败，请稍后重试。",
             "references": []
         }
 
@@ -130,11 +125,11 @@ async def run_agent_stream(query: str, config: dict, checkpointer):
     state = await agent.aget_state(config)
 
     if state and state.next:
-        logger.info(f"🧵[Thread {config['configurable']['thread_id']}] 从中断处恢复...")
+        logger.info("从中断处恢复流式任务")
         decision = {"content": query, "type": "approval"}
         input_data = Command(resume=decision)
     else:
-        logger.info(f"🧵 [Thread {config['configurable']['thread_id']}] 发起新一轮对话指令...")
+        logger.info("发起新一轮流式任务")
         input_data = {"messages": [{"role": "user", "content": query}]}
 
     try:
@@ -172,8 +167,7 @@ async def run_agent_stream(query: str, config: dict, checkpointer):
             interrupt_data = find_interrupt(final_state)
 
             if interrupt_data:
-                logger.info(
-                    f"⚠️ [Thread {config['configurable']['thread_id']}] 检测到子代理处于冻结状态，正在携带人类决策解冻...{interrupt_data}")
+                logger.info("检测到子代理处于中断状态")
                 action = interrupt_data.get('action')
                 if action in ['human_decision', 'get_document']:
                     yield {
@@ -184,22 +178,13 @@ async def run_agent_stream(query: str, config: dict, checkpointer):
                     return
 
         # 场景 B: 正常结束，提取最终回复
-        result_data = final_state.values.get('result', {})
-        if result_data:
-            yield {
-                "type": "complete",
-                "message": result_data.get('最终回复', ''),
-                "references": result_data.get('参考资料', [])
-            }
-        else:
-            # 容错：兜底最后一条消息
-            last_msg = final_state.values.get('messages', [])[-1].content
-            yield {
-                "type": "complete",
-                "message": str(last_msg),
-                "references": []
-            }
+        final_reply, references = _extract_result(final_state.values)
+        yield {
+            "type": "complete",
+            "message": final_reply,
+            "references": references,
+        }
 
-    except Exception as e:
-        logger.exception(f"❌ 运行异常: {str(e)}")
-        yield {"type": "error", "message": f"系统开小差了，请稍后再试。错误信息: {str(e)}"}
+    except Exception:
+        logger.exception("Agent 流式运行异常")
+        yield {"type": "error", "message": "请求处理失败，请稍后重试。"}

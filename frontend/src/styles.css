@@ -28,6 +28,13 @@ button, textarea, input, select { font: inherit; }
 button { color: inherit; }
 
 .app-shell { height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+.auth-shell { min-height:100%; display:grid; place-items:center; padding:24px; background:var(--bg); }
+.auth-panel { width:min(100%, 380px); display:flex; flex-direction:column; align-items:center; gap:14px; padding:28px; text-align:center; border:1px solid var(--border); border-radius:8px; background:var(--surface); }
+.auth-icon { width:42px; height:42px; display:grid; place-items:center; border-radius:8px; color:var(--text); background:var(--surface-soft); }
+.auth-panel h1 { margin:0; font-size:20px; }
+.auth-panel p { margin:0; color:var(--muted); font-size:14px; }
+.auth-spinner { animation:auth-spin .9s linear infinite; }
+@keyframes auth-spin { to { transform:rotate(360deg); } }
 .topbar {
   height: 56px; display:flex; align-items:center; justify-content:space-between; gap:16px;
   padding:0 18px; border-bottom:1px solid var(--border); background:rgba(255,255,255,.92); backdrop-filter:blur(12px); z-index:10;

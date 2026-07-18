@@ -53,11 +53,9 @@ export interface KnowledgeBaseItem {
   title: string;
   tenant_id: string;
   owner_id: string;
-  acl: string;
+  acl: string[];
   upload_time: string;
   mode: string;
-  file_path: string;
-  file_path_md?: string | null;
   status: string;
   chunk_count: number;
   error?: string | null;
@@ -65,6 +63,9 @@ export interface KnowledgeBaseItem {
   ingest_total?: number;
   ingest_message?: string | null;
   batch_id?: string | null;
+  version: number;
+  checksum: string;
+  backend_status: Record<string, string>;
 }
 
 export interface ChatSession {
