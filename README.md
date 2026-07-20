@@ -104,7 +104,7 @@ npm run build
 
 ## 量化实验
 
-统一口径见 [最终简历量化指标汇总](evals/reports/final_resume_metrics.md)，实验设计见 [企业多智能体 RAG 项目量化实验方案](EVALUATION_PLAN.md)。数据与结论如下：
+统一口径见 [量化指标汇总](evals/reports/final_resume_metrics.md)，实验设计见 [企业多智能体 RAG 项目量化实验方案](EVALUATION_PLAN.md)。数据与结论如下：
 
 | 模块 | 数据与基线 | 结果 |
 | --- | --- | --- |
@@ -115,16 +115,6 @@ npm run build
 | 成本代理 | 30 条控制样本；固定云解析 | 云解析调用 30 次降到 0 次 |
 
 注意：`22.34%` 来自 chunk 候选生成、BM25 和监督式 LambdaMART 的离线实验，不应写成“仅由 Milvus + Neo4j 双路检索带来”。成本数字是云调用次数，不是真实账单金额。
-
-## 简历写法
-
-> 基于 LangGraph 构建分层多智能体系统，实现意图识别、动态路由与 Human-in-the-Loop；在 120 条企业路由集上，相较单层 LLM 路由准确率提升 19.60%。
-
-> 构建租户隔离的 Milvus + Neo4j 混合 RAG，并通过 chunk 候选召回、BM25 与 LambdaMART 重排序，在 MultiHop-RAG 755 条 holdout 上将 Recall@10 从 78.97% 提升至 96.61%（相对提升 22.34%）。
-
-> 设计文档解析路由，动态选择 PyMuPDF、MarkItDown、RapidOCR、Qwen2.5-VL 与 LlamaParse；控制样本表格保留分数提升 49.99%，PubTables-1M 50 条公开样本达到 86.94%，云解析调用由 30 次降至 0 次。
-
-> 使用 FastAPI SSE、JWT/OIDC、RBAC、PostgreSQL、Redis Streams 与 MCP，实现多租户会话隔离、异步入库、失败重试、死信和可观测部署。
 
 ## 安全说明
 
