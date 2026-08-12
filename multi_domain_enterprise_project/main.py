@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 import uvicorn
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +24,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings, validate_runtime_settings
 from multi_domain_enterprise_project.agent.agent_main import run_agent_stream
+from multi_domain_enterprise_project.core.audit import (
+    append_audit_event,
+    create_document_with_audit,
+    create_job_with_audit,
+    create_upload_session_with_audit,
+    list_audit_events,
+)
 from multi_domain_enterprise_project.core.auth import (
     AuthTokenResponse,
     CurrentUser,
@@ -35,15 +42,11 @@ from multi_domain_enterprise_project.core.database import (
     IngestionJobRecord,
     SessionFactory,
     close_database,
-    create_document,
-    create_job,
-    create_upload_session,
     get_document,
     get_session,
     get_upload_session,
     init_database,
     list_documents,
-    remove_upload_session,
     update_document,
     update_job,
     utc_now,
@@ -53,6 +56,7 @@ from multi_domain_enterprise_project.core.observability import (
     RequestContextMiddleware,
     configure_logging,
     configure_tracing,
+    request_id_var,
 )
 from multi_domain_enterprise_project.core.storage import (
     combine_chunks,
@@ -228,12 +232,33 @@ class JobResponse(BaseModel):
     error: str | None
 
 
+class AuditEventItem(BaseModel):
+    id: str
+    tenant_id: str
+    actor_id: str
+    actor_type: str
+    source: str
+    action: str
+    resource_type: str
+    resource_id: str | None
+    outcome: str
+    request_id: str | None
+    metadata: dict[str, Any]
+    occurred_at: str
+
+
+class AuditEventListResponse(BaseModel):
+    items: list[AuditEventItem]
+    next_cursor: str | None = None
+
+
 Session = Annotated[AsyncSession, Depends(get_session)]
 Authenticated = Annotated[CurrentUser, Depends(get_current_user)]
 ChatUser = Annotated[CurrentUser, Depends(require_permissions("chat:use"))]
 KbReader = Annotated[CurrentUser, Depends(require_permissions("kb:read"))]
 KbWriter = Annotated[CurrentUser, Depends(require_permissions("kb:write"))]
 KbDeleter = Annotated[CurrentUser, Depends(require_permissions("kb:delete"))]
+AuditReader = Annotated[CurrentUser, Depends(require_permissions("audit:read"))]
 
 
 def _item(payload: dict[str, Any]) -> KnowledgeBaseItem:
@@ -298,17 +323,21 @@ async def _queue_document_job(
     *,
     operation: str,
     mode: str,
+    current_user: CurrentUser,
 ) -> None:
     if redis_conn is None:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="任务队列未初始化")
     job_id = uuid.uuid4().hex
-    await create_job(
+    request_id = request_id_var.get()
+    await create_job_with_audit(
         session,
         job_id=job_id,
         document_id=item["id"],
         tenant_id=item["tenant_id"],
         operation=operation,
         mode=mode,
+        requested_by=current_user.user_id,
+        request_id=request_id,
     )
     try:
         await enqueue_job(
@@ -318,6 +347,8 @@ async def _queue_document_job(
             tenant_id=item["tenant_id"],
             operation=operation,
             mode=mode,
+            requested_by=current_user.user_id,
+            request_id=request_id,
         )
     except Exception as exc:
         await update_job(session, job_id, status="failed", error="任务入队失败")
@@ -328,6 +359,18 @@ async def _queue_document_job(
             status="delete_failed" if operation == "delete" else "failed",
             error="任务入队失败",
             ingest_message="任务未进入队列",
+        )
+        await append_audit_event(
+            session,
+            tenant_id=current_user.tenant_id,
+            actor_id=current_user.user_id,
+            source="api",
+            action=f"document.{operation}_enqueue",
+            resource_type="document",
+            resource_id=item["id"],
+            outcome="failure",
+            request_id=request_id,
+            metadata={"job_id": job_id, "error_type": type(exc).__name__},
         )
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="任务入队失败") from exc
 
@@ -343,8 +386,21 @@ async def get_me(current_user: Authenticated) -> CurrentUserResponse:
 
 
 @app.post("/api/chat")
-async def chat_endpoint(request: ChatRequest, current_user: ChatUser):
+async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: Session):
     await _rate_limit(current_user, "chat")
+    chat_request_id = request_id_var.get()
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="chat.requested",
+        resource_type="conversation",
+        resource_id=request.thread_id,
+        outcome="success",
+        request_id=chat_request_id,
+        metadata={"attachment_count": len(request.attachments)},
+    )
     internal_thread_id = f"{current_user.tenant_id}:{current_user.user_id}:{request.thread_id}"
     config: dict[str, Any] = {
         "configurable": {
@@ -361,6 +417,19 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser):
 
     async def event_generator():
         if global_checkpointer is None:
+            async with SessionFactory() as audit_session:
+                await append_audit_event(
+                    audit_session,
+                    tenant_id=current_user.tenant_id,
+                    actor_id=current_user.user_id,
+                    source="api",
+                    action="chat.failed",
+                    resource_type="conversation",
+                    resource_id=request.thread_id,
+                    outcome="failure",
+                    request_id=chat_request_id,
+                    metadata={"error_type": "CheckpointerUnavailable"},
+                )
             yield f"data: {json.dumps({'type': 'error', 'message': '会话服务未就绪'}, ensure_ascii=False)}\n\n"
             return
         try:
@@ -372,10 +441,49 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser):
                 query = f"{query}\n\n【附件解析内容】\n{attachment_context}\n\n请结合附件内容回答。"
             async for chunk in run_agent_stream(query=query, config=config, checkpointer=global_checkpointer):
                 yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+            async with SessionFactory() as audit_session:
+                await append_audit_event(
+                    audit_session,
+                    tenant_id=current_user.tenant_id,
+                    actor_id=current_user.user_id,
+                    source="api",
+                    action="chat.completed",
+                    resource_type="conversation",
+                    resource_id=request.thread_id,
+                    outcome="success",
+                    request_id=chat_request_id,
+                    metadata={"attachment_count": len(request.attachments)},
+                )
         except HTTPException as exc:
+            async with SessionFactory() as audit_session:
+                await append_audit_event(
+                    audit_session,
+                    tenant_id=current_user.tenant_id,
+                    actor_id=current_user.user_id,
+                    source="api",
+                    action="chat.failed",
+                    resource_type="conversation",
+                    resource_id=request.thread_id,
+                    outcome="failure",
+                    request_id=chat_request_id,
+                    metadata={"error_type": type(exc).__name__, "status_code": exc.status_code},
+                )
             yield f"data: {json.dumps({'type': 'error', 'message': str(exc.detail)}, ensure_ascii=False)}\n\n"
-        except Exception:
+        except Exception as exc:
             logger.exception("聊天流处理失败")
+            async with SessionFactory() as audit_session:
+                await append_audit_event(
+                    audit_session,
+                    tenant_id=current_user.tenant_id,
+                    actor_id=current_user.user_id,
+                    source="api",
+                    action="chat.failed",
+                    resource_type="conversation",
+                    resource_id=request.thread_id,
+                    outcome="failure",
+                    request_id=chat_request_id,
+                    metadata={"error_type": type(exc).__name__},
+                )
             yield f"data: {json.dumps({'type': 'error', 'message': '请求处理失败，请稍后重试'}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(
@@ -388,12 +496,71 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser):
 @app.get("/api/admin/documents", response_model=KnowledgeBaseListResponse)
 async def api_list_documents(current_user: KbReader, session: Session):
     items = await list_documents(session, current_user.tenant_id)
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="document.listed",
+        resource_type="document_collection",
+        outcome="success",
+        request_id=request_id_var.get(),
+        metadata={"result_count": len(items)},
+    )
     return KnowledgeBaseListResponse(items=[_item(item) for item in items])
 
 
 @app.get("/api/admin/documents/{document_id}")
 async def api_get_document(document_id: str, current_user: KbReader, session: Session):
-    return {"item": _item(await _require_document(session, document_id, current_user))}
+    item = await _require_document(session, document_id, current_user)
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="document.read",
+        resource_type="document",
+        resource_id=document_id,
+        outcome="success",
+        request_id=request_id_var.get(),
+    )
+    return {"item": _item(item)}
+
+
+@app.get("/api/admin/audit-events", response_model=AuditEventListResponse)
+async def api_list_audit_events(
+    current_user: AuditReader,
+    session: Session,
+    limit: int = Query(default=50, ge=1, le=200),
+    cursor: str | None = Query(default=None, max_length=512),
+    action: str | None = Query(default=None, max_length=128),
+    outcome: Literal["success", "failure", "denied"] | None = None,
+    actor_id: str | None = Query(default=None, max_length=128),
+):
+    try:
+        items, next_cursor = await list_audit_events(
+            session,
+            tenant_id=current_user.tenant_id,
+            limit=limit,
+            cursor=cursor,
+            action=action,
+            outcome=outcome,
+            actor_id=actor_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="audit.events_read",
+        resource_type="audit_event_collection",
+        outcome="success",
+        request_id=request_id_var.get(),
+        metadata={"result_count": len(items)},
+    )
+    return AuditEventListResponse(items=[AuditEventItem(**item) for item in items], next_cursor=next_cursor)
 
 
 @app.post("/api/admin/documents/upload", response_model=UploadResponse)
@@ -414,7 +581,7 @@ async def upload_documents(
         document_id = uuid.uuid4().hex
         target = document_path(document_id, file_name)
         try:
-            _, checksum = await stream_upload(upload, target, max_bytes=settings.upload.max_file_size_bytes)
+            file_size, checksum = await stream_upload(upload, target, max_bytes=settings.upload.max_file_size_bytes)
             validate_file_signature(target, extension)
             payload = {
                 "id": document_id,
@@ -428,7 +595,14 @@ async def upload_documents(
                 "file_path": str(target),
                 "checksum": checksum,
             }
-            created.append(_item(await create_document(session, payload)))
+            item = await create_document_with_audit(
+                session,
+                actor_id=current_user.user_id,
+                request_id=request_id_var.get(),
+                payload=payload,
+                metadata={"file_size": file_size, "mode": mode, "upload_method": "multipart"},
+            )
+            created.append(_item(item))
         except Exception:
             target.unlink(missing_ok=True)
             raise
@@ -441,9 +615,12 @@ async def init_resumable_upload(payload: ResumableUploadInitRequest, current_use
     if payload.file_size > settings.upload.max_file_size_bytes:
         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="文件超过大小限制")
     upload_id = uuid.uuid4().hex
-    await create_upload_session(
-        session,
-        {
+    upload_root = upload_session_dir(upload_id)
+    (upload_root / "chunks").mkdir(parents=True, exist_ok=False)
+    try:
+        await create_upload_session_with_audit(
+            session,
+            {
             "id": upload_id,
             "file_name": payload.file_name,
             "file_size": payload.file_size,
@@ -453,9 +630,13 @@ async def init_resumable_upload(payload: ResumableUploadInitRequest, current_use
             "owner_id": current_user.user_id,
             "acl": ["private"],
             "chunk_size": RESUMABLE_CHUNK_SIZE,
-        },
-    )
-    (upload_session_dir(upload_id) / "chunks").mkdir(parents=True, exist_ok=False)
+            },
+            actor_id=current_user.user_id,
+            request_id=request_id_var.get(),
+        )
+    except Exception:
+        remove_upload_session_files(upload_id)
+        raise
     return ResumableUploadInitResponse(upload_id=upload_id, chunk_size=RESUMABLE_CHUNK_SIZE)
 
 
@@ -511,9 +692,9 @@ async def complete_resumable_upload(
     checksum = combine_chunks(payload.upload_id, expected_chunks, target, meta.file_size)
     validate_file_signature(target, normalized_extension(meta.file_name))
     try:
-        item = await create_document(
+        item = await create_document_with_audit(
             session,
-            {
+            payload={
                 "id": document_id,
                 "file_name": meta.file_name,
                 "title": meta.title or Path(meta.file_name).stem,
@@ -525,11 +706,14 @@ async def complete_resumable_upload(
                 "file_path": str(target),
                 "checksum": checksum,
             },
+            actor_id=current_user.user_id,
+            request_id=request_id_var.get(),
+            metadata={"file_size": meta.file_size, "mode": meta.mode, "upload_method": "resumable"},
+            upload_session=meta,
         )
     except Exception:
         target.unlink(missing_ok=True)
         raise
-    await remove_upload_session(session, payload.upload_id)
     remove_upload_session_files(payload.upload_id)
     return UploadResponse(items=[_item(item)])
 
@@ -555,7 +739,9 @@ async def ingest_document(document_id: str, payload: IngestRequest, current_user
         ingest_total=1,
         ingest_message="等待入库 Worker",
     )
-    await _queue_document_job(session, item, operation="ingest", mode=mode)  # type: ignore[arg-type]
+    await _queue_document_job(
+        session, item, operation="ingest", mode=mode, current_user=current_user
+    )  # type: ignore[arg-type]
     return UploadResponse(items=[_item(item)])  # type: ignore[arg-type]
 
 
@@ -575,12 +761,18 @@ async def bulk_ingest_documents(payload: BulkIngestRequest, current_user: KbWrit
             error=None,
             ingest_message="等待入库 Worker",
         )
-        await _queue_document_job(session, updated, operation="ingest", mode=_ingest_mode(payload.mode))  # type: ignore[arg-type]
+        await _queue_document_job(
+            session,
+            updated,
+            operation="ingest",
+            mode=_ingest_mode(payload.mode),
+            current_user=current_user,
+        )  # type: ignore[arg-type]
         items.append(_item(updated))  # type: ignore[arg-type]
     return UploadResponse(items=items)
 
 
-async def _queue_delete(session: AsyncSession, item: dict[str, Any]) -> None:
+async def _queue_delete(session: AsyncSession, item: dict[str, Any], current_user: CurrentUser) -> None:
     updated = await update_document(
         session,
         item["id"],
@@ -588,13 +780,15 @@ async def _queue_delete(session: AsyncSession, item: dict[str, Any]) -> None:
         status="delete_queued",
         ingest_message="等待清理检索数据",
     )
-    await _queue_document_job(session, updated, operation="delete", mode="mg")  # type: ignore[arg-type]
+    await _queue_document_job(
+        session, updated, operation="delete", mode="mg", current_user=current_user
+    )  # type: ignore[arg-type]
 
 
 @app.delete("/api/admin/documents/{document_id}", response_model=DeleteResponse, status_code=202)
 async def remove_document(document_id: str, current_user: KbDeleter, session: Session):
     item = await _require_document(session, document_id, current_user)
-    await _queue_delete(session, item)
+    await _queue_delete(session, item, current_user)
     return DeleteResponse(success=True)
 
 
@@ -605,7 +799,7 @@ async def bulk_remove_documents(payload: BulkDeleteRequest, current_user: KbDele
         item = await get_document(session, document_id, current_user.tenant_id)
         if item is None or item["status"] == "delete_queued":
             continue
-        await _queue_delete(session, item)
+        await _queue_delete(session, item, current_user)
         queued += 1
     return DeleteResponse(success=queued > 0)
 
@@ -615,7 +809,7 @@ async def remove_knowledge_base(current_user: KbDeleter, session: Session):
     items = await list_documents(session, current_user.tenant_id)
     for item in items:
         if item["status"] != "delete_queued":
-            await _queue_delete(session, item)
+            await _queue_delete(session, item, current_user)
     return DeleteResponse(success=bool(items))
 
 

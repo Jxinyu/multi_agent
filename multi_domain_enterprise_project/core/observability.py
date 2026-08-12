@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextvars
 import json
 import logging
+import re
 import time
 import uuid
 from datetime import UTC, datetime
@@ -20,6 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from config import settings
 
 request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")
 
 HTTP_REQUESTS = Counter(
     "rag_upper_http_requests_total",
@@ -72,7 +74,8 @@ def configure_tracing() -> None:
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+        supplied_request_id = request.headers.get("X-Request-ID", "")
+        request_id = supplied_request_id if REQUEST_ID_PATTERN.fullmatch(supplied_request_id) else uuid.uuid4().hex
         token = request_id_var.set(request_id)
         started = time.perf_counter()
         status_code = 500

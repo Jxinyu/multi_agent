@@ -13,6 +13,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 from config import settings
+from multi_domain_enterprise_project.core.audit import append_audit_event
+from multi_domain_enterprise_project.core.database import SessionFactory
+from multi_domain_enterprise_project.core.observability import request_id_var
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -123,6 +126,18 @@ def require_permissions(*required: str) -> Callable[..., Any]:
     async def dependency(current_user: Annotated[CurrentUser, Depends(get_current_user)]) -> CurrentUser:
         missing = [permission for permission in required if permission not in current_user.permissions]
         if missing:
+            async with SessionFactory() as session:
+                await append_audit_event(
+                    session,
+                    tenant_id=current_user.tenant_id,
+                    actor_id=current_user.user_id,
+                    source="api",
+                    action="authorization.denied",
+                    resource_type="api_permission",
+                    outcome="denied",
+                    request_id=request_id_var.get(),
+                    metadata={"required_permissions": list(required), "missing_permissions": missing},
+                )
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前账号权限不足")
         return current_user
 

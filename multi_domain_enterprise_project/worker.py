@@ -9,15 +9,17 @@ from dataclasses import dataclass
 from typing import Any
 
 from redis.asyncio import Redis
+from sqlalchemy import select
 
 from config import settings, validate_runtime_settings
+from multi_domain_enterprise_project.core.audit import append_audit_event, build_audit_event
 from multi_domain_enterprise_project.core.database import (
     IngestionJobRecord,
+    KnowledgeDocumentRecord,
     SessionFactory,
     close_database,
     get_document,
     init_database,
-    remove_document_record,
     update_document,
     update_job,
 )
@@ -81,10 +83,6 @@ async def _delete_document(item: dict[str, Any], mode: str) -> None:
         await delete_document_data(item["tenant_id"], item["id"], mode=mode)
     remove_storage_path(item.get("file_path_md") or str(parsed_document_path(item["tenant_id"], item["id"])))
     remove_storage_path(item.get("file_path"))
-    async with SessionFactory() as session:
-        removed = await remove_document_record(session, item["id"], item["tenant_id"])
-        if not removed:
-            raise RuntimeError("文档元数据已不存在")
 
 
 OPERATIONS: dict[str, JobOperation] = {
@@ -127,9 +125,28 @@ async def _record_failure(redis: Redis, message: StreamMessage, job: dict[str, s
                 tenant_id=job["tenant_id"],
                 operation=job["operation"],
                 mode=job["mode"],
+                requested_by=job["requested_by"],
+                request_id=job["request_id"],
                 attempts=attempts,
             )
             INGESTION_JOBS.labels(operation=job["operation"], status="retry").inc()
+        await append_audit_event(
+            session,
+            tenant_id=job["tenant_id"],
+            actor_id=job["requested_by"],
+            source="worker",
+            action=f"document.{job['operation']}_attempt_failed",
+            resource_type="document",
+            resource_id=job["document_id"],
+            outcome="failure",
+            request_id=job["request_id"],
+            metadata={
+                "attempts": attempts,
+                "error_type": type(error).__name__,
+                "job_id": job["job_id"],
+                "will_retry": attempts < settings.runtime.worker_max_attempts,
+            },
+        )
     await redis.xack(JOB_STREAM, JOB_GROUP, message.message_id)
 
 
@@ -163,15 +180,38 @@ async def process_message(redis: Redis, message: StreamMessage) -> None:
                 ingest_message="Worker 正在执行",
             )
         await operation(item, job["mode"])
-        if job["operation"] != "delete":
-            async with SessionFactory() as session:
-                await update_job(
-                    session,
-                    job["job_id"],
-                    status="succeeded",
-                    attempts=int(job["attempts"]) + 1,
-                    error=None,
+        async with SessionFactory() as session:
+            record = await session.get(IngestionJobRecord, job["job_id"])
+            if record is None:
+                raise RuntimeError("任务元数据不存在")
+            if job["operation"] == "delete":
+                document = await session.scalar(
+                    select(KnowledgeDocumentRecord).where(
+                        KnowledgeDocumentRecord.id == job["document_id"],
+                        KnowledgeDocumentRecord.tenant_id == job["tenant_id"],
+                    )
                 )
+                if document is None:
+                    raise RuntimeError("文档元数据不存在")
+                await session.delete(document)
+            else:
+                record.status = "succeeded"
+                record.attempts = int(job["attempts"]) + 1
+                record.error = None
+            session.add(
+                build_audit_event(
+                    tenant_id=job["tenant_id"],
+                    actor_id=job["requested_by"],
+                    source="worker",
+                    action=f"document.{job['operation']}_succeeded",
+                    resource_type="document",
+                    resource_id=job["document_id"],
+                    outcome="success",
+                    request_id=job["request_id"],
+                    metadata={"attempts": int(job["attempts"]) + 1, "job_id": job["job_id"], "mode": job["mode"]},
+                )
+            )
+            await session.commit()
         await redis.xack(JOB_STREAM, JOB_GROUP, message.message_id)
         INGESTION_JOBS.labels(operation=job["operation"], status="succeeded").inc()
     except Exception as exc:

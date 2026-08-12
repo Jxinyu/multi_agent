@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from config import settings
+from multi_domain_enterprise_project.core.audit import list_audit_events
 from multi_domain_enterprise_project.core.database import (
     IngestionJobRecord,
     SessionFactory,
@@ -63,6 +64,8 @@ async def worker_database(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
             tenant_id="tenant-a",
             operation="ingest",
             mode="milvus",
+            requested_by="owner-a",
+            request_id="request-001",
         )
     yield
     await close_database()
@@ -75,6 +78,8 @@ def job_fields(attempts: int) -> dict[str, str]:
         "tenant_id": "tenant-a",
         "operation": "ingest",
         "mode": "milvus",
+        "requested_by": "owner-a",
+        "request_id": "request-001",
         "attempts": str(attempts),
     }
 
@@ -94,16 +99,22 @@ async def test_worker_retries_then_moves_job_to_dead_letter(
     async with SessionFactory() as session:
         first_job = await session.get(IngestionJobRecord, "j" * 32)
         first_document = await get_document(session, "d" * 32, "tenant-a")
+        first_events, _ = await list_audit_events(session, tenant_id="tenant-a", limit=10)
     assert first_job is not None and first_job.status == "queued" and first_job.attempts == 1
     assert first_document is not None and first_document["status"] == "queued"
+    assert first_events[0]["action"] == "document.ingest_attempt_failed"
+    assert first_events[0]["metadata"]["will_retry"] is True
     assert redis.added[0][0] == JOB_STREAM
 
     await process_message(redis, StreamMessage("2-0", job_fields(1)))  # type: ignore[arg-type]
     async with SessionFactory() as session:
         final_job = await session.get(IngestionJobRecord, "j" * 32)
         final_document = await get_document(session, "d" * 32, "tenant-a")
+        final_events, _ = await list_audit_events(session, tenant_id="tenant-a", limit=10)
     assert final_job is not None and final_job.status == "failed" and final_job.attempts == 2
     assert final_document is not None and final_document["status"] == "failed"
+    assert final_events[0]["outcome"] == "failure"
+    assert final_events[0]["metadata"]["will_retry"] is False
     assert redis.added[-1][0] == DEAD_LETTER_STREAM
     assert redis.acked == ["1-0", "2-0"]
 
@@ -124,7 +135,24 @@ async def test_worker_marks_successful_job_and_acknowledges_message(
     async with SessionFactory() as session:
         job = await session.get(IngestionJobRecord, "j" * 32)
         document = await get_document(session, "d" * 32, "tenant-a")
+        events, _ = await list_audit_events(session, tenant_id="tenant-a", limit=10)
     assert job is not None and job.status == "succeeded" and job.attempts == 1
     assert document is not None and document["status"] == "ready"
+    assert events[0]["action"] == "document.ingest_succeeded"
+    assert events[0]["actor_id"] == "owner-a"
+    assert events[0]["request_id"] == "request-001"
     assert redis.acked == ["3-0"]
 
+
+@pytest.mark.asyncio
+async def test_worker_rejects_legacy_message_without_audit_fields(worker_database: None) -> None:
+    redis = FakeRedis()
+    legacy_fields = job_fields(0)
+    legacy_fields.pop("requested_by")
+    legacy_fields.pop("request_id")
+
+    await process_message(redis, StreamMessage("4-0", legacy_fields))  # type: ignore[arg-type]
+
+    assert redis.added[0][0] == DEAD_LETTER_STREAM
+    assert "request_id" in redis.added[0][1]["error"]
+    assert redis.acked == ["4-0"]

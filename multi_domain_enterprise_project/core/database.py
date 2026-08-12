@@ -4,7 +4,18 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, inspect, select
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    inspect,
+    select,
+)
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -60,6 +71,8 @@ class IngestionJobRecord(Base):
     status: Mapped[str] = mapped_column(String(32), default="queued", index=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    requested_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
@@ -79,6 +92,27 @@ class UploadSessionRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class AuditEventRecord(Base):
+    __tablename__ = "audit_events"
+    __table_args__ = (
+        CheckConstraint("source IN ('api', 'worker')", name="ck_audit_events_source"),
+        CheckConstraint("outcome IN ('success', 'failure', 'denied')", name="ck_audit_events_outcome"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), index=True)
+    actor_id: Mapped[str] = mapped_column(String(128), index=True)
+    actor_type: Mapped[str] = mapped_column(String(32), default="user")
+    source: Mapped[str] = mapped_column(String(32), index=True)
+    action: Mapped[str] = mapped_column(String(128), index=True)
+    resource_type: Mapped[str] = mapped_column(String(64))
+    resource_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    outcome: Mapped[str] = mapped_column(String(32), index=True)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    details: Mapped[dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
 _engine: AsyncEngine = create_async_engine(settings.database.url, echo=settings.database.echo, pool_pre_ping=True)
 SessionFactory = async_sessionmaker(_engine, expire_on_commit=False)
 
@@ -93,13 +127,26 @@ async def reconfigure_database(url: str) -> None:
 
 async def init_database() -> None:
     async with _engine.begin() as connection:
-        if settings.runtime.environment == "production":
-            tables = await connection.run_sync(lambda sync_connection: inspect(sync_connection).get_table_names())
-            missing = set(Base.metadata.tables).difference(tables)
-            if missing:
-                raise RuntimeError("数据库迁移未完成，缺少表: " + ", ".join(sorted(missing)))
-        else:
+        if settings.runtime.environment != "production":
             await connection.run_sync(Base.metadata.create_all)
+
+        def schema_issues(sync_connection: Any) -> list[str]:
+            inspector = inspect(sync_connection)
+            actual_tables = set(inspector.get_table_names())
+            issues: list[str] = []
+            for table_name, table in Base.metadata.tables.items():
+                if table_name not in actual_tables:
+                    issues.append(f"缺少表 {table_name}")
+                    continue
+                actual_columns = {column["name"] for column in inspector.get_columns(table_name)}
+                missing_columns = set(table.columns.keys()).difference(actual_columns)
+                if missing_columns:
+                    issues.append(f"表 {table_name} 缺少列 {','.join(sorted(missing_columns))}")
+            return issues
+
+        issues = await connection.run_sync(schema_issues)
+        if issues:
+            raise RuntimeError("数据库迁移未完成: " + "; ".join(issues) + "。请执行 python -m alembic upgrade head")
 
 
 async def close_database() -> None:
@@ -213,6 +260,8 @@ async def create_job(
     tenant_id: str,
     operation: str,
     mode: str,
+    requested_by: str,
+    request_id: str | None,
 ) -> IngestionJobRecord:
     record = IngestionJobRecord(
         id=job_id,
@@ -220,6 +269,8 @@ async def create_job(
         tenant_id=tenant_id,
         operation=operation,
         mode=mode,
+        requested_by=requested_by,
+        request_id=request_id,
     )
     session.add(record)
     await session.commit()

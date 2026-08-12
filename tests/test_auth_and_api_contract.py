@@ -59,6 +59,18 @@ async def test_api_rejects_missing_token_and_accepts_valid_token(development_key
 
 
 @pytest.mark.asyncio
+async def test_invalid_request_id_is_replaced(development_keys: None) -> None:
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/auth/me", headers={"X-Request-ID": "x" * 65})
+
+    actual_request_id = response.headers["X-Request-ID"]
+    assert response.status_code == 401
+    assert len(actual_request_id) == 32
+    assert actual_request_id != "x" * 65
+
+
+@pytest.mark.asyncio
 async def test_tampered_token_is_rejected(development_keys: None) -> None:
     token = auth.create_development_token().access_token
     header, payload, signature = token.split(".")
@@ -77,3 +89,4 @@ def test_openapi_excludes_server_paths_and_marks_protected_routes() -> None:
     assert "file_path" not in item_properties
     assert "file_path_md" not in item_properties
     assert schema["paths"]["/api/admin/documents"]["get"]["security"]
+    assert schema["paths"]["/api/admin/audit-events"]["get"]["security"]

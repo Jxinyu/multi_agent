@@ -77,7 +77,7 @@ class AuthSetting(BaseModel):
     development_username: str = "admin"
     development_tenant_id: str = "tenant_default"
     development_role: str = "admin"
-    development_permissions: list[str] = ["chat:use", "kb:read", "kb:write", "kb:delete"]
+    development_permissions: list[str] = ["chat:use", "kb:read", "kb:write", "kb:delete", "audit:read"]
     token_ttl_seconds: int = 900
 
 

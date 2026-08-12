@@ -26,6 +26,8 @@ async def enqueue_job(
     tenant_id: str,
     operation: str,
     mode: str,
+    requested_by: str,
+    request_id: str,
     attempts: int = 0,
 ) -> str:
     message_id = await redis.xadd(
@@ -36,6 +38,8 @@ async def enqueue_job(
             "tenant_id": tenant_id,
             "operation": operation,
             "mode": mode,
+            "requested_by": requested_by,
+            "request_id": request_id,
             "attempts": str(attempts),
         },
     )
@@ -48,8 +52,20 @@ def decode_job(fields: dict[Any, Any]) -> dict[str, str]:
         clean_key = key.decode() if isinstance(key, bytes) else str(key)
         clean_value = value.decode() if isinstance(value, bytes) else str(value)
         decoded[clean_key] = clean_value
-    required = {"job_id", "document_id", "tenant_id", "operation", "mode", "attempts"}
+    required = {
+        "job_id",
+        "document_id",
+        "tenant_id",
+        "operation",
+        "mode",
+        "requested_by",
+        "request_id",
+        "attempts",
+    }
     missing = required.difference(decoded)
     if missing:
         raise ValueError("任务消息缺少字段: " + ", ".join(sorted(missing)))
+    empty = [field for field in required if not decoded[field].strip()]
+    if empty:
+        raise ValueError("任务消息字段不能为空: " + ", ".join(sorted(empty)))
     return decoded

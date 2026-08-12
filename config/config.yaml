@@ -52,7 +52,7 @@ auth:
   development_username: 'admin'
   development_tenant_id: 'tenant_default'
   development_role: 'admin'
-  development_permissions: ['chat:use', 'kb:read', 'kb:write', 'kb:delete']
+  development_permissions: ['chat:use', 'kb:read', 'kb:write', 'kb:delete', 'audit:read']
   token_ttl_seconds: 900
 
 database:
