@@ -7,7 +7,7 @@ from functools import lru_cache
 from llama_index.core import PropertyGraphIndex
 from llama_index.core.graph_stores.types import EntityNode, Relation
 from llama_index.core.indices.property_graph import SimpleLLMPathExtractor, VectorContextRetriever
-from llama_index.core.schema import BaseNode, QueryBundle
+from llama_index.core.schema import BaseNode
 from llama_index.embeddings.langchain import LangchainEmbedding
 from llama_index.llms.dashscope import DashScope
 
@@ -19,7 +19,7 @@ from multi_domain_enterprise_project.rag.authorization import (
 from multi_domain_enterprise_project.rag.graph.graph_db import get_graph_store
 from multi_domain_enterprise_project.rag.ollama_embedding import ollama_embedding_function
 from multi_domain_enterprise_project.rag.retrieval import deduplicate_node_results
-from multi_domain_enterprise_project.rag.runtime import get_reranker
+from multi_domain_enterprise_project.rag.runtime import rerank_nodes
 
 logger = logging.getLogger(__name__)
 
@@ -173,10 +173,7 @@ class GraphRetrieverService:
             embed_model=self.embed_model,
         )
 
-        # BGE-Reranker 来精排子图和文本
-        self.reranker = get_reranker()
-
-    async def retrieve_nodes(self, query_str: str, filters_dict: dict = None):
+    async def retrieve_candidates(self, query_str: str, filters_dict: dict = None):
         logger.info("正在向 Neo4j 发起授权检索")
         scope, filter_branches = build_authorized_filter_branches(filters_dict)
         retrievers = [
@@ -184,7 +181,7 @@ class GraphRetrieverService:
                 self.index.property_graph_store,
                 embed_model=self.embed_model,
                 include_text=True,
-                similarity_top_k=30,
+                similarity_top_k=settings.retrieval.candidate_top_k,
                 filters=filters,
             )
             for filters in filter_branches
@@ -195,19 +192,18 @@ class GraphRetrieverService:
         final_nodes = deduplicate_node_results(
             [node for branch in branch_results for node in branch]
         )
-        final_nodes = filter_authorized_nodes(final_nodes, scope)
+        final_nodes = filter_authorized_nodes(final_nodes, scope)[: settings.retrieval.backend_candidate_limit]
 
         if not final_nodes:
             logger.warning("⚠️ 检索结果为空！")
             return []
 
-        # 2. Reranker 精排
-        query_bundle = QueryBundle(query_str=query_str)
-        final_nodes = self.reranker.postprocess_nodes(
-            nodes=final_nodes,
-            query_bundle=query_bundle
-        )
-        return filter_authorized_nodes(final_nodes, scope)
+        return final_nodes
+
+    async def retrieve_nodes(self, query_str: str, filters_dict: dict = None):
+        scope, _ = build_authorized_filter_branches(filters_dict)
+        candidates = await self.retrieve_candidates(query_str, filters_dict)
+        return filter_authorized_nodes(await rerank_nodes(query_str, candidates), scope)
 
     async def retrieve_answer(self, query_str: str, filters_dict: dict = None):
         return await format_graph_retrieval_results(
@@ -215,7 +211,12 @@ class GraphRetrieverService:
         )
 
 
-async def format_graph_retrieval_results(nodes):
+async def format_graph_retrieval_results(
+    nodes,
+    *,
+    max_chars: int | None = None,
+    max_chunks_per_document: int | None = None,
+):
     """
     格式化 GraphRAG 检索结果：将三元组与文本块区分，但保持 Header 风格一致
     """
@@ -224,6 +225,15 @@ async def format_graph_retrieval_results(nodes):
 
     kg_parts = ["### 🕸️ 知识图谱关联事实："]
     text_parts = ["### 📄 图谱关联参考文本："]
+    max_chars = settings.retrieval.max_context_chars if max_chars is None else max_chars
+    max_chunks_per_document = (
+        settings.retrieval.max_chunks_per_document
+        if max_chunks_per_document is None
+        else max_chunks_per_document
+    )
+    if max_chars < 1 or max_chunks_per_document < 1:
+        raise ValueError("上下文长度和单文档切片数必须大于 0")
+    document_counts = {}
 
     seen_ids = set()
     for node_with_score in nodes:
@@ -231,6 +241,9 @@ async def format_graph_retrieval_results(nodes):
         if node.node_id in seen_ids:
             continue
         seen_ids.add(node.node_id)
+        document_key = str(node.metadata.get("document_id") or node.metadata.get("file_name") or node.node_id)
+        if document_counts.get(document_key, 0) >= max_chunks_per_document:
+            continue
 
         score = node_with_score.score
         score_text = f"{score:.4f}" if score is not None else "N/A"
@@ -241,10 +254,16 @@ async def format_graph_retrieval_results(nodes):
         if "facts extracted from the provided text" in content:
             # 这里的 content 已经包含了 "Here are some facts..."
             header = f"--- [来源: {file_name} | 类型: 关系事实 | 匹配分值: {score_text}] ---"
-            kg_parts.append(f"{header}\n{content}")
+            section = f"{header}\n{content}"
+            if len("\n\n".join((*kg_parts, *text_parts, section))) <= max_chars:
+                kg_parts.append(section)
+                document_counts[document_key] = document_counts.get(document_key, 0) + 1
         else:
             header = f"--- [来源: {file_name} | 类型: 关联文本 | 匹配分值: {score_text}] ---"
-            text_parts.append(f"{header}\n{content}")
+            section = f"{header}\n{content}"
+            if len("\n\n".join((*kg_parts, *text_parts, section))) <= max_chars:
+                text_parts.append(section)
+                document_counts[document_key] = document_counts.get(document_key, 0) + 1
 
     # 合并输出
     result = []
@@ -253,7 +272,7 @@ async def format_graph_retrieval_results(nodes):
     if len(text_parts) > 1:
         result.append("\n\n".join(text_parts))
 
-    return "\n\n".join(result)
+    return "\n\n".join(result) if result else "【图数据库检索】: 未找到相关关联事实。"
 
 
 @lru_cache(maxsize=1)

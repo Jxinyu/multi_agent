@@ -28,8 +28,17 @@ ollama:
 
 reranker:
   model_path: 'D:/Environment/model/bge-reranker-v2-m3'
-  top_n: 3
+  top_n: 8
   use_fp16: true
+
+retrieval:
+  candidate_top_k: 30
+  backend_candidate_limit: 40
+  fusion_candidate_limit: 40
+  rrf_k: 60
+  timeout_seconds: 20
+  max_context_chars: 12000
+  max_chunks_per_document: 2
 
 mcp:
   rag_url: 'http://127.0.0.1:8010/rag-retriever'

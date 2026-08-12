@@ -7,7 +7,7 @@
 - 身份与权限：Bearer JWT，支持 OIDC/JWKS 或 RSA 公钥校验；接口按 `chat:use`、`kb:read`、`kb:write`、`kb:delete`、`audit:read` 执行 RBAC。
 - 租户隔离：API、PostgreSQL 元数据、LangGraph thread、Milvus 和 Neo4j 检索均绑定 `tenant_id`；检索执行 `tenant AND (owner OR ACL)`。
 - 状态机：Supervisor 支持跨域 fan-out、Human-in-the-Loop、汇总与审核；新一轮会清理旧轮终态，重试耗尽进入失败态。
-- RAG：Milvus/Neo4j 双路检索、稳定节点 ID、授权后置复核、结果去重融合、双写失败显式上报、完整删除。
+- RAG：Milvus/Neo4j 并发候选召回、RRF 候选融合、单次全局 BGE 重排、授权后置复核、上下文预算、双写失败显式上报和完整删除。
 - 文档：流式限量上传、扩展名与文件签名校验、分片续传、确定性解析文件路径、异步入库。
 - 可靠性：PostgreSQL 元数据、Redis Streams Worker、重试与死信、Alembic 迁移、真实 readiness、结构化日志和 Prometheus 指标。
 - 安全审计：记录用户、租户、动作、资源、结果和 request ID；支持租户隔离的筛选与游标分页；PostgreSQL 禁止更新或删除审计行。
@@ -85,6 +85,8 @@ docker compose up -d --build
 
 OIDC 推荐改用 `AUTH_MODE=oidc` 和 `AUTH_JWKS_URL`。生产发布、备份和回滚步骤见 [部署与运维手册](docs/部署与运维手册.md)，当前企业化边界及剩余工作见 [企业化改造与上线清单](docs/企业化改造与上线清单.md)。
 
+检索候选数、融合上限、超时和上下文预算可通过 `RETRIEVAL_*` 环境变量调整。设计依据、公开准确率实验和本机重排性能基准见 [检索准确性与性能优化](docs/检索准确性与性能优化.md)。
+
 ## 验证
 
 ```powershell
@@ -102,6 +104,8 @@ npm run build
 - `/api/health/live`：进程存活。
 - `/api/health/ready`：数据库、Redis、checkpointer、Milvus、Neo4j、Ollama 和 MCP 均可用才返回 200。
 - `/metrics`：Prometheus 指标。
+
+检索指标包括请求耗时、各后端候选数、融合候选数、重排耗时和最终结果数，可用于按 `mode` 或后端建立 P95 与异常候选量告警。
 
 审计查询：`GET /api/admin/audit-events`，需要 `audit:read`，支持 `limit`、`cursor`、`action`、`outcome`、`actor_id`。审计元数据禁止提示词、文件名、路径、令牌和正文；数据库只追加能力不等同于 WORM 合规归档，生产环境应按保留策略导出到 SIEM 或不可变对象存储。
 

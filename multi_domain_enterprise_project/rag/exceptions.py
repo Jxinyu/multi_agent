@@ -15,6 +15,10 @@ class RetrievalAuthorizationError(RAGDataError):
     """检索请求缺少强制授权上下文。"""
 
 
+class RetrievalTimeoutError(RAGDataError):
+    """检索后端或重排超过配置时限。"""
+
+
 class BackendOperationError(RAGDataError):
     operation = "backend_operation"
 

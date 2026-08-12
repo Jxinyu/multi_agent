@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,8 +48,20 @@ class OllamaSetting(BaseModel):
 class RerankerSetting(BaseModel):
     """重排模型配置"""
     model_path: str = "D:/Environment/model/bge-reranker-v2-m3"
-    top_n: int = 3
+    top_n: int = Field(default=8, ge=1, le=20)
     use_fp16: bool = True
+
+
+class RetrievalSetting(BaseModel):
+    """检索候选、融合与上下文边界。"""
+
+    candidate_top_k: int = Field(default=30, ge=1, le=100)
+    backend_candidate_limit: int = Field(default=40, ge=1, le=200)
+    fusion_candidate_limit: int = Field(default=40, ge=1, le=200)
+    rrf_k: int = Field(default=60, ge=1, le=200)
+    timeout_seconds: float = Field(default=20.0, gt=0, le=120)
+    max_context_chars: int = Field(default=12000, ge=1000, le=100000)
+    max_chunks_per_document: int = Field(default=2, ge=1, le=20)
 
 
 class MCPSetting(BaseModel):
@@ -122,6 +134,7 @@ class AppSettings(BaseSettings):
     neo4j: Neo4jSetting = Neo4jSetting()
     ollama: OllamaSetting = OllamaSetting()
     reranker: RerankerSetting = RerankerSetting()
+    retrieval: RetrievalSetting = RetrievalSetting()
     mcp: MCPSetting = MCPSetting()
     auth: AuthSetting = AuthSetting()
     database: DatabaseSetting = DatabaseSetting()
@@ -172,6 +185,13 @@ def _apply_env_overrides(config: dict[str, Any]) -> dict[str, Any]:
         "RERANKER_MODEL_PATH": ("reranker", "model_path"),
         "RERANKER_TOP_N": ("reranker", "top_n"),
         "RERANKER_USE_FP16": ("reranker", "use_fp16"),
+        "RETRIEVAL_CANDIDATE_TOP_K": ("retrieval", "candidate_top_k"),
+        "RETRIEVAL_BACKEND_CANDIDATE_LIMIT": ("retrieval", "backend_candidate_limit"),
+        "RETRIEVAL_FUSION_CANDIDATE_LIMIT": ("retrieval", "fusion_candidate_limit"),
+        "RETRIEVAL_RRF_K": ("retrieval", "rrf_k"),
+        "RETRIEVAL_TIMEOUT_SECONDS": ("retrieval", "timeout_seconds"),
+        "RETRIEVAL_MAX_CONTEXT_CHARS": ("retrieval", "max_context_chars"),
+        "RETRIEVAL_MAX_CHUNKS_PER_DOCUMENT": ("retrieval", "max_chunks_per_document"),
         "MCP_RAG_URL": ("mcp", "rag_url"),
         "MCP_WEB_SEARCH_URL": ("mcp", "web_search_url"),
         "MCP_FINANCE_CHART_URL": ("mcp", "finance_chart_url"),
@@ -218,9 +238,14 @@ def _apply_env_overrides(config: dict[str, Any]) -> dict[str, Any]:
             "LLAMA_PARSE_TIMEOUT_SECONDS", "LLAMA_PARSE_MAX_RETRIES",
             "MAX_FILE_SIZE_BYTES", "MAX_ATTACHMENT_SIZE_BYTES", "MAX_FILES_PER_REQUEST",
             "MAX_ATTACHMENTS_PER_REQUEST", "REQUEST_RATE_LIMIT_PER_MINUTE",
-            "WORKER_MAX_ATTEMPTS", "WORKER_BLOCK_MS",
+            "WORKER_MAX_ATTEMPTS", "WORKER_BLOCK_MS", "RETRIEVAL_CANDIDATE_TOP_K",
+            "RETRIEVAL_BACKEND_CANDIDATE_LIMIT", "RETRIEVAL_FUSION_CANDIDATE_LIMIT",
+            "RETRIEVAL_RRF_K", "RETRIEVAL_MAX_CONTEXT_CHARS",
+            "RETRIEVAL_MAX_CHUNKS_PER_DOCUMENT",
         }:
             value = int(raw_value)
+        elif env_name == "RETRIEVAL_TIMEOUT_SECONDS":
+            value = float(raw_value)
         elif env_name in {"LLAMA_PARSE_INVALIDATE_CACHE", "DATABASE_ECHO", "RERANKER_USE_FP16"}:
             value = raw_value.strip().lower() in {"1", "true", "yes", "on"}
         elif env_name in {"AUTH_ALGORITHMS", "AUTH_DEV_PERMISSIONS", "ALLOWED_UPLOAD_EXTENSIONS", "CORS_ORIGINS"}:

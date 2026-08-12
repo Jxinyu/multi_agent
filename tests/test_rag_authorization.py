@@ -87,9 +87,8 @@ def test_graph_retrieval_uses_only_filtered_vector_branches(monkeypatch):
         async def aretrieve(self, query):
             return candidates
 
-    class IdentityReranker:
-        def postprocess_nodes(self, nodes, query_bundle):
-            return nodes
+    async def identity_reranker(query, nodes):
+        return nodes
 
     monkeypatch.setattr(ingestion_graph, "VectorContextRetriever", FakeVectorRetriever)
     service = ingestion_graph.GraphRetrieverService.__new__(
@@ -97,7 +96,7 @@ def test_graph_retrieval_uses_only_filtered_vector_branches(monkeypatch):
     )
     service.index = SimpleNamespace(property_graph_store=object())
     service.embed_model = object()
-    service.reranker = IdentityReranker()
+    monkeypatch.setattr(ingestion_graph, "rerank_nodes", identity_reranker)
 
     results = asyncio.run(
         service.retrieve_nodes(

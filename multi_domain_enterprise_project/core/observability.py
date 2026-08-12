@@ -38,6 +38,39 @@ INGESTION_JOBS = Counter(
     "文档任务处理数量",
     ["operation", "status"],
 )
+RETRIEVAL_REQUESTS = Counter(
+    "rag_upper_retrieval_requests_total",
+    "检索请求数量",
+    ["mode", "status"],
+)
+RETRIEVAL_LATENCY = Histogram(
+    "rag_upper_retrieval_duration_seconds",
+    "检索请求耗时",
+    ["mode"],
+)
+RETRIEVAL_CANDIDATES = Histogram(
+    "rag_upper_retrieval_candidates",
+    "检索候选数量",
+    ["backend"],
+    buckets=(0, 1, 3, 5, 10, 20, 40, 80, 160),
+)
+RETRIEVAL_RESULTS = Histogram(
+    "rag_upper_retrieval_results",
+    "重排后结果数量",
+    ["mode"],
+    buckets=(0, 1, 3, 5, 8, 10, 20),
+)
+RETRIEVAL_FUSED_CANDIDATES = Histogram(
+    "rag_upper_retrieval_fused_candidates",
+    "融合后进入重排的候选数量",
+    ["mode"],
+    buckets=(0, 1, 3, 5, 10, 20, 40, 80),
+)
+RETRIEVAL_RERANK_LATENCY = Histogram(
+    "rag_upper_retrieval_rerank_duration_seconds",
+    "全局重排耗时",
+    ["mode"],
+)
 
 
 class JsonFormatter(logging.Formatter):

@@ -39,6 +39,23 @@ def test_reranker_fp16_environment_override(
     assert loaded.reranker.use_fp16 is False
 
 
+def test_retrieval_environment_overrides(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("retrieval:\n  candidate_top_k: 10\n", encoding="utf-8")
+    monkeypatch.setenv("RETRIEVAL_CANDIDATE_TOP_K", "25")
+    monkeypatch.setenv("RETRIEVAL_TIMEOUT_SECONDS", "7.5")
+    monkeypatch.setenv("RETRIEVAL_MAX_CONTEXT_CHARS", "9000")
+
+    loaded = load_setting(config_path)
+
+    assert loaded.retrieval.candidate_top_k == 25
+    assert loaded.retrieval.timeout_seconds == 7.5
+    assert loaded.retrieval.max_context_chars == 9000
+
+
 def test_reranker_rejects_missing_local_model(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings.reranker, "model_path", "/missing/reranker-model")
     get_reranker.cache_clear()
