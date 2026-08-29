@@ -4,6 +4,11 @@ import { AuthState } from './components/AuthState';
 import { ProductShell } from './layouts/ProductShell';
 import { LoginPage } from './pages/auth/LoginPage';
 import { CapabilityPendingPage } from './pages/CapabilityPendingPage';
+import { EnterpriseAgentsPage } from './pages/enterprise/EnterpriseAgentsPage';
+import { EnterpriseEvaluationPage } from './pages/enterprise/EnterpriseEvaluationPage';
+import { EnterpriseKnowledgePage } from './pages/enterprise/EnterpriseKnowledgePage';
+import { EnterpriseMembersPage } from './pages/enterprise/EnterpriseMembersPage';
+import { EnterpriseOverviewPage } from './pages/enterprise/EnterpriseOverviewPage';
 import { AgentAnswerPage } from './pages/user/AgentAnswerPage';
 import { EnterpriseSearchPage } from './pages/user/EnterpriseSearchPage';
 import { UserWorkbenchPage } from './pages/user/UserWorkbenchPage';
@@ -65,11 +70,11 @@ function AuthenticatedApp() {
       </Route>
 
       <Route element={<ProductShell mode="enterprise" currentUser={currentUser.user} />}>
-        <Route path="/enterprise" element={<CapabilityPendingPage scope="enterprise" capability="企业运营总览" />} />
-        <Route path="/enterprise/knowledge" element={<CapabilityPendingPage scope="enterprise" capability="知识与解析" />} />
-        <Route path="/enterprise/agents" element={<CapabilityPendingPage scope="enterprise" capability="智能体与 MCP" />} />
-        <Route path="/enterprise/members" element={<CapabilityPendingPage scope="enterprise" capability="成员与权限" />} />
-        <Route path="/enterprise/evaluation" element={<CapabilityPendingPage scope="enterprise" capability="评测与成本" />} />
+        <Route path="/enterprise" element={<EnterpriseOverviewPage />} />
+        <Route path="/enterprise/knowledge" element={<EnterpriseKnowledgePage />} />
+        <Route path="/enterprise/agents" element={<EnterpriseAgentsPage />} />
+        <Route path="/enterprise/members" element={<EnterpriseMembersPage />} />
+        <Route path="/enterprise/evaluation" element={<EnterpriseEvaluationPage />} />
       </Route>
 
       <Route element={<ProductShell mode="admin" currentUser={currentUser.user} />}>
