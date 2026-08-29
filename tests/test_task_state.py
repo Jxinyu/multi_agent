@@ -137,3 +137,27 @@ def test_langgraph_merges_parallel_fanout_updates():
         "finance": {"answer": "finance"},
         "tech": {"answer": "tech"},
     }
+
+
+def test_dispatcher_consumes_pending_queue_before_fanout():
+    command = supervisor_module._dispatch_pending_agents(
+        TaskState(
+            task_status=TaskStatus.DISPATCHED,
+            pending_sub_agents=["finance", "tech"],
+        )
+    )
+
+    assert command.goto == ["finance", "tech"]
+    assert command.update == {
+        "task_status": TaskStatus.EXECUTING,
+        "pending_sub_agents": [],
+    }
+
+
+def test_dispatcher_routes_empty_queue_to_aggregator():
+    command = supervisor_module._dispatch_pending_agents(
+        TaskState(task_status=TaskStatus.EXECUTING)
+    )
+
+    assert command.goto == "aggregator"
+    assert command.update == {"task_status": TaskStatus.AGGREGATING}

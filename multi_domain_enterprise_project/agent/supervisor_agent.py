@@ -119,6 +119,20 @@ async def human_in_loop(content: Annotated[str, Field(..., description="发送�
     return {"用户的回复": decision['content']}
 
 
+def _dispatch_pending_agents(state: TaskState) -> Command:
+    """读取并消费待执行队列，避免同一批子代理被重复派发。"""
+    sub_agent_names = list(state.pending_sub_agents or [])
+    if not sub_agent_names:
+        return Command(goto="aggregator", update={"task_status": TaskStatus.AGGREGATING})
+    return Command(
+        goto=sub_agent_names,
+        update={
+            "task_status": TaskStatus.EXECUTING,
+            "pending_sub_agents": [],
+        },
+    )
+
+
 async def create_graph(checkpointer: Checkpointer):
     # 定义工具列表
     tools = [get_sub_agent_list, invoke_sub_agent, human_in_loop]
@@ -215,18 +229,11 @@ async def create_graph(checkpointer: Checkpointer):
             return route_map[state.task_status]
         return route_map.get(state.task_status, "supervisor")
 
-    async def dispatcher(state: TaskState, config: RunnableConfig):
-        """用于分发任务"""
-        sub_agent_names = list(state.pending_sub_agents or [])
-        if not sub_agent_names:
-            return Command(goto="aggregator", update={"task_status": TaskStatus.AGGREGATING})
-        return Command(goto=sub_agent_names, update={"task_status": TaskStatus.EXECUTING})
-
     graph = StateGraph(TaskState)
 
     graph.add_node("supervisor", supervisor_agent)
     graph.add_node("tools", too_node)
-    graph.add_node("dispatcher", dispatcher)
+    graph.add_node("dispatcher", _dispatch_pending_agents)
     graph.add_node("tech", tech_agent_node)
     graph.add_node("hr", hr_agent)
     graph.add_node("finance", finance_agent)

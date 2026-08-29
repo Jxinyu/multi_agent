@@ -24,6 +24,18 @@ def _extract_result(values: dict) -> tuple[str, list[str]]:
     return reply, [str(item) for item in references]
 
 
+def _extract_failure_message(values: dict) -> str | None:
+    """将失败终态转换为可观测且不泄露内部异常的用户消息。"""
+    if values.get("task_status") != "failed":
+        return None
+    feedback = values.get("audit_feedback")
+    if isinstance(feedback, dict):
+        target = str(feedback.get("correction_targets") or "").strip()
+        if target:
+            return f"回答未通过合规审计：{target}"
+    return "多智能体任务未能生成可验证的答案，请检查知识库内容后重试。"
+
+
 async def run_agent(query: str, config: dict, checkpointer) -> dict:
     """
     通用、无状态、防断网的 Agent 运行引擎。
@@ -75,6 +87,10 @@ async def run_agent(query: str, config: dict, checkpointer) -> dict:
                 }
 
         # 如果没有 interrupt，说明 Graph 走到了 END，提取最终答案
+        failure_message = _extract_failure_message(response)
+        if failure_message:
+            return {"status": "error", "message": failure_message, "references": []}
+
         final_reply, references = _extract_result(response)
         return {
             "status": "completed",
@@ -92,13 +108,13 @@ async def run_agent(query: str, config: dict, checkpointer) -> dict:
 
 
 STATUS_MESSAGES = {
-    "supervisor": "🧠 调度中枢正在分析意图并规划任务...",
-    "tools": "🛠️ 正在为您分发任务至专属领域专家...",
-    "tech": "💻 技术专家正在查阅系统操作指南...",
-    "hr": "🧑‍💼 HR专家正在比对人事制度与离职流程...",
-    "finance": "💰 财务专家正在核对财务报销规范...",
-    "legal": "⚖️ 法务专家正在审查合规与法律条文...",
-    "aggregator": "📝 信息合成中心正在汇编专家的最终解答...",
+    "supervisor": "调度中枢正在分析意图并规划任务...",
+    "tools": "正在将任务分发至领域专家...",
+    "tech": "技术专家正在查阅系统操作指南...",
+    "hr": "HR 专家正在比对人事制度与流程...",
+    "finance": "财务专家正在核对财务报销规范...",
+    "legal": "法务专家正在审查合规与法律条文...",
+    "aggregator": "信息合成中心正在汇编专家答复...",
 }
 
 
@@ -106,7 +122,7 @@ def _resolve_stream_status(node_name: str, node_state: dict | None) -> dict | No
     """把 LangGraph 节点事件映射成前端可消费的状态消息。"""
     if node_name == "audit":
         feedback = (node_state or {}).get("audit_feedback")
-        message = "⚠️ 审计未通过，要求专家重新修正..." if feedback else "✅ 合规审计已通过，准备输出内容..."
+        message = "审计未通过，正在要求专家修正..." if feedback else "合规审计已通过，正在准备输出..."
         return {"type": "status", "message": message}
 
     message = STATUS_MESSAGES.get(node_name)
@@ -148,7 +164,7 @@ async def run_agent_stream(query: str, config: dict, checkpointer):
         if final_state.next:
             interrupt_data = None
 
-            # 🛠️ ：递归查找可能深藏在子 Agent (嵌套图) 中的中断数据
+            # 递归查找可能深藏在子 Agent（嵌套图）中的中断数据。
             def find_interrupt(snapshot):
                 if (not snapshot) or (not hasattr(snapshot, 'tasks')) or (not snapshot.tasks):
                     return None
@@ -178,6 +194,11 @@ async def run_agent_stream(query: str, config: dict, checkpointer):
                     return
 
         # 场景 B: 正常结束，提取最终回复
+        failure_message = _extract_failure_message(final_state.values)
+        if failure_message:
+            yield {"type": "error", "message": failure_message, "references": []}
+            return
+
         final_reply, references = _extract_result(final_state.values)
         yield {
             "type": "complete",

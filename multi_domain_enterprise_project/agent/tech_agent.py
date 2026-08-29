@@ -1,7 +1,7 @@
 import logging
 
 from langchain.agents import create_agent
-from langchain.agents.middleware import SummarizationMiddleware
+from langchain.agents.middleware import SummarizationMiddleware, ToolCallLimitMiddleware
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import ToolRuntime
@@ -70,6 +70,7 @@ async def tech_agent_node(state: TaskState, config: RunnableConfig):
             tools=[get_document] + mcp_tools,
             response_format=SubAgentOutputFormat,
             middleware=[
+                ToolCallLimitMiddleware(run_limit=4, exit_behavior="continue"),
                 SummarizationMiddleware(
                     model=await qwen_model(),
                     trigger=("messages", 8),

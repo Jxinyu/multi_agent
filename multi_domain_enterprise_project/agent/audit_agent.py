@@ -89,7 +89,10 @@ async def audit_agent(state: TaskState, config: RunnableConfig):
 
     if not response.is_pass:
         feedback_text = f'审计反馈：\n"correction_targets": {response.correction_targets}'
-        if retry_count < max_retries:
+        previous_targets = str((state.audit_feedback or {}).get("correction_targets") or "").strip()
+        current_targets = response.correction_targets.strip()
+        repeated_feedback = retry_count > 0 and previous_targets == current_targets
+        if retry_count < max_retries and not repeated_feedback:
             # 审核不通过，保留聚合结果并生成结构化反馈
             return {
                 "messages": [HumanMessage(content=feedback_text)],
@@ -106,9 +109,11 @@ async def audit_agent(state: TaskState, config: RunnableConfig):
             "retry_count": retry_count,
             "max_retries": max_retries,
             "exhausted": True,
+            "repeated": repeated_feedback,
         }
+        failure_reason = "审计意见连续两次未解决，任务失败。" if repeated_feedback else "已达到最大重试次数，任务失败。"
         return {
-            "messages": [HumanMessage(content=f"{feedback_text}\n已达到最大重试次数，任务失败。")],
+            "messages": [HumanMessage(content=f"{feedback_text}\n{failure_reason}")],
             "task_status": TaskStatus.FAILED,
             "audit_feedback": exhausted_feedback,
             "retry_count": retry_count,

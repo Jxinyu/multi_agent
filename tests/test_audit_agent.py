@@ -78,6 +78,26 @@ def test_audit_rejection_fails_when_retry_budget_is_exhausted(monkeypatch):
     assert "最大重试次数" in update["messages"][-1].content
 
 
+def test_audit_rejection_fails_fast_when_feedback_is_unchanged(monkeypatch):
+    _stub_audit_result(
+        monkeypatch,
+        is_pass=False,
+        correction_targets="finance 补充来源",
+    )
+    state = _auditable_state(
+        retry_count=1,
+        max_retries=3,
+        audit_feedback={"correction_targets": "finance 补充来源", "retry_count": 1},
+    )
+
+    update = asyncio.run(audit_module.audit_agent(state, {}))
+
+    assert update["task_status"] == TaskStatus.FAILED
+    assert update["retry_count"] == 1
+    assert update["audit_feedback"]["repeated"] is True
+    assert "连续两次未解决" in update["messages"][-1].content
+
+
 def test_audit_pass_clears_all_round_scoped_dispatch_state(monkeypatch):
     _stub_audit_result(monkeypatch, is_pass=True)
     state = _auditable_state()
