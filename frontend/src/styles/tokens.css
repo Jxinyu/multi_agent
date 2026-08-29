@@ -1,0 +1,53 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --ru-fog: #f2f4f1;
+  --ru-white: #ffffff;
+  --ru-carbon: #171a18;
+  --ru-graphite: #5d625e;
+  --ru-muted: #858b86;
+  --ru-line: #d6dad5;
+  --ru-line-strong: #b8bdb8;
+  --ru-vermilion: #f04424;
+  --ru-vermilion-soft: #fff0ec;
+  --ru-chartreuse: #d9f03a;
+  --ru-chartreuse-soft: #f4fbc9;
+  --ru-cobalt: #2855d9;
+  --ru-cobalt-soft: #eef3ff;
+  --ru-cyan: #00a69c;
+  --ru-magenta: #d6408f;
+  --ru-warning: #f6c744;
+  --ru-warning-soft: #fff8dd;
+  --ru-danger: #d92d20;
+  --ru-radius: 6px;
+  --ru-sidebar-width: 216px;
+  --ru-topbar-height: 56px;
+  --ru-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ru-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@keyframes ru-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ru-spin { animation: ru-spin 0.8s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

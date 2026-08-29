@@ -75,3 +75,22 @@ export interface ChatSession {
   messages: ChatMessage[];
   messageCount: number;
 }
+
+export type SearchMode = 'milvus' | 'graph' | 'mg';
+
+export interface SearchEvidence {
+  id: string;
+  source: string;
+  content: string;
+  score: number | null;
+  kind: string;
+  backend: string;
+}
+
+export interface UserTask {
+  id: string;
+  status: 'running' | 'waiting' | 'completed' | 'failed' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+  attachment_count: number;
+}

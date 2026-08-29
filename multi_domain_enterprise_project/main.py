@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -58,6 +60,7 @@ from multi_domain_enterprise_project.core.observability import (
     configure_tracing,
     request_id_var,
 )
+from multi_domain_enterprise_project.core.search import parse_retrieval_context
 from multi_domain_enterprise_project.core.storage import (
     combine_chunks,
     decode_attachment,
@@ -69,8 +72,17 @@ from multi_domain_enterprise_project.core.storage import (
     upload_session_dir,
     validate_file_signature,
 )
+from multi_domain_enterprise_project.core.user_views import (
+    SearchEvidenceItem,
+    SearchRequest,
+    SearchResponse,
+    UserTaskListResponse,
+    build_user_tasks,
+)
 from multi_domain_enterprise_project.healthcheck import run_checks
+from multi_domain_enterprise_project.rag.authorization import RetrievalAuthorization, is_metadata_authorized
 from multi_domain_enterprise_project.rag.documentParser.parser_route import DocumentParserRouter
+from multi_domain_enterprise_project.rag.rag_service import retrieve_service
 
 configure_logging()
 configure_tracing()
@@ -439,21 +451,46 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
             query = request.query
             if attachment_context:
                 query = f"{query}\n\n【附件解析内容】\n{attachment_context}\n\n请结合附件内容回答。"
+            terminal_chunk: dict[str, Any] | None = None
             async for chunk in run_agent_stream(query=query, config=config, checkpointer=global_checkpointer):
+                if chunk.get("type") in {"complete", "interrupt", "error"}:
+                    terminal_chunk = chunk
                 yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+            async with SessionFactory() as audit_session:
+                terminal_type = (terminal_chunk or {}).get("type")
+                if terminal_type == "complete":
+                    action, outcome = "chat.completed", "success"
+                elif terminal_type == "interrupt":
+                    action, outcome = "chat.waiting_input", "success"
+                else:
+                    action, outcome = "chat.failed", "failure"
+                await append_audit_event(
+                    audit_session,
+                    tenant_id=current_user.tenant_id,
+                    actor_id=current_user.user_id,
+                    source="api",
+                    action=action,
+                    resource_type="conversation",
+                    resource_id=request.thread_id,
+                    outcome=outcome,
+                    request_id=chat_request_id,
+                    metadata={"attachment_count": len(request.attachments)},
+                )
+        except asyncio.CancelledError:
             async with SessionFactory() as audit_session:
                 await append_audit_event(
                     audit_session,
                     tenant_id=current_user.tenant_id,
                     actor_id=current_user.user_id,
                     source="api",
-                    action="chat.completed",
+                    action="chat.cancelled",
                     resource_type="conversation",
                     resource_id=request.thread_id,
-                    outcome="success",
+                    outcome="failure",
                     request_id=chat_request_id,
                     metadata={"attachment_count": len(request.attachments)},
                 )
+            raise
         except HTTPException as exc:
             async with SessionFactory() as audit_session:
                 await append_audit_event(
@@ -491,6 +528,62 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@app.post("/api/search", response_model=SearchResponse)
+async def api_search(request: SearchRequest, current_user: KbReader, session: Session):
+    await _rate_limit(current_user, "search")
+    started = time.perf_counter()
+    context = await retrieve_service(
+        query_str=request.query,
+        title=request.title,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        acl_list=current_user.groups,
+        mode=request.mode,
+    )
+    items = parse_retrieval_context(context)
+    elapsed_ms = round((time.perf_counter() - started) * 1000)
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="search.completed",
+        resource_type="knowledge_index",
+        outcome="success",
+        request_id=request_id_var.get(),
+        metadata={
+            "input_digest": hashlib.sha256(request.query.encode()).hexdigest(),
+            "mode": request.mode,
+            "result_count": len(items),
+            "elapsed_ms": elapsed_ms,
+        },
+    )
+    return SearchResponse(items=[SearchEvidenceItem(**item) for item in items], mode=request.mode, elapsed_ms=elapsed_ms)
+
+
+@app.get("/api/tasks", response_model=UserTaskListResponse)
+async def api_list_user_tasks(current_user: ChatUser, session: Session):
+    events, _ = await list_audit_events(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        limit=200,
+    )
+    return UserTaskListResponse(items=build_user_tasks(events))
+
+
+@app.get("/api/documents", response_model=KnowledgeBaseListResponse)
+async def api_list_user_documents(current_user: KbReader, session: Session):
+    items = await list_documents(session, current_user.tenant_id)
+    scope = RetrievalAuthorization(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        acl=tuple(current_user.groups),
+    )
+    authorized = [item for item in items if is_metadata_authorized(item, scope)]
+    return KnowledgeBaseListResponse(items=[_item(item) for item in authorized])
 
 
 @app.get("/api/admin/documents", response_model=KnowledgeBaseListResponse)

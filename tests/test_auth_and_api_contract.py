@@ -90,3 +90,6 @@ def test_openapi_excludes_server_paths_and_marks_protected_routes() -> None:
     assert "file_path_md" not in item_properties
     assert schema["paths"]["/api/admin/documents"]["get"]["security"]
     assert schema["paths"]["/api/admin/audit-events"]["get"]["security"]
+    assert schema["paths"]["/api/search"]["post"]["security"]
+    assert schema["paths"]["/api/tasks"]["get"]["security"]
+    assert schema["paths"]["/api/documents"]["get"]["security"]

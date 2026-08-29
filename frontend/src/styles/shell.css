@@ -1,0 +1,203 @@
+html, body, #root { min-width: 320px; }
+body { background: var(--ru-fog); color: var(--ru-carbon); }
+
+.ru-shell {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: var(--ru-sidebar-width) minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--ru-fog);
+}
+
+.ru-sidebar {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--ru-white);
+  border-right: 1px solid var(--ru-line);
+}
+
+.ru-shell-enterprise .ru-sidebar,
+.ru-shell-admin .ru-sidebar {
+  color: var(--ru-white);
+  background: var(--ru-carbon);
+  border-right-color: var(--ru-carbon);
+}
+
+.ru-brand-block {
+  position: relative;
+  display: flex;
+  min-height: 78px;
+  padding: 20px 18px 14px;
+  flex-direction: column;
+  justify-content: center;
+  border-bottom: 1px solid var(--ru-line);
+}
+
+.ru-shell-enterprise .ru-brand-block,
+.ru-shell-admin .ru-brand-block { border-bottom-color: #393d3a; }
+.ru-brand { font-size: 23px; font-weight: 800; line-height: 1; }
+.ru-brand-mode { margin-top: 8px; color: var(--ru-graphite); font-size: 12px; font-weight: 650; }
+.ru-shell-enterprise .ru-brand-mode,
+.ru-shell-admin .ru-brand-mode { color: #c6cbc7; }
+.ru-mobile-close { display: none; }
+
+.ru-tenant-switcher { padding: 14px 12px; border-bottom: 1px solid var(--ru-line); }
+.ru-shell-enterprise .ru-tenant-switcher,
+.ru-shell-admin .ru-tenant-switcher { border-bottom-color: #393d3a; }
+.ru-tenant-switcher > span { display: block; margin: 0 6px 8px; color: var(--ru-muted); font-size: 11px; }
+.ru-tenant-switcher button {
+  width: 100%;
+  height: 38px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: inherit;
+  border: 1px solid var(--ru-line);
+  border-radius: var(--ru-radius);
+  background: transparent;
+  cursor: pointer;
+}
+.ru-shell-enterprise .ru-tenant-switcher button,
+.ru-shell-admin .ru-tenant-switcher button { border-color: #4d524e; }
+.ru-tenant-switcher strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+
+.ru-nav { display: flex; min-height: 0; padding: 12px 0; flex: 1; flex-direction: column; gap: 2px; overflow-y: auto; }
+.ru-nav-link {
+  position: relative;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  color: var(--ru-graphite);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 570;
+  transition: color 140ms var(--ru-ease), background 140ms var(--ru-ease);
+}
+.ru-shell-enterprise .ru-nav-link,
+.ru-shell-admin .ru-nav-link { color: #d5d9d6; }
+.ru-nav-link:hover { color: var(--ru-carbon); background: var(--ru-fog); }
+.ru-shell-enterprise .ru-nav-link:hover,
+.ru-shell-admin .ru-nav-link:hover { color: var(--ru-white); background: #292d2a; }
+.ru-nav-link.is-active { color: var(--ru-vermilion); background: var(--ru-vermilion-soft); }
+.ru-nav-link.is-active::before { position: absolute; inset: 0 auto 0 0; width: 3px; content: ''; background: var(--ru-vermilion); }
+.ru-shell-enterprise .ru-nav-link.is-active,
+.ru-shell-admin .ru-nav-link.is-active { color: var(--ru-white); background: var(--ru-vermilion); }
+.ru-shell-enterprise .ru-nav-link.is-active::before,
+.ru-shell-admin .ru-nav-link.is-active::before { display: none; }
+
+.ru-sidebar-footer { display: flex; align-items: center; gap: 8px; padding: 12px; border-top: 1px solid var(--ru-line); }
+.ru-shell-enterprise .ru-sidebar-footer,
+.ru-shell-admin .ru-sidebar-footer { border-top-color: #393d3a; }
+.ru-mode-switch { min-width: 0; display: flex; flex: 1; align-items: center; gap: 9px; color: inherit; text-decoration: none; font-size: 12px; }
+.ru-collapse-button { width: 34px; height: 34px; display: grid; place-items: center; color: inherit; border: 0; background: transparent; cursor: pointer; }
+
+.ru-shell-main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.ru-topbar {
+  height: var(--ru-topbar-height);
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--ru-line);
+  background: var(--ru-white);
+}
+.ru-topbar-start, .ru-topbar-actions { display: flex; align-items: center; gap: 7px; }
+.ru-mobile-menu { display: none; }
+.ru-workspace-button, .ru-user-menu, .ru-icon-button {
+  color: var(--ru-carbon);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.ru-workspace-button { height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 8px; font-weight: 650; }
+.ru-icon-button { position: relative; width: 38px; height: 38px; display: grid; place-items: center; border-radius: var(--ru-radius); }
+.ru-icon-button:hover { background: var(--ru-fog); }
+.ru-notification > span { position: absolute; top: 2px; right: 1px; min-width: 17px; height: 17px; display: grid; place-items: center; padding: 0 4px; color: var(--ru-white); border: 2px solid var(--ru-white); border-radius: 9px; background: var(--ru-vermilion); font-size: 9px; font-weight: 800; }
+.ru-user-menu { height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 2px 0 7px; }
+.ru-avatar { width: 30px; height: 30px; display: grid; place-items: center; color: var(--ru-white); border-radius: 50%; background: var(--ru-vermilion); font-weight: 800; }
+.ru-user-copy { display: flex; min-width: 80px; flex-direction: column; align-items: flex-start; line-height: 1.2; }
+.ru-user-copy strong { font-size: 12px; }
+.ru-user-copy small { color: var(--ru-muted); font-size: 10px; }
+.ru-page-area { min-width: 0; min-height: 0; flex: 1; overflow: auto; }
+.ru-mobile-bottom-nav { display: none; }
+
+.ru-pending-page { min-height: 100%; padding: 28px; background: var(--ru-white); }
+.ru-pending-page header { padding-bottom: 18px; border-bottom: 1px solid var(--ru-line); }
+.ru-pending-page header span { color: var(--ru-vermilion); font-size: 12px; font-weight: 700; }
+.ru-pending-page h1 { margin: 5px 0 0; font-size: 28px; line-height: 36px; letter-spacing: 0; }
+.ru-pending-status { max-width: 760px; display: flex; gap: 14px; margin-top: 28px; padding: 18px; border: 1px solid var(--ru-warning); border-radius: var(--ru-radius); background: var(--ru-warning-soft); }
+.ru-pending-status p { margin: 4px 0 0; color: var(--ru-graphite); font-size: 13px; }
+.ru-pending-checks { max-width: 760px; display: grid; grid-template-columns: 1fr 1fr; margin-top: 14px; border: 1px solid var(--ru-line); }
+.ru-pending-checks > div { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; padding: 15px; }
+.ru-pending-checks > div + div { border-left: 1px solid var(--ru-line); }
+.ru-pending-checks svg { grid-row: 1 / 3; }
+.ru-pending-checks span { color: var(--ru-muted); font-size: 12px; }
+
+.ru-login-page { min-height: 100vh; display: grid; grid-template-columns: 250px minmax(460px, 1fr) minmax(360px, 38%); background: var(--ru-white); }
+.ru-login-rail { display: flex; padding: 30px 24px; flex-direction: column; border-right: 1px solid var(--ru-line); background: var(--ru-fog); }
+.ru-login-rail section { display: flex; padding: 30px 0; flex-direction: column; gap: 7px; border-bottom: 1px solid var(--ru-line); }
+.ru-login-rail small, .ru-section-index { color: var(--ru-graphite); font-size: 12px; }
+.ru-login-rail strong { display: flex; align-items: center; gap: 9px; font-size: 14px; }
+.ru-login-rail strong.is-healthy { color: #527400; }
+.ru-login-rail span { color: var(--ru-graphite); font-size: 12px; }
+.ru-login-rail footer { margin-top: auto; color: var(--ru-muted); font-size: 11px; }
+.ru-login-form-area { display: grid; place-items: center; padding: 48px; }
+.ru-login-form { width: min(100%, 580px); }
+.ru-login-form h1 { margin: 20px 0 8px; font-size: 42px; line-height: 50px; letter-spacing: 0; }
+.ru-login-form > p { margin: 0 0 28px; color: var(--ru-graphite); }
+.ru-segmented { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 24px; border: 1px solid var(--ru-line); }
+.ru-segmented button { height: 50px; border: 0; background: transparent; cursor: pointer; }
+.ru-segmented button.is-active { color: var(--ru-vermilion); border-bottom: 3px solid var(--ru-vermilion); }
+.ru-login-form > label { display: flex; margin: 14px 0; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 650; }
+.ru-login-form input:not([type='checkbox']) { height: 48px; padding: 0 14px; border: 1px solid var(--ru-line); border-radius: var(--ru-radius); outline: none; }
+.ru-login-form input:focus { border-color: var(--ru-vermilion); }
+.ru-login-form label.ru-checkbox { display: flex; flex-direction: row; align-items: center; font-weight: 400; }
+.ru-checkbox input { position: absolute; opacity: 0; }
+.ru-checkbox > span { width: 20px; height: 20px; display: grid; place-items: center; color: var(--ru-carbon); background: var(--ru-chartreuse); }
+.ru-primary-button { width: 100%; height: 52px; display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 22px; color: var(--ru-white); border: 0; border-radius: var(--ru-radius); background: var(--ru-vermilion); cursor: pointer; font-weight: 750; }
+.ru-primary-button:disabled { opacity: 0.6; cursor: wait; }
+.ru-login-security { display: flex; align-items: center; gap: 9px; margin-top: 20px; padding: 13px; color: var(--ru-graphite); border: 1px solid var(--ru-line); font-size: 12px; }
+.ru-login-security span { flex: 1; }
+.ru-inline-error { margin-top: 14px; padding: 12px; color: var(--ru-danger); border: 1px solid #f2b8b3; background: #fff5f4; font-size: 12px; }
+.ru-login-tenants { padding: 66px 34px; border-left: 1px solid var(--ru-line); }
+.ru-login-tenants h2 { margin: 16px 0 26px; font-size: 19px; }
+.ru-tenant-option { position: relative; display: flex; align-items: center; gap: 15px; margin-bottom: 14px; padding: 22px; border: 1px solid var(--ru-line); }
+.ru-tenant-option > svg:first-child { width: 42px; height: 42px; padding: 10px; color: var(--ru-white); background: var(--ru-carbon); }
+.ru-tenant-option > div { display: flex; flex: 1; flex-direction: column; gap: 3px; }
+.ru-tenant-option span, .ru-tenant-option small { color: var(--ru-graphite); font-size: 12px; }
+.ru-tenant-option.is-selected { border: 2px solid var(--ru-vermilion); }
+.ru-tenant-option.is-selected > svg:last-child { position: absolute; top: 10px; right: 10px; color: var(--ru-vermilion); }
+
+@media (max-width: 900px) {
+  .ru-shell { grid-template-columns: minmax(0, 1fr); }
+  .ru-sidebar { position: fixed; inset: 0 auto 0 0; width: min(86vw, 300px); transform: translateX(-102%); transition: transform 200ms var(--ru-ease); }
+  .ru-sidebar.is-open { transform: translateX(0); }
+  .ru-nav-scrim { position: fixed; inset: 0; z-index: 20; border: 0; background: rgb(23 26 24 / 48%); }
+  .ru-mobile-close { position: absolute; top: 14px; right: 12px; width: 40px; height: 40px; display: grid; place-items: center; color: inherit; border: 0; background: transparent; }
+  .ru-mobile-menu { width: 40px; height: 40px; display: grid; place-items: center; border: 0; background: transparent; }
+  .ru-topbar { padding: 0 10px; }
+  .ru-topbar-start { min-width: 0; }
+  .ru-workspace-button { min-width: 0; padding: 0 4px; }
+  .ru-workspace-button span { max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ru-topbar-actions .ru-icon-button:first-child,
+  .ru-topbar-actions .ru-icon-button:nth-child(3) { display: none; }
+  .ru-user-menu { width: 36px; padding: 0; justify-content: center; }
+  .ru-user-menu > svg { display: none; }
+  .ru-user-copy { display: none; }
+  .ru-page-area { padding-bottom: 65px; }
+  .ru-shell-user .ru-mobile-bottom-nav { position: fixed; inset: auto 0 0 0; z-index: 15; height: 66px; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--ru-line); background: var(--ru-white); }
+  .ru-mobile-bottom-nav a { display: flex; align-items: center; justify-content: center; gap: 3px; color: var(--ru-graphite); text-decoration: none; flex-direction: column; font-size: 10px; }
+  .ru-mobile-bottom-nav a.is-active { color: var(--ru-vermilion); }
+  .ru-login-page { grid-template-columns: 1fr; }
+  .ru-login-rail, .ru-login-tenants { display: none; }
+  .ru-login-form-area { padding: 30px 20px; }
+  .ru-login-form h1 { font-size: 30px; line-height: 38px; }
+}
