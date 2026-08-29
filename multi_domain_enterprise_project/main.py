@@ -27,6 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config import settings, validate_runtime_settings
 from multi_domain_enterprise_project.agent.agent_main import run_agent_stream
 from multi_domain_enterprise_project.api.enterprise import router as enterprise_router
+from multi_domain_enterprise_project.api.platform import router as platform_router
 from multi_domain_enterprise_project.core.audit import (
     append_audit_event,
     create_document_with_audit,
@@ -126,6 +127,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="企业多智能体助手", version="1.0.0", lifespan=lifespan)
 app.include_router(enterprise_router)
+app.include_router(platform_router)
 app.add_middleware(RequestContextMiddleware)
 if settings.runtime.cors_origins:
     app.add_middleware(

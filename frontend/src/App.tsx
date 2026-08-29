@@ -3,7 +3,11 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { AuthState } from './components/AuthState';
 import { ProductShell } from './layouts/ProductShell';
 import { LoginPage } from './pages/auth/LoginPage';
-import { CapabilityPendingPage } from './pages/CapabilityPendingPage';
+import { AdminModelsPage } from './pages/admin/AdminModelsPage';
+import { AdminOperationsPage } from './pages/admin/AdminOperationsPage';
+import { AdminSecurityPage } from './pages/admin/AdminSecurityPage';
+import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { AdminTenantsPage } from './pages/admin/AdminTenantsPage';
 import { EnterpriseAgentsPage } from './pages/enterprise/EnterpriseAgentsPage';
 import { EnterpriseEvaluationPage } from './pages/enterprise/EnterpriseEvaluationPage';
 import { EnterpriseKnowledgePage } from './pages/enterprise/EnterpriseKnowledgePage';
@@ -79,11 +83,11 @@ function AuthenticatedApp() {
 
       <Route element={<ProductShell mode="admin" currentUser={currentUser.user} />}>
         <Route path="/admin" element={<Navigate to="/admin/tenants" replace />} />
-        <Route path="/admin/tenants" element={<CapabilityPendingPage scope="admin" capability="租户与资源配额" />} />
-        <Route path="/admin/security" element={<CapabilityPendingPage scope="admin" capability="安全审计" />} />
-        <Route path="/admin/operations" element={<CapabilityPendingPage scope="admin" capability="系统运行" />} />
-        <Route path="/admin/models" element={<CapabilityPendingPage scope="admin" capability="模型与容量" />} />
-        <Route path="/admin/settings" element={<CapabilityPendingPage scope="admin" capability="平台配置" />} />
+        <Route path="/admin/tenants" element={<AdminTenantsPage />} />
+        <Route path="/admin/security" element={<AdminSecurityPage />} />
+        <Route path="/admin/operations" element={<AdminOperationsPage />} />
+        <Route path="/admin/models" element={<AdminModelsPage />} />
+        <Route path="/admin/settings" element={<AdminSettingsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/app" replace />} />
