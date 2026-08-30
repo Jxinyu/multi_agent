@@ -1,0 +1,87 @@
+{
+  "local_fast_only": {
+    "sample_count": 30,
+    "error_count": 0,
+    "cloud_call_count": 0,
+    "avg_latency_seconds": 0.0313,
+    "cell_recall": 0.6667,
+    "header_recall": 0.6667,
+    "numeric_value_recall": 0.6667,
+    "table_retention_score": 0.6667,
+    "by_sample_type": {
+      "native_pdf": {
+        "sample_count": 10,
+        "cell_recall": 1.0,
+        "table_retention_score": 1.0
+      },
+      "scanned_pdf": {
+        "sample_count": 10,
+        "cell_recall": 0.0,
+        "table_retention_score": 0.0
+      },
+      "xlsx": {
+        "sample_count": 10,
+        "cell_recall": 1.0,
+        "table_retention_score": 1.0
+      }
+    }
+  },
+  "cloud_accurate_only": {
+    "sample_count": 30,
+    "error_count": 30,
+    "cloud_call_count": 30,
+    "avg_latency_seconds": 2.5004,
+    "cell_recall": 0.0,
+    "header_recall": 0.0,
+    "numeric_value_recall": 0.0,
+    "table_retention_score": 0.0,
+    "by_sample_type": {
+      "native_pdf": {
+        "sample_count": 10,
+        "cell_recall": 0.0,
+        "table_retention_score": 0.0
+      },
+      "scanned_pdf": {
+        "sample_count": 10,
+        "cell_recall": 0.0,
+        "table_retention_score": 0.0
+      },
+      "xlsx": {
+        "sample_count": 10,
+        "cell_recall": 0.0,
+        "table_retention_score": 0.0
+      }
+    }
+  },
+  "auto_router": {
+    "sample_count": 30,
+    "error_count": 0,
+    "cloud_call_count": 0,
+    "avg_latency_seconds": 0.5712,
+    "cell_recall": 1.0,
+    "header_recall": 1.0,
+    "numeric_value_recall": 1.0,
+    "table_retention_score": 1.0,
+    "by_sample_type": {
+      "native_pdf": {
+        "sample_count": 10,
+        "cell_recall": 1.0,
+        "table_retention_score": 1.0
+      },
+      "scanned_pdf": {
+        "sample_count": 10,
+        "cell_recall": 1.0,
+        "table_retention_score": 1.0
+      },
+      "xlsx": {
+        "sample_count": 10,
+        "cell_recall": 1.0,
+        "table_retention_score": 1.0
+      }
+    }
+  },
+  "relative_lifts": {
+    "auto_vs_local_table_retention": 0.4999,
+    "auto_vs_cloud_cost_reduction": 1.0
+  }
+}

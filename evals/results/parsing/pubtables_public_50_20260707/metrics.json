@@ -1,0 +1,47 @@
+{
+  "run_id": "pubtables_public_50_20260707",
+  "dataset_id": "docling-project/PubTables-1M_OTSL-v1.1",
+  "split": "test",
+  "sample_count": 50,
+  "min_cells": 12,
+  "summary": {
+    "pymupdf_text_only_pdf": {
+      "samples": 50,
+      "ok_rate": 1.0,
+      "cell_recall": 0.0,
+      "numeric_recall": 0.0,
+      "header_recall": 0.0,
+      "table_retention_score": 0.0,
+      "mean_latency_s": 0.011222132000839338,
+      "mean_output_chars": 0.0
+    },
+    "router_auto_pdf": {
+      "samples": 50,
+      "ok_rate": 1.0,
+      "cell_recall": 0.8737882901798776,
+      "numeric_recall": 0.8752932512513568,
+      "header_recall": 0.8422676767676768,
+      "table_retention_score": 0.8694364384359173,
+      "mean_latency_s": 2.108711986001581,
+      "mean_output_chars": 842.8
+    },
+    "rapidocr_direct_image": {
+      "samples": 50,
+      "ok_rate": 1.0,
+      "cell_recall": 0.9090014981088379,
+      "numeric_recall": 0.9042740522783429,
+      "header_recall": 0.8248542568542568,
+      "table_retention_score": 0.895197550463027,
+      "mean_latency_s": 2.124395734001882,
+      "mean_output_chars": 814.36
+    }
+  },
+  "lift_vs_text_only_baseline": {
+    "baseline": 0.0,
+    "candidate": 0.8694364384359173,
+    "absolute": 0.8694364384359173,
+    "relative": null
+  },
+  "report_path": "D:\\学习笔记\\langchain\\rag_upper\\evals\\reports\\pubtables_document_parsing_evaluation.md",
+  "result_dir": "D:\\学习笔记\\langchain\\rag_upper\\evals\\results\\parsing\\pubtables_public_50_20260707"
+}

@@ -1,0 +1,246 @@
+{
+  "metrics": {
+    "keyword_router": {
+      "case_count": 320,
+      "route_accuracy": 0.6406,
+      "macro_f1": 0.7232,
+      "clarification_accuracy": 0.91,
+      "multi_domain_f1": 0.8667,
+      "error_count": 0,
+      "avg_latency_seconds": 0.0,
+      "p95_latency_seconds": 0.0,
+      "source_accuracy": {
+        "CLINC150": 0.58,
+        "enterprise_curated": 0.7417
+      },
+      "category_accuracy": {
+        "enterprise_clarify": 0.85,
+        "enterprise_finance": 0.8,
+        "enterprise_hr": 0.7,
+        "enterprise_legal": 0.65,
+        "enterprise_multi_domain": 0.6,
+        "enterprise_tech": 0.85,
+        "finance": 0.4154,
+        "hr": 0.2727,
+        "oos": 0.875,
+        "unsupported_in_domain": 0.975
+      },
+      "per_label": {
+        "clarify": {
+          "precision": 0.5353,
+          "recall": 0.91,
+          "f1": 0.6741,
+          "tp": 91,
+          "fp": 79,
+          "fn": 9
+        },
+        "finance": {
+          "precision": 0.8169,
+          "recall": 0.6105,
+          "f1": 0.6988,
+          "tp": 58,
+          "fp": 13,
+          "fn": 37
+        },
+        "hr": {
+          "precision": 0.8958,
+          "recall": 0.5059,
+          "f1": 0.6466,
+          "tp": 43,
+          "fp": 5,
+          "fn": 42
+        },
+        "legal": {
+          "precision": 0.9062,
+          "recall": 0.8286,
+          "f1": 0.8657,
+          "tp": 29,
+          "fp": 3,
+          "fn": 6
+        },
+        "tech": {
+          "precision": 0.7037,
+          "recall": 0.76,
+          "f1": 0.7308,
+          "tp": 19,
+          "fp": 8,
+          "fn": 6
+        }
+      }
+    },
+    "single_llm_router": {
+      "case_count": 320,
+      "route_accuracy": 0.8187,
+      "macro_f1": 0.8687,
+      "clarification_accuracy": 0.87,
+      "multi_domain_f1": 0.6667,
+      "error_count": 0,
+      "avg_latency_seconds": 0.7144,
+      "p95_latency_seconds": 0.9913,
+      "source_accuracy": {
+        "CLINC150": 0.825,
+        "enterprise_curated": 0.8083
+      },
+      "category_accuracy": {
+        "enterprise_clarify": 0.85,
+        "enterprise_finance": 1.0,
+        "enterprise_hr": 1.0,
+        "enterprise_legal": 1.0,
+        "enterprise_multi_domain": 0.0,
+        "enterprise_tech": 1.0,
+        "finance": 0.6923,
+        "hr": 0.9091,
+        "oos": 0.85,
+        "unsupported_in_domain": 0.9
+      },
+      "per_label": {
+        "clarify": {
+          "precision": 0.8131,
+          "recall": 0.87,
+          "f1": 0.8406,
+          "tp": 87,
+          "fp": 20,
+          "fn": 13
+        },
+        "finance": {
+          "precision": 0.8684,
+          "recall": 0.6947,
+          "f1": 0.7719,
+          "tp": 66,
+          "fp": 10,
+          "fn": 29
+        },
+        "hr": {
+          "precision": 0.95,
+          "recall": 0.8941,
+          "f1": 0.9212,
+          "tp": 76,
+          "fp": 4,
+          "fn": 9
+        },
+        "legal": {
+          "precision": 0.9394,
+          "recall": 0.8857,
+          "f1": 0.9118,
+          "tp": 31,
+          "fp": 2,
+          "fn": 4
+        },
+        "tech": {
+          "precision": 0.9167,
+          "recall": 0.88,
+          "f1": 0.898,
+          "tp": 22,
+          "fp": 2,
+          "fn": 3
+        }
+      }
+    },
+    "langgraph_supervisor": {
+      "case_count": 320,
+      "route_accuracy": 0.7281,
+      "macro_f1": 0.8004,
+      "clarification_accuracy": 0.99,
+      "multi_domain_f1": 0.9833,
+      "error_count": 0,
+      "avg_latency_seconds": 2.417,
+      "p95_latency_seconds": 3.7928,
+      "source_accuracy": {
+        "CLINC150": 0.585,
+        "enterprise_curated": 0.9667
+      },
+      "category_accuracy": {
+        "enterprise_clarify": 0.95,
+        "enterprise_finance": 1.0,
+        "enterprise_hr": 0.95,
+        "enterprise_legal": 0.95,
+        "enterprise_multi_domain": 0.95,
+        "enterprise_tech": 1.0,
+        "finance": 0.0,
+        "hr": 0.6727,
+        "oos": 1.0,
+        "unsupported_in_domain": 1.0
+      },
+      "per_label": {
+        "clarify": {
+          "precision": 0.5593,
+          "recall": 0.99,
+          "f1": 0.7148,
+          "tp": 99,
+          "fp": 78,
+          "fn": 1
+        },
+        "finance": {
+          "precision": 0.8529,
+          "recall": 0.3053,
+          "f1": 0.4496,
+          "tp": 29,
+          "fp": 5,
+          "fn": 66
+        },
+        "hr": {
+          "precision": 0.9853,
+          "recall": 0.7882,
+          "f1": 0.8758,
+          "tp": 67,
+          "fp": 1,
+          "fn": 18
+        },
+        "legal": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 35,
+          "fp": 0,
+          "fn": 0
+        },
+        "tech": {
+          "precision": 0.9259,
+          "recall": 1.0,
+          "f1": 0.9615,
+          "tp": 25,
+          "fp": 2,
+          "fn": 0
+        }
+      }
+    }
+  },
+  "lifts": {
+    "keyword_router": {
+      "route_accuracy": {
+        "absolute_gain": 0.0875,
+        "relative_lift": 0.1366
+      },
+      "macro_f1": {
+        "absolute_gain": 0.0772,
+        "relative_lift": 0.1067
+      },
+      "clarification_accuracy": {
+        "absolute_gain": 0.08,
+        "relative_lift": 0.0879
+      },
+      "multi_domain_f1": {
+        "absolute_gain": 0.1166,
+        "relative_lift": 0.1345
+      }
+    },
+    "single_llm_router": {
+      "route_accuracy": {
+        "absolute_gain": -0.0906,
+        "relative_lift": -0.1107
+      },
+      "macro_f1": {
+        "absolute_gain": -0.0683,
+        "relative_lift": -0.0786
+      },
+      "clarification_accuracy": {
+        "absolute_gain": 0.12,
+        "relative_lift": 0.1379
+      },
+      "multi_domain_f1": {
+        "absolute_gain": 0.3166,
+        "relative_lift": 0.4749
+      }
+    }
+  }
+}
