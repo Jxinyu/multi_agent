@@ -11,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl libgl1 libglib2.0-0 \
+    && apt-get install -y --no-install-recommends curl libxcb1 libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:0.11.29 /uv /uvx /bin/
 WORKDIR /app
