@@ -106,6 +106,7 @@ def test_openapi_excludes_server_paths_and_marks_protected_routes() -> None:
     assert schema["paths"]["/api/enterprise/runtime/connections/{connection_id}"]["get"]["security"]
     assert schema["paths"]["/api/enterprise/knowledge/runtime"]["get"]["security"]
     assert schema["paths"]["/api/enterprise/evaluation/runs/{run_id}"]["get"]["security"]
+    assert schema["paths"]["/api/enterprise/evaluation/runs/{run_id}/dataset"]["get"]["security"]
     assert schema["paths"]["/api/enterprise/members/{actor_id}"]["get"]["security"]
     assert schema["paths"]["/api/admin/audit-events/{event_id}"]["get"]["security"]
     assert schema["paths"]["/api/admin/jobs"]["get"]["security"]

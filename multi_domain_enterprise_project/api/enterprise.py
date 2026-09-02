@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
+from multi_domain_enterprise_project.api.evaluation_datasets import router as evaluation_dataset_router
 from multi_domain_enterprise_project.core.audit import append_audit_event, list_audit_events
 from multi_domain_enterprise_project.core.auth import CurrentUser, require_permissions
 from multi_domain_enterprise_project.core.database import get_session, list_documents
@@ -21,6 +22,7 @@ from multi_domain_enterprise_project.core.observability import request_id_var
 from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 
 router = APIRouter(prefix="/api/enterprise", tags=["enterprise"])
+router.include_router(evaluation_dataset_router)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 Session = Annotated[AsyncSession, Depends(get_session)]
 EnterpriseReader = Annotated[CurrentUser, Depends(require_permissions("audit:read", "kb:read"))]

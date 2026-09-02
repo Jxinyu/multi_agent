@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "datasets": [
+    {
+      "run_id": "routing_full_singlelabel_20260706_210622",
+      "name": "CLINC150 与企业多领域路由集",
+      "benchmark_type": "公开基准 + 企业场景集",
+      "sample_count": 320,
+      "split": "CLINC150 200 条 + 企业场景 120 条",
+      "seed": 20260706,
+      "selection_rule": "从 CLINC150 test/oos_test 选择可映射的工作、金融、域内不支持与 OOS 样本，并加入 HR、财务、法务、技术、多领域和追问各 20 条企业场景。",
+      "source_urls": [
+        {"label": "CLINC150 官方仓库", "url": "https://github.com/clinc/oos-eval"}
+      ],
+      "distributions": [
+        {"label": "CLINC150", "count": 200},
+        {"label": "企业场景集", "count": 120}
+      ],
+      "artifacts": [
+        {"path": "evals/data/routing/clinc150_data_full.json", "role": "公开原始数据缓存", "distribution": "local_cache", "expected_size_bytes": 2495390, "expected_sha256": "36923c3705a59e08fe9c3883d8bc2dd966ef93e22cb78ac41171782a698d56e0", "record_count": null},
+        {"path": "evals/data/routing/routing_cases.jsonl", "role": "固定评测样本", "distribution": "local_cache", "expected_size_bytes": 72788, "expected_sha256": "aa8081bb8f26d4277edb2fabd39d39e7d880bdc1a332a0804f269168d1bec0d4", "record_count": 320},
+        {"path": "evals/results/routing/routing_full_singlelabel_20260706_210622/metrics.json", "role": "版本化指标产物", "distribution": "repository", "expected_size_bytes": 5734, "expected_sha256": "c3e280f350c4210e51efa5f32e6bc0dcfc8e52d8d7eb0aa160e9b7305cc0cdcd", "record_count": null},
+        {"path": "evals/routing/run_routing_eval.py", "role": "复现实验脚本", "distribution": "repository", "expected_size_bytes": 46632, "expected_sha256": "7a32ce5ec8cdeb1cbbc044a6f6968ee6c024c8f4b1e3ff690b3a6831b6dca746", "record_count": null},
+        {"path": "evals/reports/routing_intent_evaluation.md", "role": "实验报告", "distribution": "repository", "expected_size_bytes": 5964, "expected_sha256": "2bf1ee96f252c3b37d6b5bfdffab0a7a6df7715349c261ba5b2e9cf05c02efe9", "record_count": null}
+      ],
+      "leakage_controls": [
+        "路由评测只判断目标智能体或追问，不进入知识检索和回答阶段。",
+        "同一固定输入集分别运行关键词、单 LLM 与 LangGraph Supervisor。"
+      ],
+      "limitations": ["CLINC150 不是企业专用基准，企业准确率必须单独报告。"]
+    },
+    {
+      "run_id": "rag_lambdamart_enriched_train1300_dev200_20260707",
+      "name": "MultiHop-RAG 多跳检索集",
+      "benchmark_type": "公开多跳问答基准",
+      "sample_count": 2255,
+      "split": "训练 1300 / 开发 200 / 严格留出 755",
+      "seed": 20260706,
+      "selection_rule": "使用官方 2556 条查询，排除 301 条 null_query；固定划分后只用 755 条 holdout 报告主提升。",
+      "source_urls": [
+        {"label": "MultiHop-RAG 官方仓库", "url": "https://github.com/yixuantt/MultiHop-RAG"}
+      ],
+      "distributions": [
+        {"label": "训练集", "count": 1300},
+        {"label": "开发集", "count": 200},
+        {"label": "严格留出集", "count": 755}
+      ],
+      "artifacts": [
+        {"path": "evals/data/rag/MultiHopRAG.json", "role": "官方查询与金标缓存", "distribution": "local_cache", "expected_size_bytes": 5171312, "expected_sha256": "03cfb4926461f868684903aadc8024447bdda5bb3f6804741424cce338515bff", "record_count": 2556},
+        {"path": "evals/data/rag/corpus.json", "role": "官方文档语料缓存", "distribution": "local_cache", "expected_size_bytes": 6785567, "expected_sha256": "20b61b5ab84de84a927420c5d265b7ec8d859ae49980699958a787ade9e4d28f", "record_count": 609},
+        {"path": "evals/results/rag/rag_lambdamart_enriched_train1300_dev200_20260707/metrics.json", "role": "版本化指标产物", "distribution": "repository", "expected_size_bytes": 7011, "expected_sha256": "9779ffdc8f38b04460845c00b17cc0f6c856ef0c64fb544e9b2ce5c2a5cc881d", "record_count": null},
+        {"path": "evals/rag/run_multihop_lambdamart_eval.py", "role": "复现实验脚本", "distribution": "repository", "expected_size_bytes": 26301, "expected_sha256": "daafb2482bafb43ba4ef141b433b33e539209476d396f40be8857a2825063c40", "record_count": null},
+        {"path": "evals/reports/multihop_rag_lambdamart_evaluation.md", "role": "实验报告", "distribution": "repository", "expected_size_bytes": 2510, "expected_sha256": "2701aab6de9cb1e3a9abfe845242ba42e2c1daaa6ee06783bfbe288436960214", "record_count": null}
+      ],
+      "leakage_controls": [
+        "金标证据标题只用于训练标签和最终评分，不进入查询文本或索引内容。",
+        "Holdout 不参与模型拟合、特征选择或参数选择。"
+      ],
+      "limitations": ["22.34% 仅代表监督式 LambdaMART 重排序在固定 holdout 上的 Recall@10 相对提升。"]
+    },
+    {
+      "run_id": "parsing_full_20260706_220325",
+      "name": "复杂文档解析固定控制集",
+      "benchmark_type": "项目控制实验",
+      "sample_count": 30,
+      "split": "原生 PDF、扫描 PDF、XLSX 各 10 份",
+      "seed": 20260706,
+      "selection_rule": "使用固定生成规则构造三类各 10 份文档，并为单元格、表头和数值保存金标。",
+      "source_urls": [],
+      "distributions": [
+        {"label": "原生 PDF", "count": 10},
+        {"label": "扫描 PDF", "count": 10},
+        {"label": "XLSX", "count": 10}
+      ],
+      "artifacts": [
+        {"path": "evals/data/parsing/controlled_manifest.json", "role": "固定样本与金标清单", "distribution": "local_cache", "expected_size_bytes": 27931, "expected_sha256": "8cf2f38ea57b120b0ae78862a7a730d93ef7f09bd6eaebbb2800ae80e457f400", "record_count": 30},
+        {"path": "evals/results/parsing/parsing_full_20260706_220325/metrics.json", "role": "版本化指标产物", "distribution": "repository", "expected_size_bytes": 2075, "expected_sha256": "0f1e81300adca056ee8aa72fcee734c5693e42c5fa12ecb5c065cadc651d8141", "record_count": null},
+        {"path": "evals/parsing/run_document_parsing_eval.py", "role": "复现实验脚本", "distribution": "repository", "expected_size_bytes": 23662, "expected_sha256": "611912e53f004deef4a3482560bccb8df94037273c5db1f8a3c292e088f925a9", "record_count": null},
+        {"path": "evals/reports/document_parsing_evaluation.md", "role": "实验报告", "distribution": "repository", "expected_size_bytes": 7242, "expected_sha256": "ec3b76418ff021466d146de0bdff9024ed88f61c6cf883b097f97d473ba5d2bd", "record_count": null}
+      ],
+      "leakage_controls": [
+        "三个解析方案使用同一份文件和同一份字段级金标。",
+        "质量按单元格、表头和数值召回计算，成本按真实云调用次数计算。"
+      ],
+      "limitations": ["控制集验证路由机制，不替代公开复杂文档基准。", "云端对照调用失败，不能将其质量结果作为有效质量基线。"]
+    },
+    {
+      "run_id": "pubtables_public_50_20260707",
+      "name": "PubTables-1M OTSL 公开表格集",
+      "benchmark_type": "公开表格抽取基准子集",
+      "sample_count": 50,
+      "split": "test split 固定 50 表",
+      "seed": null,
+      "selection_rule": "顺序检查 test split，保留至少 12 个唯一非空单元格的表格；检查 54 条后取得 50 条，跳过 4 条小表。",
+      "source_urls": [
+        {"label": "Microsoft Research PubTables-1M", "url": "https://www.microsoft.com/en-us/research/publication/pubtables-1m/"},
+        {"label": "PubTables-1M OTSL v1.1", "url": "https://huggingface.co/datasets/docling-project/PubTables-1M_OTSL-v1.1"}
+      ],
+      "distributions": [
+        {"label": "纳入评测", "count": 50},
+        {"label": "小表排除", "count": 4}
+      ],
+      "artifacts": [
+        {"path": "evals/data/parsing/pubtables/manifest_test_50.json", "role": "公开样本与金标清单", "distribution": "local_cache", "expected_size_bytes": 508960, "expected_sha256": "de5988c09273fa95285151f45fa4ca5b7f52734499703b7195a90107a8c7da3f", "record_count": 50},
+        {"path": "evals/results/parsing/pubtables_public_50_20260707/metrics.json", "role": "版本化指标产物", "distribution": "repository", "expected_size_bytes": 1510, "expected_sha256": "751d724fd28090753ddc9375bc7bdd22453f9854e574adeafa822cd49040e6e2", "record_count": null},
+        {"path": "evals/parsing/run_pubtables_parsing_eval.py", "role": "复现实验脚本", "distribution": "repository", "expected_size_bytes": 20666, "expected_sha256": "7dc5dfacc957cff3149aed68d1598de3186232b897becfa44259c25dfccad46d", "record_count": null},
+        {"path": "evals/reports/pubtables_document_parsing_evaluation.md", "role": "实验报告", "distribution": "repository", "expected_size_bytes": 3334, "expected_sha256": "92f2ee0d73639a03eb08c645cff778cbdadcec00a078174ed57dd7aa3b0ea9d5", "record_count": null}
+      ],
+      "leakage_controls": [
+        "所有解析方案使用相同的 50 张表格图像和同一份单元格金标。",
+        "筛选规则只使用单元格数量，不根据任何方案的解析结果挑选样本。"
+      ],
+      "limitations": ["这是项目级固定子集实验，不是 PubTables-1M 官方排行榜提交。", "纯文本 PDF 基线为零，因此只报告绝对提升，不计算相对倍数。"]
+    }
+  ]
+}

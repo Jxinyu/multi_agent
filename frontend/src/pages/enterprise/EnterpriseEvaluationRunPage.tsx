@@ -60,7 +60,7 @@ export function EnterpriseEvaluationRunPage() {
 
     <div className="ru-evaluation-evidence-grid">
       <section className="ru-console-panel ru-run-methodology"><header><strong>验证口径</strong><span>可复核说明</span></header>{detail.notes.map((note, index) => <div key={note}><span>{index + 1}</span><p>{note}</p></div>)}</section>
-      <section className="ru-console-panel ru-run-provenance"><header><strong>结果追溯</strong><span>只读</span></header><dl><div><dt>运行 ID</dt><dd>{detail.run_id}</dd></div><div><dt>样本数</dt><dd>{detail.sample_count}</dd></div><div><dt>数据划分</dt><dd>{detail.split}</dd></div></dl><code>{detail.source}</code><p>页面直接读取该 JSON 产物；未运行新实验时不会自动改写数值。</p></section>
+      <section className="ru-console-panel ru-run-provenance"><header><strong>结果追溯</strong><span>只读</span></header><dl><div><dt>运行 ID</dt><dd>{detail.run_id}</dd></div><div><dt>样本数</dt><dd>{detail.sample_count}</dd></div><div><dt>数据划分</dt><dd>{detail.split}</dd></div></dl><code>{detail.source}</code><p>页面直接读取该 JSON 产物；未运行新实验时不会自动改写数值。</p><button className="ru-outline-command" type="button" onClick={() => navigate(`/enterprise/evaluation/${detail.run_id}/dataset`)}><Database size={15} />核验数据集来源</button></section>
     </div>
   </div>;
 }

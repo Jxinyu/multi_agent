@@ -173,6 +173,36 @@ export interface EvaluationRunDetail {
   notes: string[];
 }
 
+export interface EvaluationDatasetDetail {
+  registry_version: number;
+  checked_at: string;
+  run_id: string;
+  name: string;
+  benchmark_type: string;
+  sample_count: number;
+  split: string;
+  seed: number | null;
+  selection_rule: string;
+  source_urls: { label: string; url: string }[];
+  distributions: { label: string; count: number }[];
+  artifacts: {
+    path: string;
+    role: string;
+    distribution: 'repository' | 'local_cache';
+    expected_size_bytes: number;
+    actual_size_bytes: number | null;
+    expected_sha256: string;
+    actual_sha256: string | null;
+    record_count: number | null;
+    available: boolean;
+    integrity: 'verified' | 'mismatch' | 'not_distributed' | 'missing';
+  }[];
+  leakage_controls: string[];
+  limitations: string[];
+  raw_samples_exposed: boolean;
+  registry_note: string;
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const response = await authFetch(path);
   if (!response.ok) throw new Error(await response.text());
@@ -187,6 +217,7 @@ export const fetchRuntimeConnectionDetail = (connectionId: string) => getJson<Ru
 export const fetchKnowledgeIndexRuntime = () => getJson<KnowledgeIndexRuntime>('/api/enterprise/knowledge/runtime');
 export const fetchEvaluationSummary = async () => (await getJson<{ metrics: EvaluationMetric[] }>('/api/enterprise/evaluation')).metrics;
 export const fetchEvaluationRunDetail = (runId: string) => getJson<EvaluationRunDetail>(`/api/enterprise/evaluation/runs/${encodeURIComponent(runId)}`);
+export const fetchEvaluationDatasetDetail = (runId: string) => getJson<EvaluationDatasetDetail>(`/api/enterprise/evaluation/runs/${encodeURIComponent(runId)}/dataset`);
 export const fetchEnterpriseDocuments = async () => (await getJson<{ items: KnowledgeBaseItem[] }>('/api/admin/documents')).items;
 export const fetchEnterpriseCurrentUser = async () => (await getJson<{ user: CurrentUser }>('/api/auth/me')).user;
 
