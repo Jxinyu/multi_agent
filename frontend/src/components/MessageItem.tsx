@@ -43,7 +43,7 @@ export function MessageItem({ message }: MessageItemProps) {
                   )}
                   <div className="message-attachment-meta">
                     <span className="message-attachment-name">{attachment.name}</span>
-                    <span className="message-attachment-size">{formatSize(attachment.size)}</span>
+                    <span className="message-attachment-size">{attachment.size === undefined ? '历史附件' : formatSize(attachment.size)}</span>
                   </div>
                 </div>
               );

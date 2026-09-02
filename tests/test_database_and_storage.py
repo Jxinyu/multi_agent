@@ -5,18 +5,27 @@ from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
+from sqlalchemy import select
 
 from config import settings
+from multi_domain_enterprise_project import main
 from multi_domain_enterprise_project.core.audit import append_audit_event, list_audit_events
 from multi_domain_enterprise_project.core.auth import CurrentUser, require_permissions
 from multi_domain_enterprise_project.core.database import (
+    ConversationFeedbackRecord,
     SessionFactory,
+    append_conversation_message,
     close_database,
     create_document,
+    ensure_conversation,
+    finish_conversation_turn,
     get_document,
+    get_user_conversation,
     init_database,
     list_documents,
+    list_user_conversations,
     reconfigure_database,
+    set_conversation_feedback,
 )
 from multi_domain_enterprise_project.core.storage import KB_ROOT, parsed_document_path, remove_storage_path
 
@@ -99,6 +108,139 @@ async def test_audit_queries_are_tenant_scoped_and_cursor_paginated(isolated_dat
     assert next_cursor is None
     assert {event["tenant_id"] for event in first_page + second_page} == {"tenant-a"}
     assert not {event["id"] for event in first_page}.intersection(event["id"] for event in second_page)
+
+
+@pytest.mark.asyncio
+async def test_conversation_history_is_scoped_and_preserves_public_messages(isolated_database: None) -> None:
+    async with SessionFactory() as session:
+        conversation = await ensure_conversation(
+            session,
+            thread_id="thread_scope_a",
+            tenant_id="tenant-a",
+            owner_id="user-a",
+            title="差旅制度查询",
+            attachment_count=1,
+        )
+        await append_conversation_message(
+            session,
+            conversation_id=conversation["id"],
+            role="user",
+            content="差旅标准是什么？",
+            attachments=[{"name": "制度.pdf", "mime_type": "application/pdf"}],
+        )
+        await finish_conversation_turn(
+            session,
+            conversation_id=conversation["id"],
+            status="completed",
+            role="assistant",
+            content="请按企业差旅制度执行。",
+            references=["差旅制度.pdf"],
+        )
+        await set_conversation_feedback(
+            session,
+            conversation_id=conversation["id"],
+            user_id="user-a",
+            rating="helpful",
+        )
+
+        await append_conversation_message(
+            session,
+            conversation_id=conversation["id"],
+            role="user",
+            content="再补充审批顺序。",
+        )
+        await finish_conversation_turn(
+            session,
+            conversation_id=conversation["id"],
+            status="completed",
+            role="assistant",
+            content="先部门审批，再由财务复核。",
+        )
+        await set_conversation_feedback(
+            session,
+            conversation_id=conversation["id"],
+            user_id="user-a",
+            rating="not_helpful",
+        )
+
+        own = await get_user_conversation(
+            session,
+            thread_id="thread_scope_a",
+            tenant_id="tenant-a",
+            owner_id="user-a",
+        )
+        wrong_tenant = await get_user_conversation(
+            session,
+            thread_id="thread_scope_a",
+            tenant_id="tenant-b",
+            owner_id="user-a",
+        )
+        wrong_owner = await list_user_conversations(session, tenant_id="tenant-a", owner_id="user-b")
+        feedback_records = list(
+            (await session.scalars(select(ConversationFeedbackRecord))).all()
+        )
+
+    assert own is not None
+    assert own["status"] == "completed"
+    assert own["feedback"] == "not_helpful"
+    assert [message["role"] for message in own["messages"]] == ["user", "assistant", "user", "assistant"]
+    assert own["messages"][1]["references"] == ["差旅制度.pdf"]
+    assert {record.rating for record in feedback_records} == {"helpful", "not_helpful"}
+    assert wrong_tenant is None
+    assert wrong_owner == []
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_persists_user_visible_conversation(
+    isolated_database: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = CurrentUser(
+        user_id="user-a",
+        username="tester",
+        tenant_id="tenant-a",
+        role="user",
+        permissions=["chat:use"],
+        groups=[],
+        access_token="token",
+    )
+
+    async def no_rate_limit(*args, **kwargs):
+        return None
+
+    async def no_audit(*args, **kwargs):
+        return None
+
+    async def fake_stream(*args, **kwargs):
+        yield {"type": "status", "message": "正在处理"}
+        yield {"type": "complete", "message": "已完成回答", "references": ["制度.pdf"]}
+
+    monkeypatch.setattr(main, "_rate_limit", no_rate_limit)
+    monkeypatch.setattr(main, "append_audit_event", no_audit)
+    monkeypatch.setattr(main, "run_agent_stream", fake_stream)
+    monkeypatch.setattr(main, "global_checkpointer", object())
+
+    async with SessionFactory() as session:
+        response = await main.chat_endpoint(
+            main.ChatRequest(query="请查询制度", thread_id="thread_test_1"),
+            user,
+            session,
+        )
+        async for _ in response.body_iterator:
+            pass
+
+    async with SessionFactory() as session:
+        detail = await get_user_conversation(
+            session,
+            thread_id="thread_test_1",
+            tenant_id="tenant-a",
+            owner_id="user-a",
+        )
+
+    assert detail is not None
+    assert detail["status"] == "completed"
+    assert [message["content"] for message in detail["messages"]] == ["请查询制度", "已完成回答"]
+    assert detail["messages"][1]["references"] == ["制度.pdf"]
 
 
 @pytest.mark.asyncio

@@ -123,6 +123,34 @@
 .ru-doc-status.is-failed::before { background: var(--ru-danger); }
 .ru-detail-error { display: flex; gap: 7px; padding: 9px; color: var(--ru-danger); border: 1px solid var(--ru-danger); font-size: 10px; }
 
+.ru-task-detail-page { height: 100%; min-height: 0; display: flex; padding: 18px 20px; overflow-y: auto; background: #f6f7f5; flex-direction: column; }
+.ru-task-detail-title { min-height: 74px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--ru-line); }
+.ru-task-detail-title > button:first-child, .ru-back-command { min-width: 36px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--ru-carbon); border: 1px solid var(--ru-line); border-radius: 4px; background: var(--ru-white); cursor: pointer; }
+.ru-task-detail-title > div > span { color: var(--ru-vermilion); font-size: 9px; font-weight: 800; }
+.ru-task-detail-title h1 { margin: 3px 0; overflow: hidden; font-size: 19px; text-overflow: ellipsis; white-space: nowrap; }
+.ru-task-detail-title p { margin: 0; color: var(--ru-muted); font-family: "IBM Plex Mono", monospace; font-size: 9px; }
+.ru-task-detail-title .ru-primary-command { min-height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 13px; }
+.ru-task-detail-layout { min-height: 0; flex: 1; display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; padding-top: 14px; }
+.ru-task-metadata { min-height: 0; overflow-y: auto; }
+.ru-task-metadata section, .ru-task-transcript { border: 1px solid var(--ru-line); background: var(--ru-white); }
+.ru-task-metadata section + section { margin-top: 10px; }
+.ru-task-metadata section > header, .ru-task-transcript > header { min-height: 42px; display: flex; align-items: center; gap: 7px; padding: 0 12px; border-bottom: 1px solid var(--ru-line); font-size: 10px; }
+.ru-task-metadata section > header .ru-task-status, .ru-task-transcript > header span { margin-left: auto; }
+.ru-task-metadata dl { margin: 0; padding: 5px 12px 12px; }
+.ru-task-metadata dl div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--ru-line); font-size: 9px; }
+.ru-task-metadata dt { color: var(--ru-muted); }
+.ru-task-metadata dd { margin: 0; text-align: right; }
+.ru-task-metadata section > p { margin: 0; padding: 13px; color: var(--ru-graphite); font-size: 10px; line-height: 1.65; }
+.ru-task-metadata .ru-waiting-prompt { color: #694700; border-left: 3px solid var(--ru-warning); background: var(--ru-warning-soft); }
+.ru-task-transcript { min-width: 0; min-height: 0; display: flex; overflow: hidden; flex-direction: column; }
+.ru-task-transcript > header span { color: var(--ru-muted); font-size: 9px; }
+.ru-task-transcript .message-list { min-height: 0; flex: 1; overflow-y: auto; }
+.ru-task-detail-state { min-height: 260px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--ru-muted); flex-direction: column; text-align: center; }
+.ru-task-detail-state.is-error { margin-top: 14px; color: var(--ru-danger); border: 1px solid #efb5af; background: var(--ru-white); }
+.ru-task-detail-state p { max-width: 620px; margin: 0; overflow-wrap: anywhere; font-size: 10px; }
+.ru-task-detail-state span { color: var(--ru-muted); font-size: 10px; }
+.ru-back-command { align-self: flex-start; padding: 0 10px; }
+
 @media (max-width: 1120px) {
   .ru-search-workspace { grid-template-columns: 150px minmax(360px, 1fr); }
   .ru-reader-panel { display: none; }
@@ -152,6 +180,13 @@
   .ru-task-tabs button, .ru-document-tabs button { flex: 0 0 auto; }
   .ru-upload-queue > div { grid-template-columns: auto minmax(0, 1fr) 50px; }
   .ru-upload-queue > div > span { display: none; }
+  .ru-task-detail-page { height: auto; min-height: 100%; padding: 12px 10px 78px; }
+  .ru-task-detail-title { grid-template-columns: auto minmax(0, 1fr); }
+  .ru-task-detail-title .ru-primary-command { grid-column: 1 / 3; justify-self: stretch; justify-content: center; }
+  .ru-task-detail-layout { display: flex; flex-direction: column; }
+  .ru-task-metadata { overflow: visible; }
+  .ru-task-transcript { min-height: 420px; overflow: visible; }
+  .ru-task-transcript .message-list { overflow: visible; }
 }
 
 @media (prefers-reduced-motion: reduce) {

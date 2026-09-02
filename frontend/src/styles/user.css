@@ -79,6 +79,9 @@
 .ru-answer-header span { color: var(--ru-muted); font-family: "IBM Plex Mono", "Cascadia Code", monospace; font-size: 10px; }
 .ru-answer-actions { display: flex; gap: 4px; }
 .ru-answer-actions button { width: 34px; height: 34px; display: grid; place-items: center; color: var(--ru-graphite); border: 1px solid var(--ru-line); border-radius: var(--ru-radius); background: var(--ru-white); cursor: pointer; }
+.ru-answer-actions button.is-selected { color: var(--ru-white); border-color: var(--ru-vermilion); background: var(--ru-vermilion); }
+.ru-answer-actions button:disabled { opacity: .35; cursor: not-allowed; }
+.ru-answer-notice { padding: 7px 20px; color: #174a42; border-bottom: 1px solid #b9d2cb; background: #edf8f5; font-size: 10px; }
 .ru-route-trace { padding: 14px 20px; border-bottom: 1px solid var(--ru-line); background: var(--ru-fog); }
 .ru-route-trace > strong { font-size: 12px; }
 .ru-route-trace > strong span { color: var(--ru-vermilion); }
@@ -104,6 +107,7 @@
 .ru-evidence-panel { min-width: 0; padding: 0 16px; border-left: 1px solid var(--ru-line); overflow-y: auto; }
 .ru-evidence-panel > header { height: 56px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--ru-line); }
 .ru-evidence-panel > header button { color: var(--ru-cobalt); border: 0; background: transparent; cursor: pointer; font-size: 11px; }
+.ru-evidence-panel > header button:disabled { color: var(--ru-muted); cursor: not-allowed; }
 .ru-evidence-source { display: flex; gap: 10px; margin-top: 16px; padding: 13px; border: 1px solid var(--ru-line); }
 .ru-evidence-source svg { color: var(--ru-cobalt); }
 .ru-evidence-source div { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
@@ -144,7 +148,7 @@
   .ru-answer-page { grid-template-columns: 1fr; }
   .ru-evidence-panel { display: none; }
   .ru-answer-header { padding: 8px 12px; }
-  .ru-answer-actions button:nth-child(n+3) { display: none; }
+  .ru-answer-header { flex-wrap: wrap; }
   .ru-route-trace { padding: 12px; overflow-x: auto; }
   .ru-route-trace > div { width: 620px; }
   .ru-answer-stream .message-list { padding: 10px 14px 24px; }

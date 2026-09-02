@@ -33,10 +33,37 @@ class UserTaskItem(BaseModel):
     created_at: str
     updated_at: str
     attachment_count: int = 0
+    title: str = "历史会话"
+    detail_available: bool = False
 
 
 class UserTaskListResponse(BaseModel):
     items: list[UserTaskItem]
+
+
+class UserConversationMessage(BaseModel):
+    id: str
+    role: Literal["user", "assistant", "status", "error"]
+    content: str
+    references: list[str] = Field(default_factory=list)
+    attachments: list[dict[str, Any]] = Field(default_factory=list)
+    created_at: str
+
+
+class UserTaskDetailResponse(BaseModel):
+    id: str
+    status: Literal["running", "waiting", "completed", "failed", "cancelled"]
+    title: str
+    created_at: str
+    updated_at: str
+    attachment_count: int
+    waiting_prompt: str | None = None
+    feedback: Literal["helpful", "not_helpful"] | None = None
+    messages: list[UserConversationMessage]
+
+
+class UserTaskFeedbackRequest(BaseModel):
+    rating: Literal["helpful", "not_helpful"]
 
 
 def build_user_tasks(events: list[dict[str, Any]], *, now: datetime | None = None) -> list[UserTaskItem]:
@@ -76,3 +103,18 @@ def build_user_tasks(events: list[dict[str, Any]], *, now: datetime | None = Non
         if item["status"] == "running" and updated_at < stale_before:
             item["status"] = "cancelled"
     return [UserTaskItem(**item) for item in grouped.values()]
+
+
+def build_persisted_user_tasks(conversations: list[dict[str, Any]]) -> list[UserTaskItem]:
+    return [
+        UserTaskItem(
+            id=item["thread_id"],
+            status=item["status"],
+            created_at=item["created_at"],
+            updated_at=item["updated_at"],
+            attachment_count=item["attachment_count"],
+            title=item["title"],
+            detail_available=True,
+        )
+        for item in conversations
+    ]

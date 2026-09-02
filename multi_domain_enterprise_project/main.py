@@ -5,7 +5,6 @@ import hashlib
 import json
 import logging
 import os
-import tempfile
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -19,13 +18,14 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Streamin
 from fastapi.staticfiles import StaticFiles
 from langgraph.checkpoint.redis import AsyncRedisSaver
 from prometheus_client import make_asgi_app
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 from redis.asyncio import Redis
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings, validate_runtime_settings
 from multi_domain_enterprise_project.agent.agent_main import run_agent_stream
+from multi_domain_enterprise_project.api.conversations import router as conversations_router
 from multi_domain_enterprise_project.api.enterprise import router as enterprise_router
 from multi_domain_enterprise_project.api.platform import router as platform_router
 from multi_domain_enterprise_project.core.audit import (
@@ -42,10 +42,14 @@ from multi_domain_enterprise_project.core.auth import (
     get_current_user,
     require_permissions,
 )
+from multi_domain_enterprise_project.core.chat import ChatRequest, build_attachment_context
 from multi_domain_enterprise_project.core.database import (
     IngestionJobRecord,
     SessionFactory,
+    append_conversation_message,
     close_database,
+    ensure_conversation,
+    finish_conversation_turn,
     get_document,
     get_session,
     get_upload_session,
@@ -65,7 +69,6 @@ from multi_domain_enterprise_project.core.observability import (
 from multi_domain_enterprise_project.core.search import parse_retrieval_context
 from multi_domain_enterprise_project.core.storage import (
     combine_chunks,
-    decode_attachment,
     document_path,
     ensure_storage_roots,
     normalized_extension,
@@ -74,16 +77,9 @@ from multi_domain_enterprise_project.core.storage import (
     upload_session_dir,
     validate_file_signature,
 )
-from multi_domain_enterprise_project.core.user_views import (
-    SearchEvidenceItem,
-    SearchRequest,
-    SearchResponse,
-    UserTaskListResponse,
-    build_user_tasks,
-)
+from multi_domain_enterprise_project.core.user_views import SearchEvidenceItem, SearchRequest, SearchResponse
 from multi_domain_enterprise_project.healthcheck import run_checks
 from multi_domain_enterprise_project.rag.authorization import RetrievalAuthorization, is_metadata_authorized
-from multi_domain_enterprise_project.rag.documentParser.parser_route import DocumentParserRouter
 from multi_domain_enterprise_project.rag.rag_service import retrieve_service
 
 configure_logging()
@@ -126,6 +122,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="企业多智能体助手", version="1.0.0", lifespan=lifespan)
+app.include_router(conversations_router)
 app.include_router(enterprise_router)
 app.include_router(platform_router)
 app.add_middleware(RequestContextMiddleware)
@@ -138,24 +135,6 @@ if settings.runtime.cors_origins:
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
 app.mount("/metrics", make_asgi_app(), name="metrics")
-
-
-class AttachmentPayload(BaseModel):
-    name: str = Field(min_length=1, max_length=255)
-    mime_type: str = Field(max_length=128)
-    data_base64: str = Field(min_length=1)
-
-
-class ChatRequest(BaseModel):
-    query: str = Field(min_length=1, max_length=8000)
-    thread_id: str = Field(pattern=r"^[A-Za-z0-9_-]{8,128}$")
-    attachments: list[AttachmentPayload] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def validate_attachment_count(self) -> ChatRequest:
-        if len(self.attachments) > settings.upload.max_attachments_per_request:
-            raise ValueError("附件数量超过限制")
-        return self
 
 
 class CurrentUserResponse(BaseModel):
@@ -313,26 +292,6 @@ def _uploaded_chunk_indexes(upload_id: str) -> list[int]:
     return sorted(indexes)
 
 
-async def _build_attachment_context(attachments: list[AttachmentPayload]) -> tuple[str, list[str]]:
-    if not attachments:
-        return "", []
-    router = DocumentParserRouter(mode="auto")
-    sections: list[str] = []
-    names: list[str] = []
-    with tempfile.TemporaryDirectory(prefix="rag-upper-attachments-") as temp_dir:
-        root = Path(temp_dir)
-        for attachment in attachments:
-            extension = normalized_extension(attachment.name)
-            data = decode_attachment(attachment.data_base64, settings.upload.max_attachment_size_bytes)
-            path = root / f"{uuid.uuid4().hex}{extension}"
-            path.write_bytes(data)
-            validate_file_signature(path, extension)
-            parsed = await router.route_and_parse(str(path))
-            sections.append(f"### 附件: {Path(attachment.name).name}\n{parsed}")
-            names.append(Path(attachment.name).name)
-    return "\n\n".join(sections), names
-
-
 async def _queue_document_job(
     session: AsyncSession,
     item: dict[str, Any],
@@ -405,6 +364,22 @@ async def get_me(current_user: Authenticated) -> CurrentUserResponse:
 async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: Session):
     await _rate_limit(current_user, "chat")
     chat_request_id = request_id_var.get()
+    title = " ".join(request.query.split())[:80] or "新会话"
+    conversation = await ensure_conversation(
+        session,
+        thread_id=request.thread_id,
+        tenant_id=current_user.tenant_id,
+        owner_id=current_user.user_id,
+        title=title,
+        attachment_count=len(request.attachments),
+    )
+    await append_conversation_message(
+        session,
+        conversation_id=conversation["id"],
+        role="user",
+        content=request.query,
+        attachments=[{"name": item.name, "mime_type": item.mime_type} for item in request.attachments],
+    )
     await append_audit_event(
         session,
         tenant_id=current_user.tenant_id,
@@ -434,6 +409,13 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
     async def event_generator():
         if global_checkpointer is None:
             async with SessionFactory() as audit_session:
+                await finish_conversation_turn(
+                    audit_session,
+                    conversation_id=conversation["id"],
+                    status="failed",
+                    role="error",
+                    content="会话服务未就绪",
+                )
                 await append_audit_event(
                     audit_session,
                     tenant_id=current_user.tenant_id,
@@ -449,7 +431,7 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
             yield f"data: {json.dumps({'type': 'error', 'message': '会话服务未就绪'}, ensure_ascii=False)}\n\n"
             return
         try:
-            attachment_context, names = await _build_attachment_context(request.attachments)
+            attachment_context, names = await build_attachment_context(request.attachments)
             if names:
                 yield f"data: {json.dumps({'type': 'status', 'message': f'已解析 {len(names)} 个附件'}, ensure_ascii=False)}\n\n"
             query = request.query
@@ -459,15 +441,31 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
             async for chunk in run_agent_stream(query=query, config=config, checkpointer=global_checkpointer):
                 if chunk.get("type") in {"complete", "interrupt", "error"}:
                     terminal_chunk = chunk
+                    continue
                 yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+            if terminal_chunk is None:
+                terminal_chunk = {"type": "error", "message": "请求处理失败，请稍后重试", "references": []}
             async with SessionFactory() as audit_session:
-                terminal_type = (terminal_chunk or {}).get("type")
+                terminal_type = terminal_chunk.get("type")
                 if terminal_type == "complete":
                     action, outcome = "chat.completed", "success"
+                    conversation_status, message_role = "completed", "assistant"
                 elif terminal_type == "interrupt":
                     action, outcome = "chat.waiting_input", "success"
+                    conversation_status, message_role = "waiting", "assistant"
                 else:
                     action, outcome = "chat.failed", "failure"
+                    conversation_status, message_role = "failed", "error"
+                terminal_message = str(terminal_chunk.get("message") or "请求处理失败，请稍后重试")
+                terminal_references = [str(item) for item in terminal_chunk.get("references", [])]
+                await finish_conversation_turn(
+                    audit_session,
+                    conversation_id=conversation["id"],
+                    status=conversation_status,
+                    role=message_role,
+                    content=terminal_message,
+                    references=terminal_references,
+                )
                 await append_audit_event(
                     audit_session,
                     tenant_id=current_user.tenant_id,
@@ -480,8 +478,14 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
                     request_id=chat_request_id,
                     metadata={"attachment_count": len(request.attachments)},
                 )
+            yield f"data: {json.dumps(terminal_chunk, ensure_ascii=False)}\n\n"
         except asyncio.CancelledError:
             async with SessionFactory() as audit_session:
+                await finish_conversation_turn(
+                    audit_session,
+                    conversation_id=conversation["id"],
+                    status="cancelled",
+                )
                 await append_audit_event(
                     audit_session,
                     tenant_id=current_user.tenant_id,
@@ -497,6 +501,13 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
             raise
         except HTTPException as exc:
             async with SessionFactory() as audit_session:
+                await finish_conversation_turn(
+                    audit_session,
+                    conversation_id=conversation["id"],
+                    status="failed",
+                    role="error",
+                    content=str(exc.detail),
+                )
                 await append_audit_event(
                     audit_session,
                     tenant_id=current_user.tenant_id,
@@ -513,6 +524,13 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
         except Exception as exc:
             logger.exception("聊天流处理失败")
             async with SessionFactory() as audit_session:
+                await finish_conversation_turn(
+                    audit_session,
+                    conversation_id=conversation["id"],
+                    status="failed",
+                    role="error",
+                    content="请求处理失败，请稍后重试",
+                )
                 await append_audit_event(
                     audit_session,
                     tenant_id=current_user.tenant_id,
@@ -565,17 +583,6 @@ async def api_search(request: SearchRequest, current_user: KbReader, session: Se
         },
     )
     return SearchResponse(items=[SearchEvidenceItem(**item) for item in items], mode=request.mode, elapsed_ms=elapsed_ms)
-
-
-@app.get("/api/tasks", response_model=UserTaskListResponse)
-async def api_list_user_tasks(current_user: ChatUser, session: Session):
-    events, _ = await list_audit_events(
-        session,
-        tenant_id=current_user.tenant_id,
-        actor_id=current_user.user_id,
-        limit=200,
-    )
-    return UserTaskListResponse(items=build_user_tasks(events))
 
 
 @app.get("/api/documents", response_model=KnowledgeBaseListResponse)

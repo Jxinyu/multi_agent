@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any
@@ -16,6 +17,7 @@ from sqlalchemy import (
     inspect,
     select,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -24,6 +26,12 @@ from config import settings
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+def utc_iso(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat()
 
 
 class Base(DeclarativeBase):
@@ -111,6 +119,68 @@ class AuditEventRecord(Base):
     request_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     details: Mapped[dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class ConversationRecord(Base):
+    __tablename__ = "conversations"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "owner_id", "thread_id", name="uq_conversation_scope_thread"),
+        CheckConstraint(
+            "status IN ('running', 'waiting', 'completed', 'failed', 'cancelled')",
+            name="ck_conversations_status",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    thread_id: Mapped[str] = mapped_column(String(128), index=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), index=True)
+    owner_id: Mapped[str] = mapped_column(String(128), index=True)
+    title: Mapped[str] = mapped_column(String(256))
+    status: Mapped[str] = mapped_column(String(32), default="running", index=True)
+    waiting_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attachment_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class ConversationMessageRecord(Base):
+    __tablename__ = "conversation_messages"
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ('user', 'assistant', 'status', 'error')",
+            name="ck_conversation_messages_role",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    role: Mapped[str] = mapped_column(String(32))
+    content: Mapped[str] = mapped_column(Text)
+    references: Mapped[list[str]] = mapped_column(JSON, default=list)
+    attachments: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class ConversationFeedbackRecord(Base):
+    __tablename__ = "conversation_feedback"
+    __table_args__ = (
+        UniqueConstraint("message_id", "user_id", name="uq_conversation_feedback_message_user"),
+        CheckConstraint("rating IN ('helpful', 'not_helpful')", name="ck_conversation_feedback_rating"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    message_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("conversation_messages.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[str] = mapped_column(String(128), index=True)
+    rating: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
 
 _engine: AsyncEngine = create_async_engine(settings.database.url, echo=settings.database.echo, pool_pre_ping=True)
@@ -320,3 +390,236 @@ async def remove_upload_session(session: AsyncSession, upload_id: str) -> None:
     if record is not None:
         await session.delete(record)
         await session.commit()
+
+
+def conversation_to_dict(record: ConversationRecord) -> dict[str, Any]:
+    return {
+        "id": record.id,
+        "thread_id": record.thread_id,
+        "tenant_id": record.tenant_id,
+        "owner_id": record.owner_id,
+        "title": record.title,
+        "status": record.status,
+        "waiting_prompt": record.waiting_prompt,
+        "attachment_count": record.attachment_count,
+        "created_at": utc_iso(record.created_at),
+        "updated_at": utc_iso(record.updated_at),
+    }
+
+
+def conversation_message_to_dict(record: ConversationMessageRecord) -> dict[str, Any]:
+    return {
+        "id": record.id,
+        "role": record.role,
+        "content": record.content,
+        "references": record.references,
+        "attachments": record.attachments,
+        "created_at": utc_iso(record.created_at),
+    }
+
+
+async def ensure_conversation(
+    session: AsyncSession,
+    *,
+    thread_id: str,
+    tenant_id: str,
+    owner_id: str,
+    title: str,
+    attachment_count: int,
+) -> dict[str, Any]:
+    record = await session.scalar(
+        select(ConversationRecord).where(
+            ConversationRecord.thread_id == thread_id,
+            ConversationRecord.tenant_id == tenant_id,
+            ConversationRecord.owner_id == owner_id,
+        )
+    )
+    if record is None:
+        record = ConversationRecord(
+            id=uuid.uuid4().hex,
+            thread_id=thread_id,
+            tenant_id=tenant_id,
+            owner_id=owner_id,
+            title=title,
+            attachment_count=attachment_count,
+        )
+        session.add(record)
+        try:
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()
+            record = await session.scalar(
+                select(ConversationRecord).where(
+                    ConversationRecord.thread_id == thread_id,
+                    ConversationRecord.tenant_id == tenant_id,
+                    ConversationRecord.owner_id == owner_id,
+                )
+            )
+            if record is None:
+                raise
+            record.status = "running"
+            record.waiting_prompt = None
+            record.attachment_count += attachment_count
+            record.updated_at = utc_now()
+            await session.commit()
+    else:
+        record.status = "running"
+        record.waiting_prompt = None
+        record.attachment_count += attachment_count
+        record.updated_at = utc_now()
+        await session.commit()
+    await session.refresh(record)
+    return conversation_to_dict(record)
+
+
+async def append_conversation_message(
+    session: AsyncSession,
+    *,
+    conversation_id: str,
+    role: str,
+    content: str,
+    references: list[str] | None = None,
+    attachments: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    record = ConversationMessageRecord(
+        id=uuid.uuid4().hex,
+        conversation_id=conversation_id,
+        role=role,
+        content=content,
+        references=references or [],
+        attachments=attachments or [],
+    )
+    session.add(record)
+    await session.commit()
+    await session.refresh(record)
+    return conversation_message_to_dict(record)
+
+
+async def finish_conversation_turn(
+    session: AsyncSession,
+    *,
+    conversation_id: str,
+    status: str,
+    role: str | None = None,
+    content: str | None = None,
+    references: list[str] | None = None,
+) -> None:
+    record = await session.get(ConversationRecord, conversation_id)
+    if record is None:
+        raise RuntimeError("会话记录不存在")
+    record.status = status
+    record.waiting_prompt = content if status == "waiting" else None
+    record.updated_at = utc_now()
+    if role and content:
+        session.add(
+            ConversationMessageRecord(
+                id=uuid.uuid4().hex,
+                conversation_id=conversation_id,
+                role=role,
+                content=content,
+                references=references or [],
+                attachments=[],
+            )
+        )
+    await session.commit()
+
+
+async def list_user_conversations(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    owner_id: str,
+    limit: int = 200,
+) -> list[dict[str, Any]]:
+    result = await session.scalars(
+        select(ConversationRecord)
+        .where(ConversationRecord.tenant_id == tenant_id, ConversationRecord.owner_id == owner_id)
+        .order_by(ConversationRecord.updated_at.desc())
+        .limit(limit)
+    )
+    return [conversation_to_dict(record) for record in result.all()]
+
+
+async def get_user_conversation(
+    session: AsyncSession,
+    *,
+    thread_id: str,
+    tenant_id: str,
+    owner_id: str,
+) -> dict[str, Any] | None:
+    record = await session.scalar(
+        select(ConversationRecord).where(
+            ConversationRecord.thread_id == thread_id,
+            ConversationRecord.tenant_id == tenant_id,
+            ConversationRecord.owner_id == owner_id,
+        )
+    )
+    if record is None:
+        return None
+    messages = await session.scalars(
+        select(ConversationMessageRecord)
+        .where(ConversationMessageRecord.conversation_id == record.id)
+        .order_by(ConversationMessageRecord.created_at.asc(), ConversationMessageRecord.id.asc())
+    )
+    payload = conversation_to_dict(record)
+    payload["messages"] = [conversation_message_to_dict(message) for message in messages.all()]
+    latest_assistant_id = await session.scalar(
+        select(ConversationMessageRecord.id)
+        .where(
+            ConversationMessageRecord.conversation_id == record.id,
+            ConversationMessageRecord.role == "assistant",
+        )
+        .order_by(ConversationMessageRecord.created_at.desc(), ConversationMessageRecord.id.desc())
+        .limit(1)
+    )
+    feedback = None
+    if latest_assistant_id:
+        feedback = await session.scalar(
+            select(ConversationFeedbackRecord).where(
+                ConversationFeedbackRecord.message_id == latest_assistant_id,
+                ConversationFeedbackRecord.user_id == owner_id,
+            )
+        )
+    payload["feedback"] = feedback.rating if feedback else None
+    return payload
+
+
+async def set_conversation_feedback(
+    session: AsyncSession,
+    *,
+    conversation_id: str,
+    user_id: str,
+    rating: str,
+) -> bool:
+    message_id = await session.scalar(
+        select(ConversationMessageRecord.id)
+        .where(
+            ConversationMessageRecord.conversation_id == conversation_id,
+            ConversationMessageRecord.role == "assistant",
+        )
+        .order_by(ConversationMessageRecord.created_at.desc(), ConversationMessageRecord.id.desc())
+        .limit(1)
+    )
+    if message_id is None:
+        return False
+    record = await session.scalar(
+        select(ConversationFeedbackRecord).where(
+            ConversationFeedbackRecord.message_id == message_id,
+            ConversationFeedbackRecord.user_id == user_id,
+        )
+    )
+    if record is None:
+        session.add(
+            ConversationFeedbackRecord(
+                id=uuid.uuid4().hex,
+                conversation_id=conversation_id,
+                message_id=message_id,
+                user_id=user_id,
+                rating=rating,
+            )
+        )
+    else:
+        record.rating = rating
+        record.updated_at = utc_now()
+    await session.commit()
+    return True

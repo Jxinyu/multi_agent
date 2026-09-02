@@ -5,7 +5,7 @@ export type ChatReference = string;
 export interface MessageAttachment {
   id: string;
   name: string;
-  size: number;
+  size?: number;
   mimeType: string;
   previewUrl?: string;
 }
@@ -74,6 +74,7 @@ export interface ChatSession {
   busy: boolean;
   messages: ChatMessage[];
   messageCount: number;
+  feedback?: 'helpful' | 'not_helpful' | null;
 }
 
 export type SearchMode = 'milvus' | 'graph' | 'mg';
@@ -93,4 +94,27 @@ export interface UserTask {
   created_at: string;
   updated_at: string;
   attachment_count: number;
+  title: string;
+  detail_available: boolean;
+}
+
+export interface UserTaskMessage {
+  id: string;
+  role: Role;
+  content: string;
+  references: string[];
+  attachments: { name: string; mime_type: string }[];
+  created_at: string;
+}
+
+export interface UserTaskDetail {
+  id: string;
+  status: UserTask['status'];
+  title: string;
+  created_at: string;
+  updated_at: string;
+  attachment_count: number;
+  waiting_prompt?: string | null;
+  feedback?: 'helpful' | 'not_helpful' | null;
+  messages: UserTaskMessage[];
 }

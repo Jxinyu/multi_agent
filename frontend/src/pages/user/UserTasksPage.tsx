@@ -11,6 +11,7 @@ export function UserTasksPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<UserTask[]>([]);
   const [filter, setFilter] = useState<'all' | UserTask['status']>('all');
+  const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -29,7 +30,11 @@ export function UserTasksPage() {
     }
   };
   useEffect(() => { void load(); }, []);
-  const visible = useMemo(() => filter === 'all' ? items : items.filter((item) => item.status === filter), [filter, items]);
+  const visible = useMemo(() => items.filter((item) => {
+    const matchesStatus = filter === 'all' || item.status === filter;
+    const keyword = query.trim().toLowerCase();
+    return matchesStatus && (!keyword || item.id.toLowerCase().includes(keyword) || item.title.toLowerCase().includes(keyword));
+  }), [filter, items, query]);
   const selected = items.find((item) => item.id === selectedId) ?? null;
 
   return (
@@ -43,15 +48,15 @@ export function UserTasksPage() {
             </button>
           ))}
         </div>
-        <div className="ru-task-toolbar"><div><Search size={15} /><input placeholder="搜索任务 ID" aria-label="搜索任务" /></div><span>按最近更新排序</span></div>
+        <div className="ru-task-toolbar"><div><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索标题或任务 ID" aria-label="搜索任务" /></div><span>按最近更新排序</span></div>
         <div className="ru-task-table">
           <div className="ru-task-table-head"><span>任务 ID</span><span>状态</span><span>附件</span><span>创建时间</span><span>操作</span></div>
           {loading ? <div className="ru-data-empty"><RefreshCw className="is-spinning" size={28} /><strong>正在加载任务</strong></div> : null}
           {error ? <div className="ru-inline-error">{error}</div> : null}
           {!loading && !error && visible.length === 0 ? <div className="ru-data-empty"><Clock3 size={30} /><strong>暂无此类任务</strong><span>从 AI 工作台发起问题后，执行状态会出现在这里。</span></div> : null}
           {visible.map((item) => (
-            <button key={item.id} type="button" className={selectedId === item.id ? 'is-selected' : ''} onClick={() => setSelectedId(item.id)}>
-              <span><strong>{item.id}</strong><small>多智能体会话任务</small></span>
+            <button key={item.id} type="button" className={selectedId === item.id ? 'is-selected' : ''} onClick={() => { setSelectedId(item.id); if (window.matchMedia('(max-width: 780px)').matches) navigate(`/app/tasks/${item.id}`); }}>
+              <span><strong>{item.title}</strong><small>{item.id}</small></span>
               <span className={`ru-task-status is-${item.status}`}>{item.status === 'completed' ? <CheckCircle2 size={13} /> : item.status === 'failed' || item.status === 'cancelled' ? <AlertCircle size={13} /> : <Clock3 size={13} />}{statusLabel[item.status]}</span>
               <span>{item.attachment_count} 个</span>
               <time>{new Date(item.created_at).toLocaleString('zh-CN')}</time>
@@ -65,7 +70,7 @@ export function UserTasksPage() {
           <>
             <header><div><span className={`ru-task-status is-${selected.status}`}>{statusLabel[selected.status]}</span><h2>{selected.id}</h2></div></header>
             <section><h3>执行概况</h3><dl><div><dt>当前状态</dt><dd>{statusLabel[selected.status]}</dd></div><div><dt>创建时间</dt><dd>{new Date(selected.created_at).toLocaleString('zh-CN')}</dd></div><div><dt>附件数量</dt><dd>{selected.attachment_count}</dd></div></dl></section>
-            <section><h3>{selected.status === 'waiting' ? '需要你的补充' : '任务操作'}</h3><p>{selected.status === 'waiting' ? 'Supervisor 正在等待补充信息。进入会话后提交回答即可从断点继续。' : '可进入会话查看完整问答、路由状态和引用证据。'}</p><button className="ru-primary-command" type="button" onClick={() => navigate(`/app/chat/${selected.id}`)}>{selected.status === 'waiting' ? '进入会话并补充' : '查看会话'}</button></section>
+            <section><h3>{selected.status === 'waiting' ? '需要你的补充' : '任务操作'}</h3><p>{selected.detail_available ? (selected.status === 'waiting' ? 'Supervisor 正在等待补充信息。进入详情后可核对追问并从断点继续。' : '可查看服务端保存的完整问答、引用证据和反馈状态。') : '该任务来自旧版审计记录，只保留状态，不包含可恢复的问答正文。'}</p><button className="ru-primary-command" type="button" onClick={() => navigate(`/app/tasks/${selected.id}`)}>{selected.detail_available ? (selected.status === 'waiting' ? '查看追问详情' : '查看会话详情') : '查看保留边界'}</button></section>
           </>
         ) : <div className="ru-data-empty"><Clock3 size={30} /><strong>选择一个任务</strong><span>右侧将显示执行状态和可用操作。</span></div>}
       </aside>

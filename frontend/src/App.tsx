@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 
 import { AuthState } from './components/AuthState';
 import { ProductShell } from './layouts/ProductShell';
@@ -20,10 +21,32 @@ import { AgentAnswerPage } from './pages/user/AgentAnswerPage';
 import { EnterpriseSearchPage } from './pages/user/EnterpriseSearchPage';
 import { UserWorkbenchPage } from './pages/user/UserWorkbenchPage';
 import { UserDocumentsPage } from './pages/user/UserDocumentsPage';
+import { UserTaskDetailPage } from './pages/user/UserTaskDetailPage';
 import { UserTasksPage } from './pages/user/UserTasksPage';
 import { useAuth } from './hooks/useAuth';
 import { useChatSession } from './hooks/useChatSession';
 import { useCurrentUser } from './hooks/useCurrentUser';
+
+type ChatController = ReturnType<typeof useChatSession>;
+
+function AgentAnswerRoute({ chat }: { chat: ChatController }) {
+  const { threadId } = useParams();
+  useEffect(() => {
+    if (threadId && threadId !== chat.session.threadId) {
+      void chat.loadSession(threadId).catch(() => undefined);
+    }
+  }, [threadId]);
+  return (
+    <AgentAnswerPage
+      session={chat.session}
+      attachments={chat.attachments}
+      onSend={chat.send}
+      onStop={chat.stop}
+      onAddAttachments={chat.addAttachments}
+      onRemoveAttachment={chat.removeAttachment}
+    />
+  );
+}
 
 function AuthenticatedApp() {
   const navigate = useNavigate();
@@ -60,19 +83,11 @@ function AuthenticatedApp() {
         />
         <Route
           path="/app/chat/:threadId"
-          element={(
-            <AgentAnswerPage
-              session={chat.session}
-              attachments={chat.attachments}
-              onSend={chat.send}
-              onStop={chat.stop}
-              onAddAttachments={chat.addAttachments}
-              onRemoveAttachment={chat.removeAttachment}
-            />
-          )}
+          element={<AgentAnswerRoute chat={chat} />}
         />
         <Route path="/app/search" element={<EnterpriseSearchPage />} />
         <Route path="/app/tasks" element={<UserTasksPage />} />
+        <Route path="/app/tasks/:taskId" element={<UserTaskDetailPage />} />
         <Route path="/app/documents" element={<UserDocumentsPage />} />
         <Route path="/app/notifications" element={<NotificationCenterPage mode="user" />} />
         <Route path="/app/help" element={<HelpCenterPage mode="user" />} />

@@ -28,12 +28,16 @@ jobs:
       - run: uv run python scripts/secret_scan.py
       - run: >-
           uv run ruff check config
+          migrations/versions/20260902_0003_conversation_history.py
+          multi_domain_enterprise_project/api
           multi_domain_enterprise_project/core/auth.py
+          multi_domain_enterprise_project/core/chat.py
           multi_domain_enterprise_project/core/database.py
           multi_domain_enterprise_project/core/jobs.py
           multi_domain_enterprise_project/core/observability.py
           multi_domain_enterprise_project/core/storage.py
           multi_domain_enterprise_project/core/task_state.py
+          multi_domain_enterprise_project/core/user_views.py
           multi_domain_enterprise_project/main.py
           multi_domain_enterprise_project/worker.py
           multi_domain_enterprise_project/healthcheck.py

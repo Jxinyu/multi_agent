@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { createThreadId, fileToAttachmentPayload, streamChat } from '../api/chat';
+import { fetchUserTask } from '../api/user';
 import type {
   AttachmentDraft,
   AttachmentPayload,
@@ -78,6 +79,7 @@ export function useChatSession() {
   const [status, setStatus] = useState('就绪');
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
+  const [feedback, setFeedback] = useState<'helpful' | 'not_helpful' | null>(null);
   const [history, setHistory] = useState<SessionHistoryItem[]>([]);
   const [activeHistoryThreadId, setActiveHistoryThreadId] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
@@ -89,9 +91,10 @@ export function useChatSession() {
       status,
       busy,
       messages,
-      messageCount: messages.length
+      messageCount: messages.length,
+      feedback
     }),
-    [busy, messages, status, threadId]
+    [busy, feedback, messages, status, threadId]
   );
 
   useEffect(() => {
@@ -139,6 +142,7 @@ export function useChatSession() {
     setStatus('就绪');
     setBusy(false);
     setMessages([WELCOME_MESSAGE]);
+    setFeedback(null);
     setActiveHistoryThreadId(null);
     setAttachments([]);
   };
@@ -167,6 +171,41 @@ export function useChatSession() {
     setMessages(item.messages);
     setActiveHistoryThreadId(item.threadId);
     setAttachments([]);
+  };
+
+  const loadSession = async (targetThreadId: string) => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setThreadId(targetThreadId);
+    setStatus('正在恢复会话');
+    setBusy(true);
+    setAttachments([]);
+    try {
+      const detail = await fetchUserTask(targetThreadId);
+      const restoredMessages: ChatMessage[] = detail.messages.map((message) => ({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        references: message.references,
+        attachments: message.attachments.map((attachment, index) => ({
+          id: `${message.id}-${index}`,
+          name: attachment.name,
+          mimeType: attachment.mime_type
+        }))
+      }));
+      setMessages(restoredMessages.length ? restoredMessages : [WELCOME_MESSAGE]);
+      setFeedback(detail.feedback ?? null);
+      setStatus(detail.status === 'waiting' ? '等待补充' : detail.status === 'completed' ? '已完成' : detail.status === 'failed' ? '错误' : detail.status === 'cancelled' ? '已停止' : '运行中');
+      setActiveHistoryThreadId(targetThreadId);
+      return detail;
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : '会话恢复失败';
+      setStatus('错误');
+      setMessages([WELCOME_MESSAGE, { id: createId(), role: 'error', content: message }]);
+      throw reason;
+    } finally {
+      setBusy(false);
+    }
   };
 
   const addAttachments = async (files: FileList | File[]) => {
@@ -202,6 +241,7 @@ export function useChatSession() {
     const currentAttachments = attachments;
     const messageAttachments = toMessageAttachments(currentAttachments);
     setAttachments([]);
+    setFeedback(null);
 
     appendMessage({ role: 'user', content: query, attachments: messageAttachments });
 
@@ -267,6 +307,7 @@ export function useChatSession() {
     resetThread,
     createNewChat,
     resumeSession,
+    loadSession,
     addAttachments,
     removeAttachment,
     clearAttachments

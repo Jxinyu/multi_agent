@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 import pytest
 
 from multi_domain_enterprise_project import main
+from multi_domain_enterprise_project.api import conversations
 from multi_domain_enterprise_project.core.auth import CurrentUser
 from multi_domain_enterprise_project.core.search import parse_retrieval_context
 
@@ -38,6 +39,10 @@ def _document(document_id: str, owner_id: str, acl: list[str]) -> dict:
         "checksum": document_id,
         "backend_status": {},
     }
+
+
+async def _empty_conversations(*args, **kwargs):
+    return []
 
 
 def test_parse_retrieval_context_returns_structured_evidence() -> None:
@@ -103,9 +108,10 @@ async def test_task_endpoint_is_scoped_to_current_actor(monkeypatch: pytest.Monk
             },
         ], None)
 
-    monkeypatch.setattr(main, "list_audit_events", fake_list)
+    monkeypatch.setattr(conversations, "list_audit_events", fake_list)
+    monkeypatch.setattr(conversations, "list_user_conversations", _empty_conversations)
 
-    response = await main.api_list_user_tasks(_user(), object())
+    response = await conversations.list_tasks(_user(), object())
 
     assert captured["actor_id"] == "user-1"
     assert captured["tenant_id"] == "tenant-1"
@@ -125,11 +131,106 @@ async def test_task_endpoint_marks_stale_running_task_as_cancelled(monkeypatch: 
             }
         ], None)
 
-    monkeypatch.setattr(main, "list_audit_events", fake_list)
+    monkeypatch.setattr(conversations, "list_audit_events", fake_list)
+    monkeypatch.setattr(conversations, "list_user_conversations", _empty_conversations)
 
-    response = await main.api_list_user_tasks(_user(), object())
+    response = await conversations.list_tasks(_user(), object())
 
     assert response.items[0].status == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_task_endpoint_prefers_persisted_conversation_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake_list_events(*args, **kwargs):
+        return ([{
+            "action": "chat.requested",
+            "resource_id": "thread-live",
+            "occurred_at": "2026-09-02T10:00:00+00:00",
+            "metadata": {},
+        }], None)
+
+    async def fake_conversations(*args, **kwargs):
+        return [{
+            "thread_id": "thread-live",
+            "status": "completed",
+            "created_at": "2026-09-02T10:00:00+00:00",
+            "updated_at": "2026-09-02T10:01:00+00:00",
+            "attachment_count": 0,
+            "title": "持久化会话",
+        }]
+
+    monkeypatch.setattr(conversations, "list_audit_events", fake_list_events)
+    monkeypatch.setattr(conversations, "list_user_conversations", fake_conversations)
+
+    response = await conversations.list_tasks(_user(), object())
+
+    assert len(response.items) == 1
+    assert response.items[0].status == "completed"
+    assert response.items[0].title == "持久化会话"
+    assert response.items[0].detail_available is True
+
+
+@pytest.mark.asyncio
+async def test_task_detail_is_scoped_to_current_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = {}
+
+    async def fake_conversation(session, **kwargs):
+        captured.update(kwargs)
+        return {
+            "id": "conversation-id",
+            "thread_id": "thread-detail",
+            "status": "waiting",
+            "title": "需要补充",
+            "created_at": "2026-09-02T10:00:00+00:00",
+            "updated_at": "2026-09-02T10:01:00+00:00",
+            "attachment_count": 0,
+            "waiting_prompt": "请补充系统名称",
+            "feedback": None,
+            "messages": [],
+        }
+
+    monkeypatch.setattr(conversations, "get_user_conversation", fake_conversation)
+
+    response = await conversations.get_task("thread-detail", _user(), object())
+
+    assert captured["tenant_id"] == "tenant-1"
+    assert captured["owner_id"] == "user-1"
+    assert response.waiting_prompt == "请补充系统名称"
+
+
+@pytest.mark.asyncio
+async def test_task_feedback_updates_scoped_conversation_and_audits(monkeypatch: pytest.MonkeyPatch) -> None:
+    feedback_payload = {}
+    audit_payload = {}
+
+    async def fake_conversation(session, **kwargs):
+        return {"id": "conversation-id"}
+
+    async def fake_feedback(session, **kwargs):
+        feedback_payload.update(kwargs)
+        return True
+
+    async def fake_audit(session, **kwargs):
+        audit_payload.update(kwargs)
+
+    monkeypatch.setattr(conversations, "get_user_conversation", fake_conversation)
+    monkeypatch.setattr(conversations, "set_conversation_feedback", fake_feedback)
+    monkeypatch.setattr(conversations, "append_audit_event", fake_audit)
+
+    response = await conversations.set_task_feedback(
+        "thread-detail",
+        conversations.UserTaskFeedbackRequest(rating="not_helpful"),
+        _user(),
+        object(),
+    )
+
+    assert response == {"success": True, "rating": "not_helpful"}
+    assert feedback_payload == {
+        "conversation_id": "conversation-id",
+        "user_id": "user-1",
+        "rating": "not_helpful",
+    }
+    assert audit_payload["metadata"] == {"rating": "not_helpful"}
 
 
 @pytest.mark.asyncio
