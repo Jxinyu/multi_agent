@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+from collections import Counter
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 import httpx
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
-from multi_domain_enterprise_project.core.audit import list_audit_events
+from multi_domain_enterprise_project.core.audit import append_audit_event, list_audit_events
 from multi_domain_enterprise_project.core.auth import CurrentUser, require_permissions
 from multi_domain_enterprise_project.core.database import get_session, list_documents
-from multi_domain_enterprise_project.healthcheck import run_checks
+from multi_domain_enterprise_project.core.observability import request_id_var
+from multi_domain_enterprise_project.healthcheck import CHECK_DEFINITIONS, run_checks
 
 router = APIRouter(prefix="/api/platform", tags=["platform"])
 Session = Annotated[AsyncSession, Depends(get_session)]
@@ -39,6 +42,35 @@ class TenantDirectory(BaseModel):
     enforcement_note: str = "当前版本仅执行全局请求与上传限制，尚未配置跨租户配额控制面。"
 
 
+class DistributionItem(BaseModel):
+    id: str
+    count: int
+
+
+class TenantDocumentActivity(BaseModel):
+    id: str
+    file_name: str
+    owner_id: str
+    status: str
+    mode: str
+    upload_time: str
+
+
+class TenantDetail(BaseModel):
+    usage: TenantUsage
+    registry_available: bool = False
+    audit_window_complete: bool
+    audit_window_size: int
+    observed_actor_ids: list[str]
+    document_statuses: list[DistributionItem]
+    parsing_modes: list[DistributionItem]
+    audit_outcomes: list[DistributionItem]
+    frequent_actions: list[DistributionItem]
+    recent_documents: list[TenantDocumentActivity]
+    recent_events: list[dict[str, Any]]
+    enforcement_note: str = "当前详情仅覆盖令牌租户；跨租户目录、计费与配额控制面尚未接入。"
+
+
 class ServiceStatus(BaseModel):
     name: str
     ok: bool
@@ -52,6 +84,17 @@ class RuntimeStatus(BaseModel):
     worker_max_attempts: int
     worker_block_ms: int
     maintenance_operations_enabled: bool = False
+
+
+class ServiceProbeDetail(BaseModel):
+    service: ServiceStatus
+    checked_at: str
+    method: str
+    success_condition: str
+    operational_role: str
+    timeout_seconds: int
+    history_available: bool = False
+    configuration_source: str = "服务端启动配置（端点与凭据不返回前端）"
 
 
 class ModelItem(BaseModel):
@@ -86,14 +129,15 @@ class PlatformSettings(BaseModel):
     source: str = "启动配置与环境变量（只读脱敏视图）"
 
 
-@router.get("/tenants", response_model=TenantDirectory)
-async def get_tenant_directory(current_user: PlatformReader, session: Session) -> TenantDirectory:
-    events, _ = await list_audit_events(session, tenant_id=current_user.tenant_id, limit=200)
-    documents = await list_documents(session, current_user.tenant_id)
+def _distribution(values: list[str], *, limit: int | None = None) -> list[DistributionItem]:
+    return [DistributionItem(id=item, count=count) for item, count in Counter(values).most_common(limit)]
+
+
+def _tenant_usage(tenant_id: str, events: list[dict[str, Any]], documents: list[dict[str, Any]]) -> TenantUsage:
     actors = {str(event["actor_id"]) for event in events}
     healthy = sum(item.get("status") in {"completed", "ready"} for item in documents)
-    return TenantDirectory(items=[TenantUsage(
-        tenant_id=current_user.tenant_id,
+    return TenantUsage(
+        tenant_id=tenant_id,
         status="active",
         auth_mode=settings.auth.mode,
         observed_users=len(actors),
@@ -102,7 +146,48 @@ async def get_tenant_directory(current_user: PlatformReader, session: Session) -
         audit_event_count=len(events),
         request_limit_per_minute=settings.runtime.request_rate_limit_per_minute,
         max_file_size_bytes=settings.upload.max_file_size_bytes,
-    )])
+    )
+
+
+@router.get("/tenants", response_model=TenantDirectory)
+async def get_tenant_directory(current_user: PlatformReader, session: Session) -> TenantDirectory:
+    events, _ = await list_audit_events(session, tenant_id=current_user.tenant_id, limit=200)
+    documents = await list_documents(session, current_user.tenant_id)
+    return TenantDirectory(items=[_tenant_usage(current_user.tenant_id, events, documents)])
+
+
+@router.get("/tenants/{tenant_id}", response_model=TenantDetail)
+async def get_tenant_detail(tenant_id: str, current_user: PlatformReader, session: Session) -> TenantDetail:
+    if tenant_id != current_user.tenant_id:
+        raise HTTPException(status_code=404, detail="当前部署目录中不存在该租户")
+
+    events, cursor = await list_audit_events(session, tenant_id=tenant_id, limit=200)
+    documents = await list_documents(session, tenant_id)
+    response = TenantDetail(
+        usage=_tenant_usage(tenant_id, events, documents),
+        audit_window_complete=cursor is None,
+        audit_window_size=len(events),
+        observed_actor_ids=sorted({str(event["actor_id"]) for event in events}),
+        document_statuses=_distribution([str(item.get("status") or "unknown") for item in documents]),
+        parsing_modes=_distribution([str(item.get("mode") or "unknown") for item in documents]),
+        audit_outcomes=_distribution([str(item["outcome"]) for item in events]),
+        frequent_actions=_distribution([str(item["action"]) for item in events], limit=8),
+        recent_documents=[TenantDocumentActivity(**item) for item in documents[:8]],
+        recent_events=events[:12],
+    )
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="platform.tenant_read",
+        resource_type="tenant",
+        resource_id=tenant_id,
+        outcome="success",
+        request_id=request_id_var.get(),
+        metadata={"audit_window_size": len(events), "document_count": len(documents)},
+    )
+    return response
 
 
 @router.get("/runtime", response_model=RuntimeStatus)
@@ -115,6 +200,42 @@ async def get_runtime_status(current_user: PlatformReader) -> RuntimeStatus:
         worker_max_attempts=settings.runtime.worker_max_attempts,
         worker_block_ms=settings.runtime.worker_block_ms,
     )
+
+
+@router.get("/runtime/services/{service_name}", response_model=ServiceProbeDetail)
+async def get_service_probe_detail(
+    service_name: str,
+    current_user: PlatformReader,
+    session: Session,
+) -> ServiceProbeDetail:
+    definition = CHECK_DEFINITIONS.get(service_name)
+    if definition is None:
+        raise HTTPException(status_code=404, detail="未知服务探针")
+    results = await run_checks({service_name})
+    if not results:
+        raise HTTPException(status_code=404, detail="服务探针未注册")
+    result = results[0]
+    response = ServiceProbeDetail(
+        service=ServiceStatus(name=result.name, ok=result.ok, detail=result.detail),
+        checked_at=datetime.now(UTC).isoformat(),
+        method=definition.method,
+        success_condition=definition.success_condition,
+        operational_role=definition.operational_role,
+        timeout_seconds=definition.timeout_seconds,
+    )
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="platform.service_probe_read",
+        resource_type="service_probe",
+        resource_id=service_name,
+        outcome="success",
+        request_id=request_id_var.get(),
+        metadata={"probe_ok": result.ok},
+    )
+    return response
 
 
 @router.get("/models", response_model=ModelInventory)

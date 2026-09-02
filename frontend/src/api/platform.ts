@@ -21,6 +21,33 @@ export interface TenantDirectory {
   enforcement_note: string;
 }
 
+export interface DistributionItem {
+  id: string;
+  count: number;
+}
+
+export interface TenantDetail {
+  usage: TenantUsage;
+  registry_available: boolean;
+  audit_window_complete: boolean;
+  audit_window_size: number;
+  observed_actor_ids: string[];
+  document_statuses: DistributionItem[];
+  parsing_modes: DistributionItem[];
+  audit_outcomes: DistributionItem[];
+  frequent_actions: DistributionItem[];
+  recent_documents: {
+    id: string;
+    file_name: string;
+    owner_id: string;
+    status: string;
+    mode: string;
+    upload_time: string;
+  }[];
+  recent_events: AuditEvent[];
+  enforcement_note: string;
+}
+
 export interface RuntimeStatus {
   environment: string;
   service_name: string;
@@ -28,6 +55,17 @@ export interface RuntimeStatus {
   worker_max_attempts: number;
   worker_block_ms: number;
   maintenance_operations_enabled: boolean;
+}
+
+export interface ServiceProbeDetail {
+  service: { name: string; ok: boolean; detail: string };
+  checked_at: string;
+  method: string;
+  success_condition: string;
+  operational_role: string;
+  timeout_seconds: number;
+  history_available: boolean;
+  configuration_source: string;
 }
 
 export interface ModelInventory {
@@ -71,7 +109,9 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export const fetchTenantDirectory = () => getJson<TenantDirectory>('/api/platform/tenants');
+export const fetchTenantDetail = (tenantId: string) => getJson<TenantDetail>(`/api/platform/tenants/${encodeURIComponent(tenantId)}`);
 export const fetchRuntimeStatus = () => getJson<RuntimeStatus>('/api/platform/runtime');
+export const fetchServiceProbeDetail = (serviceName: string) => getJson<ServiceProbeDetail>(`/api/platform/runtime/services/${encodeURIComponent(serviceName)}`);
 export const fetchModelInventory = () => getJson<ModelInventory>('/api/platform/models');
 export const fetchPlatformSettings = () => getJson<PlatformSettings>('/api/platform/settings');
 

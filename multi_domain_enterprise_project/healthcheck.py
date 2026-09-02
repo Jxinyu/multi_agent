@@ -17,9 +17,36 @@ class CheckResult:
     detail: str
 
 
+@dataclass(frozen=True)
+class CheckDefinition:
+    method: str
+    success_condition: str
+    operational_role: str
+    timeout_seconds: int
+
+
+CHECK_DEFINITIONS = {
+    "redis": CheckDefinition("PING", "返回 PONG", "会话检查点、缓存与任务队列", 3),
+    "mcp-rag": CheckDefinition(
+        "HTTP GET",
+        "端点返回 200、400、401、403 或 405",
+        "RAG 工具的 MCP Streamable HTTP 入口",
+        5,
+    ),
+    "ollama": CheckDefinition(
+        "GET /api/tags",
+        "运行时可达且配置的嵌入模型存在",
+        "本地嵌入与视觉解析模型运行时",
+        5,
+    ),
+    "milvus": CheckDefinition("list_collections", "连接成功并返回集合清单", "向量检索与文档切片索引", 5),
+    "neo4j": CheckDefinition("RETURN 1 AS ok", "查询返回整数 1", "实体关系与多跳图检索", 5),
+}
+
+
 async def check_redis() -> CheckResult:
     try:
-        client = Redis.from_url(settings.llm_key.redis)
+        client = Redis.from_url(settings.llm_key.redis, socket_connect_timeout=3, socket_timeout=3)
         try:
             pong = await client.ping()
         finally:

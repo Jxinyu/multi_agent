@@ -10,6 +10,8 @@ import { AdminSecurityPage } from './pages/admin/AdminSecurityPage';
 import { AdminAuditEventDetailPage } from './pages/admin/AdminAuditEventDetailPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminTenantsPage } from './pages/admin/AdminTenantsPage';
+import { AdminTenantDetailPage } from './pages/admin/AdminTenantDetailPage';
+import { AdminServiceDetailPage } from './pages/admin/AdminServiceDetailPage';
 import { EnterpriseAgentsPage } from './pages/enterprise/EnterpriseAgentsPage';
 import { EnterpriseAgentDetailPage } from './pages/enterprise/EnterpriseAgentDetailPage';
 import { EnterpriseEvaluationPage } from './pages/enterprise/EnterpriseEvaluationPage';
@@ -120,9 +122,11 @@ function AuthenticatedApp() {
       <Route element={<ProductShell mode="admin" currentUser={currentUser.user} />}>
         <Route path="/admin" element={<Navigate to="/admin/tenants" replace />} />
         <Route path="/admin/tenants" element={<AdminTenantsPage />} />
+        <Route path="/admin/tenants/:tenantId" element={<AdminTenantDetailPage />} />
         <Route path="/admin/security" element={<AdminSecurityPage />} />
         <Route path="/admin/security/:eventId" element={<AdminAuditEventDetailPage />} />
         <Route path="/admin/operations" element={<AdminOperationsPage />} />
+        <Route path="/admin/operations/services/:serviceName" element={<AdminServiceDetailPage />} />
         <Route path="/admin/models" element={<AdminModelsPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
         <Route path="/admin/notifications" element={<NotificationCenterPage mode="admin" />} />
