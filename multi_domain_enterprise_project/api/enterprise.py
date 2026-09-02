@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
-from multi_domain_enterprise_project.core.audit import list_audit_events
+from multi_domain_enterprise_project.core.audit import append_audit_event, list_audit_events
 from multi_domain_enterprise_project.core.auth import CurrentUser, require_permissions
 from multi_domain_enterprise_project.core.database import get_session, list_documents
+from multi_domain_enterprise_project.core.observability import request_id_var
 from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 
 router = APIRouter(prefix="/api/enterprise", tags=["enterprise"])
@@ -60,6 +64,29 @@ AGENT_CATALOG = {
         "connection_ids": ["rag"],
         "capabilities": ["员工手册与考勤制度检索", "休假和福利政策问答", "入离职流程说明"],
         "guardrails": ["回答前选择并检索相关制度", "只依据知识库结果回答", "资料不足时建议联系 HRBP"],
+    },
+}
+
+CONNECTION_CATALOG = {
+    "rag": {
+        "label": "企业 RAG MCP",
+        "setting": "rag_url",
+        "capabilities": ["查询租户知识库目录", "执行向量、关键词与图谱检索", "返回可追溯文档证据"],
+    },
+    "web": {
+        "label": "网络搜索 MCP",
+        "setting": "web_search_url",
+        "capabilities": ["检索公开技术资料", "补充企业知识库之外的时效信息"],
+    },
+    "finance": {
+        "label": "财务图表 MCP",
+        "setting": "finance_chart_url",
+        "capabilities": ["读取授权财务指标", "生成财务数据图表"],
+    },
+    "legal": {
+        "label": "法务 MCP",
+        "setting": "legal_url",
+        "capabilities": ["检索受控法务知识", "将高风险问题升级至人工法务"],
     },
 }
 
@@ -111,6 +138,32 @@ class RuntimeAgentDetail(BaseModel):
     guardrails: list[str]
     connections: list[RuntimeConnection]
     editable: bool = False
+
+
+class RuntimeConnectionAgent(BaseModel):
+    id: str
+    label: str
+
+
+class RuntimeConnectionDetail(BaseModel):
+    id: str
+    label: str
+    configured: bool
+    transport: str = "MCP Streamable HTTP"
+    endpoint_hint: str
+    health: Literal["healthy", "unhealthy", "unconfigured"]
+    checked_at: str
+    http_status: int | None = None
+    latency_ms: int | None = None
+    probe_method: str = "HTTP GET"
+    success_condition: str = "端点返回 200、400、401、403 或 405"
+    probe_message: str
+    credential_policy: str = "凭据由服务端管理，不下发前端"
+    configuration_source: str = "服务端启动配置"
+    capabilities: list[str]
+    affected_agents: list[RuntimeConnectionAgent]
+    history_available: bool = False
+    mutable: bool = False
 
 
 class EvaluationMetric(BaseModel):
@@ -173,11 +226,40 @@ def _parse_event_time(value: Any) -> datetime | None:
 
 def _runtime_connections() -> list[RuntimeConnection]:
     return [
-        RuntimeConnection(id="rag", label="企业 RAG MCP", configured=bool(settings.mcp.rag_url)),
-        RuntimeConnection(id="web", label="网络搜索 MCP", configured=bool(settings.mcp.web_search_url)),
-        RuntimeConnection(id="finance", label="财务图表 MCP", configured=bool(settings.mcp.finance_chart_url)),
-        RuntimeConnection(id="legal", label="法务 MCP", configured=bool(settings.mcp.legal_url)),
+        RuntimeConnection(
+            id=connection_id,
+            label=str(spec["label"]),
+            configured=bool(getattr(settings.mcp, str(spec["setting"]))),
+        )
+        for connection_id, spec in CONNECTION_CATALOG.items()
     ]
+
+
+def _endpoint_hint(url: str) -> str:
+    try:
+        parsed = urlsplit(url)
+        if not parsed.scheme or not parsed.hostname:
+            return "端点已配置，但地址格式无效"
+        hostname = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+        port = f":{parsed.port}" if parsed.port else ""
+        path_hint = "/…" if parsed.path and parsed.path != "/" else "/"
+        return f"{parsed.scheme}://{hostname}{port}{path_hint}"
+    except ValueError:
+        return "端点已配置，但地址格式无效"
+
+
+async def _probe_connection(url: str) -> tuple[Literal["healthy", "unhealthy"], int | None, int, str]:
+    started = time.perf_counter()
+    try:
+        async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
+            response = await client.get(url)
+        latency_ms = round((time.perf_counter() - started) * 1000)
+        if response.status_code in {200, 400, 401, 403, 405}:
+            return "healthy", response.status_code, latency_ms, f"端点可达，返回 HTTP {response.status_code}"
+        return "unhealthy", response.status_code, latency_ms, f"端点返回未接受的 HTTP {response.status_code}"
+    except Exception as exc:
+        latency_ms = round((time.perf_counter() - started) * 1000)
+        return "unhealthy", None, latency_ms, f"连接探针失败（{type(exc).__name__}）"
 
 
 def _value(data: dict[str, Any], path: tuple[str, ...]) -> float:
@@ -362,6 +444,60 @@ async def get_runtime_agent_detail(agent_id: str, current_user: EnterpriseReader
         guardrails=list(catalog["guardrails"]),
         connections=[connections[item] for item in catalog["connection_ids"]],
     )
+
+
+@router.get("/runtime/connections/{connection_id}", response_model=RuntimeConnectionDetail)
+async def get_runtime_connection_detail(
+    connection_id: str,
+    current_user: EnterpriseReader,
+    session: Session,
+) -> RuntimeConnectionDetail:
+    catalog = CONNECTION_CATALOG.get(connection_id)
+    if catalog is None:
+        raise HTTPException(status_code=404, detail="MCP 连接不存在")
+
+    url = str(getattr(settings.mcp, str(catalog["setting"]))).strip()
+    checked_at = datetime.now(UTC).isoformat()
+    if url:
+        health, http_status, latency_ms, probe_message = await _probe_connection(url)
+    else:
+        health, http_status, latency_ms, probe_message = "unconfigured", None, None, "当前启动配置未设置该连接"
+    affected_agents = [
+        RuntimeConnectionAgent(id=agent_id, label=str(agent["label"]))
+        for agent_id, agent in AGENT_CATALOG.items()
+        if connection_id in agent["connection_ids"]
+    ]
+    response = RuntimeConnectionDetail(
+        id=connection_id,
+        label=str(catalog["label"]),
+        configured=bool(url),
+        endpoint_hint=_endpoint_hint(url) if url else "未配置",
+        health=health,
+        checked_at=checked_at,
+        http_status=http_status,
+        latency_ms=latency_ms,
+        probe_message=probe_message,
+        capabilities=list(catalog["capabilities"]),
+        affected_agents=affected_agents,
+    )
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="agent.connection_probe_read",
+        resource_type="mcp_connection",
+        resource_id=connection_id,
+        outcome="success",
+        request_id=request_id_var.get(),
+        metadata={
+            "configured": response.configured,
+            "health": response.health,
+            "http_status": response.http_status,
+            "latency_ms": response.latency_ms,
+        },
+    )
+    return response
 
 
 @router.get("/evaluation", response_model=EvaluationSummary)

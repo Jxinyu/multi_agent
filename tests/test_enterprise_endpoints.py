@@ -112,6 +112,83 @@ async def test_runtime_agent_detail_rejects_unknown_agent() -> None:
 
 
 @pytest.mark.asyncio
+async def test_connection_detail_probes_configured_endpoint_and_hides_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        status_code = 405
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            captured["client"] = kwargs
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            return False
+
+        async def get(self, url):
+            captured["url"] = url
+            return FakeResponse()
+
+    async def fake_audit(session, **kwargs):
+        captured["audit"] = kwargs
+
+    monkeypatch.setattr(
+        enterprise.settings.mcp,
+        "rag_url",
+        "https://mcp.local:8010/opaque-segment-12345/rag?ref=sample-value",
+    )
+    monkeypatch.setattr(enterprise.httpx, "AsyncClient", FakeClient)
+    monkeypatch.setattr(enterprise, "append_audit_event", fake_audit)
+
+    response = await enterprise.get_runtime_connection_detail("rag", _reader(), object())
+
+    assert response.health == "healthy"
+    assert response.http_status == 405
+    assert response.endpoint_hint == "https://mcp.local:8010/…"
+    assert "opaque-segment-12345" not in response.model_dump_json()
+    assert "sample-value" not in response.model_dump_json()
+    assert {item.id for item in response.affected_agents} == {"finance", "tech", "legal", "hr"}
+    assert captured["client"] == {"timeout": 5, "trust_env": False}
+    assert captured["audit"]["metadata"]["health"] == "healthy"
+
+
+@pytest.mark.asyncio
+async def test_connection_detail_marks_missing_configuration_without_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fail_probe(url):
+        raise AssertionError("未配置连接不应执行网络请求")
+
+    async def fake_audit(session, **kwargs):
+        return None
+
+    monkeypatch.setattr(enterprise.settings.mcp, "legal_url", "")
+    monkeypatch.setattr(enterprise, "_probe_connection", fail_probe)
+    monkeypatch.setattr(enterprise, "append_audit_event", fake_audit)
+
+    response = await enterprise.get_runtime_connection_detail("legal", _reader(), object())
+
+    assert response.health == "unconfigured"
+    assert response.configured is False
+    assert response.http_status is None
+    assert response.latency_ms is None
+    assert response.endpoint_hint == "未配置"
+
+
+@pytest.mark.asyncio
+async def test_connection_detail_rejects_unknown_connection() -> None:
+    with pytest.raises(HTTPException) as exc_info:
+        await enterprise.get_runtime_connection_detail("unknown", _reader(), object())
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_evaluation_run_detail_reads_versioned_holdout_metrics() -> None:
     response = await enterprise.get_evaluation_run_detail(
         "rag_lambdamart_enriched_train1300_dev200_20260707", _reader(),

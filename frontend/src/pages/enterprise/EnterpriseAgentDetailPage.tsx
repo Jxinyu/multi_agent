@@ -1,4 +1,4 @@
-import { ArrowLeft, Bot, CheckCircle2, CircleSlash2, ExternalLink, FileCode2, Network, RefreshCw, ShieldCheck, Wrench } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, CheckCircle2, CircleSlash2, ExternalLink, FileCode2, Network, RefreshCw, ShieldCheck, Wrench } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -66,7 +66,7 @@ export function EnterpriseAgentDetailPage() {
           const state = !connection.configured ? '未配置' : probe === undefined ? '已配置，未独立探测' : probe ? '配置且探针正常' : '配置但探针异常';
           const statusClass = !connection.configured || probe === false ? 'is-unhealthy' : probe === true ? 'is-healthy' : 'is-muted';
           const StatusIcon = !connection.configured || probe === false ? CircleSlash2 : probe === true ? CheckCircle2 : Network;
-          return <div key={connection.id}><span className={statusClass}><StatusIcon size={15} /></span><div><strong>{connection.label}</strong><small>{state}</small></div><code>{connection.id}</code></div>;
+          return <div key={connection.id}><span className={statusClass}><StatusIcon size={15} /></span><div><strong>{connection.label}</strong><small>{state}</small></div><code>{connection.id}</code><button type="button" title={`打开 ${connection.label} 详情`} aria-label={`打开 ${connection.label} 详情`} onClick={() => navigate(`/enterprise/agents/connections/${connection.id}`)}><ArrowRight size={14} /></button></div>;
         })}
       </section>
 

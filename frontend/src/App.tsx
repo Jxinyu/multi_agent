@@ -15,6 +15,7 @@ import { AdminTenantDetailPage } from './pages/admin/AdminTenantDetailPage';
 import { AdminServiceDetailPage } from './pages/admin/AdminServiceDetailPage';
 import { EnterpriseAgentsPage } from './pages/enterprise/EnterpriseAgentsPage';
 import { EnterpriseAgentDetailPage } from './pages/enterprise/EnterpriseAgentDetailPage';
+import { EnterpriseConnectionDetailPage } from './pages/enterprise/EnterpriseConnectionDetailPage';
 import { EnterpriseEvaluationPage } from './pages/enterprise/EnterpriseEvaluationPage';
 import { EnterpriseEvaluationRunPage } from './pages/enterprise/EnterpriseEvaluationRunPage';
 import { EnterpriseKnowledgePage } from './pages/enterprise/EnterpriseKnowledgePage';
@@ -122,6 +123,7 @@ function AuthenticatedApp() {
         <Route path="/enterprise/knowledge/:documentId" element={<DocumentDetailPage mode="enterprise" />} />
         <Route path="/enterprise/knowledge/:documentId/preview" element={<DocumentOriginalPage mode="enterprise" />} />
         <Route path="/enterprise/agents" element={<EnterpriseAgentsPage />} />
+        <Route path="/enterprise/agents/connections/:connectionId" element={<EnterpriseConnectionDetailPage />} />
         <Route path="/enterprise/agents/:agentId" element={<EnterpriseAgentDetailPage />} />
         <Route path="/enterprise/members" element={<EnterpriseMembersPage />} />
         <Route path="/enterprise/members/:actorId" element={<EnterpriseMemberDetailPage />} />

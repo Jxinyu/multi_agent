@@ -69,6 +69,27 @@ export interface RuntimeAgentDetail {
   editable: boolean;
 }
 
+export interface RuntimeConnectionDetail {
+  id: string;
+  label: string;
+  configured: boolean;
+  transport: string;
+  endpoint_hint: string;
+  health: 'healthy' | 'unhealthy' | 'unconfigured';
+  checked_at: string;
+  http_status: number | null;
+  latency_ms: number | null;
+  probe_method: string;
+  success_condition: string;
+  probe_message: string;
+  credential_policy: string;
+  configuration_source: string;
+  capabilities: string[];
+  affected_agents: { id: string; label: string }[];
+  history_available: boolean;
+  mutable: boolean;
+}
+
 export interface KnowledgeIndexRuntime {
   checked_at: string;
   tenant_id: string;
@@ -162,6 +183,7 @@ export const fetchEnterpriseOverview = () => getJson<EnterpriseOverview>('/api/e
 export const fetchObservedMemberDetail = (actorId: string) => getJson<ObservedMemberDetail>(`/api/enterprise/members/${encodeURIComponent(actorId)}`);
 export const fetchRuntimeSummary = () => getJson<RuntimeSummary>('/api/enterprise/runtime');
 export const fetchRuntimeAgentDetail = (agentId: string) => getJson<RuntimeAgentDetail>(`/api/enterprise/runtime/agents/${encodeURIComponent(agentId)}`);
+export const fetchRuntimeConnectionDetail = (connectionId: string) => getJson<RuntimeConnectionDetail>(`/api/enterprise/runtime/connections/${encodeURIComponent(connectionId)}`);
 export const fetchKnowledgeIndexRuntime = () => getJson<KnowledgeIndexRuntime>('/api/enterprise/knowledge/runtime');
 export const fetchEvaluationSummary = async () => (await getJson<{ metrics: EvaluationMetric[] }>('/api/enterprise/evaluation')).metrics;
 export const fetchEvaluationRunDetail = (runId: string) => getJson<EvaluationRunDetail>(`/api/enterprise/evaluation/runs/${encodeURIComponent(runId)}`);

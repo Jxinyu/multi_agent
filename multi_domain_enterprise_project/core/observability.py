@@ -93,6 +93,9 @@ def configure_logging(level: int = logging.INFO) -> None:
     root = logging.getLogger()
     root.handlers = [handler]
     root.setLevel(level)
+    # HTTP 客户端 INFO 日志会包含完整 URL，MCP 路径可能承载连接凭据。
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 def configure_tracing() -> None:
