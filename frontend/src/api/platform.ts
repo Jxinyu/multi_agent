@@ -58,6 +58,12 @@ export interface AuditEvent {
   occurred_at: string;
 }
 
+export interface AuditEventDetail {
+  item: AuditEvent;
+  related_events: AuditEvent[];
+  trace_complete: boolean;
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const response = await authFetch(path);
   if (!response.ok) throw new Error(await response.text());
@@ -76,3 +82,5 @@ export function fetchAuditEvents(options: { outcome?: string; actor?: string; cu
   if (options.cursor) params.set('cursor', options.cursor);
   return getJson<{ items: AuditEvent[]; next_cursor: string | null }>(`/api/admin/audit-events?${params}`);
 }
+
+export const fetchAuditEventDetail = (eventId: string) => getJson<AuditEventDetail>(`/api/admin/audit-events/${encodeURIComponent(eventId)}`);

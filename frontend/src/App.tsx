@@ -7,6 +7,7 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { AdminModelsPage } from './pages/admin/AdminModelsPage';
 import { AdminOperationsPage } from './pages/admin/AdminOperationsPage';
 import { AdminSecurityPage } from './pages/admin/AdminSecurityPage';
+import { AdminAuditEventDetailPage } from './pages/admin/AdminAuditEventDetailPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminTenantsPage } from './pages/admin/AdminTenantsPage';
 import { EnterpriseAgentsPage } from './pages/enterprise/EnterpriseAgentsPage';
@@ -15,6 +16,7 @@ import { EnterpriseEvaluationPage } from './pages/enterprise/EnterpriseEvaluatio
 import { EnterpriseEvaluationRunPage } from './pages/enterprise/EnterpriseEvaluationRunPage';
 import { EnterpriseKnowledgePage } from './pages/enterprise/EnterpriseKnowledgePage';
 import { EnterpriseMembersPage } from './pages/enterprise/EnterpriseMembersPage';
+import { EnterpriseMemberDetailPage } from './pages/enterprise/EnterpriseMemberDetailPage';
 import { EnterpriseOverviewPage } from './pages/enterprise/EnterpriseOverviewPage';
 import { HelpCenterPage } from './pages/shared/HelpCenterPage';
 import { NotificationCenterPage } from './pages/shared/NotificationCenterPage';
@@ -107,6 +109,7 @@ function AuthenticatedApp() {
         <Route path="/enterprise/agents" element={<EnterpriseAgentsPage />} />
         <Route path="/enterprise/agents/:agentId" element={<EnterpriseAgentDetailPage />} />
         <Route path="/enterprise/members" element={<EnterpriseMembersPage />} />
+        <Route path="/enterprise/members/:actorId" element={<EnterpriseMemberDetailPage />} />
         <Route path="/enterprise/evaluation" element={<EnterpriseEvaluationPage />} />
         <Route path="/enterprise/evaluation/:runId" element={<EnterpriseEvaluationRunPage />} />
         <Route path="/enterprise/notifications" element={<NotificationCenterPage mode="enterprise" />} />
@@ -118,6 +121,7 @@ function AuthenticatedApp() {
         <Route path="/admin" element={<Navigate to="/admin/tenants" replace />} />
         <Route path="/admin/tenants" element={<AdminTenantsPage />} />
         <Route path="/admin/security" element={<AdminSecurityPage />} />
+        <Route path="/admin/security/:eventId" element={<AdminAuditEventDetailPage />} />
         <Route path="/admin/operations" element={<AdminOperationsPage />} />
         <Route path="/admin/models" element={<AdminModelsPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />

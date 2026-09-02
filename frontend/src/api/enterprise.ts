@@ -27,6 +27,25 @@ export interface EnterpriseOverview {
   data_window: string;
 }
 
+export interface ObservedMemberDetail {
+  actor_id: string;
+  actor_type: string;
+  identity_source: string;
+  is_current_user: boolean;
+  role: string | null;
+  permissions: string[];
+  groups: string[];
+  event_count: number;
+  window_complete: boolean;
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+  outcomes: { id: string; count: number }[];
+  actions: { id: string; count: number }[];
+  resource_types: { id: string; count: number }[];
+  recent_events: EnterpriseEvent[];
+  directory_managed: boolean;
+}
+
 export interface RuntimeSummary {
   agents: { id: string; description: string }[];
   connections: { id: string; label: string; configured: boolean }[];
@@ -94,6 +113,7 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export const fetchEnterpriseOverview = () => getJson<EnterpriseOverview>('/api/enterprise/overview');
+export const fetchObservedMemberDetail = (actorId: string) => getJson<ObservedMemberDetail>(`/api/enterprise/members/${encodeURIComponent(actorId)}`);
 export const fetchRuntimeSummary = () => getJson<RuntimeSummary>('/api/enterprise/runtime');
 export const fetchRuntimeAgentDetail = (agentId: string) => getJson<RuntimeAgentDetail>(`/api/enterprise/runtime/agents/${encodeURIComponent(agentId)}`);
 export const fetchEvaluationSummary = async () => (await getJson<{ metrics: EvaluationMetric[] }>('/api/enterprise/evaluation')).metrics;

@@ -12,34 +12,34 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 import uvicorn
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from langgraph.checkpoint.redis import AsyncRedisSaver
 from prometheus_client import make_asgi_app
 from pydantic import BaseModel, Field, field_validator
 from redis.asyncio import Redis
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings, validate_runtime_settings
 from multi_domain_enterprise_project.agent.agent_main import run_agent_stream
+from multi_domain_enterprise_project.api.authentication import router as authentication_router
 from multi_domain_enterprise_project.api.conversations import router as conversations_router
 from multi_domain_enterprise_project.api.enterprise import router as enterprise_router
+from multi_domain_enterprise_project.api.health import router as health_router
+from multi_domain_enterprise_project.api.members import router as members_router
 from multi_domain_enterprise_project.api.platform import router as platform_router
+from multi_domain_enterprise_project.api.security import router as security_router
 from multi_domain_enterprise_project.core.audit import (
     append_audit_event,
     create_document_with_audit,
     create_job_with_audit,
     create_upload_session_with_audit,
-    list_audit_events,
 )
 from multi_domain_enterprise_project.core.auth import (
-    AuthTokenResponse,
     CurrentUser,
-    create_development_token,
-    get_current_user,
     require_permissions,
 )
 from multi_domain_enterprise_project.core.chat import ChatRequest, build_attachment_context
@@ -83,7 +83,6 @@ from multi_domain_enterprise_project.core.storage import (
     validate_file_signature,
 )
 from multi_domain_enterprise_project.core.user_views import SearchEvidenceItem, SearchRequest, SearchResponse
-from multi_domain_enterprise_project.healthcheck import run_checks
 from multi_domain_enterprise_project.rag.authorization import RetrievalAuthorization, is_metadata_authorized
 from multi_domain_enterprise_project.rag.rag_service import retrieve_service
 
@@ -98,12 +97,11 @@ FRONTEND_INDEX = FRONTEND_DIST / "index.html"
 RESUMABLE_CHUNK_SIZE = 2 * 1024 * 1024
 
 redis_conn: Redis | None = None
-global_checkpointer: Any = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global redis_conn, global_checkpointer
+    global redis_conn
     validate_runtime_settings(settings)
     ensure_storage_roots()
     await init_database()
@@ -115,11 +113,11 @@ async def lifespan(app: FastAPI):
 
     async with AsyncRedisSaver.from_conn_string(settings.llm_key.redis) as checkpointer:
         await checkpointer.asetup()
-        global_checkpointer = checkpointer
+        app.state.checkpointer = checkpointer
         logger.info("应用依赖初始化完成")
         yield
 
-    global_checkpointer = None
+    app.state.checkpointer = None
     await redis_conn.aclose()
     redis_conn = None
     await close_database()
@@ -127,9 +125,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="企业多智能体助手", version="1.0.0", lifespan=lifespan)
+app.include_router(authentication_router)
 app.include_router(conversations_router)
 app.include_router(enterprise_router)
+app.include_router(health_router)
+app.include_router(members_router)
 app.include_router(platform_router)
+app.include_router(security_router)
 app.add_middleware(RequestContextMiddleware)
 if settings.runtime.cors_origins:
     app.add_middleware(
@@ -140,10 +142,6 @@ if settings.runtime.cors_origins:
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
 app.mount("/metrics", make_asgi_app(), name="metrics")
-
-
-class CurrentUserResponse(BaseModel):
-    user: CurrentUser
 
 
 class KnowledgeBaseItem(BaseModel):
@@ -238,33 +236,11 @@ class JobResponse(BaseModel):
     error: str | None
 
 
-class AuditEventItem(BaseModel):
-    id: str
-    tenant_id: str
-    actor_id: str
-    actor_type: str
-    source: str
-    action: str
-    resource_type: str
-    resource_id: str | None
-    outcome: str
-    request_id: str | None
-    metadata: dict[str, Any]
-    occurred_at: str
-
-
-class AuditEventListResponse(BaseModel):
-    items: list[AuditEventItem]
-    next_cursor: str | None = None
-
-
 Session = Annotated[AsyncSession, Depends(get_session)]
-Authenticated = Annotated[CurrentUser, Depends(get_current_user)]
 ChatUser = Annotated[CurrentUser, Depends(require_permissions("chat:use"))]
 KbReader = Annotated[CurrentUser, Depends(require_permissions("kb:read"))]
 KbWriter = Annotated[CurrentUser, Depends(require_permissions("kb:write"))]
 KbDeleter = Annotated[CurrentUser, Depends(require_permissions("kb:delete"))]
-AuditReader = Annotated[CurrentUser, Depends(require_permissions("audit:read"))]
 
 
 def _item(payload: dict[str, Any]) -> KnowledgeBaseItem:
@@ -369,16 +345,6 @@ async def _queue_document_job(
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="任务入队失败") from exc
 
 
-@app.post("/api/auth/development-token", response_model=AuthTokenResponse)
-async def development_token() -> AuthTokenResponse:
-    return create_development_token()
-
-
-@app.get("/api/auth/me", response_model=CurrentUserResponse)
-async def get_me(current_user: Authenticated) -> CurrentUserResponse:
-    return CurrentUserResponse(user=current_user)
-
-
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: Session):
     await _rate_limit(current_user, "chat")
@@ -425,8 +391,10 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
         }
     }
 
+    checkpointer = getattr(app.state, "checkpointer", None)
+
     async def event_generator():
-        if global_checkpointer is None:
+        if checkpointer is None:
             async with SessionFactory() as audit_session:
                 await finish_conversation_turn(
                     audit_session,
@@ -457,7 +425,7 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
             if attachment_context:
                 query = f"{query}\n\n【附件解析内容】\n{attachment_context}\n\n请结合附件内容回答。"
             terminal_chunk: dict[str, Any] | None = None
-            async for chunk in run_agent_stream(query=query, config=config, checkpointer=global_checkpointer):
+            async for chunk in run_agent_stream(query=query, config=config, checkpointer=checkpointer):
                 if chunk.get("type") in {"complete", "interrupt", "error"}:
                     terminal_chunk = chunk
                     continue
@@ -733,42 +701,6 @@ async def api_get_document(document_id: str, current_user: KbReader, session: Se
     return detail
 
 
-@app.get("/api/admin/audit-events", response_model=AuditEventListResponse)
-async def api_list_audit_events(
-    current_user: AuditReader,
-    session: Session,
-    limit: int = Query(default=50, ge=1, le=200),
-    cursor: str | None = Query(default=None, max_length=512),
-    action: str | None = Query(default=None, max_length=128),
-    outcome: Literal["success", "failure", "denied"] | None = None,
-    actor_id: str | None = Query(default=None, max_length=128),
-):
-    try:
-        items, next_cursor = await list_audit_events(
-            session,
-            tenant_id=current_user.tenant_id,
-            limit=limit,
-            cursor=cursor,
-            action=action,
-            outcome=outcome,
-            actor_id=actor_id,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    await append_audit_event(
-        session,
-        tenant_id=current_user.tenant_id,
-        actor_id=current_user.user_id,
-        source="api",
-        action="audit.events_read",
-        resource_type="audit_event_collection",
-        outcome="success",
-        request_id=request_id_var.get(),
-        metadata={"result_count": len(items)},
-    )
-    return AuditEventListResponse(items=[AuditEventItem(**item) for item in items], next_cursor=next_cursor)
-
-
 @app.post("/api/admin/documents/upload", response_model=UploadResponse)
 async def upload_documents(
     current_user: KbWriter,
@@ -1037,38 +969,6 @@ async def get_job_status(job_id: str, current_user: KbReader, session: Session):
         status=job.status,
         attempts=job.attempts,
         error=job.error,
-    )
-
-
-@app.get("/api/health/live")
-async def liveness():
-    return {"status": "ok"}
-
-
-async def _readiness_payload() -> tuple[bool, dict[str, Any]]:
-    checks: dict[str, Any] = {}
-    try:
-        checks["redis"] = bool(redis_conn and await redis_conn.ping())
-    except Exception:
-        checks["redis"] = False
-    try:
-        async with SessionFactory() as session:
-            checks["database"] = (await session.execute(text("SELECT 1"))).scalar_one() == 1
-    except Exception:
-        checks["database"] = False
-    checks["checkpointer"] = global_checkpointer is not None
-    external = await run_checks({"milvus", "neo4j", "ollama", "mcp-rag"})
-    checks.update({result.name: result.ok for result in external})
-    return all(checks.values()), checks
-
-
-@app.get("/api/health/ready")
-@app.get("/api/health")
-async def readiness():
-    ready, checks = await _readiness_payload()
-    return JSONResponse(
-        status_code=status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE,
-        content={"status": "ok" if ready else "not_ready", "checks": checks},
     )
 
 

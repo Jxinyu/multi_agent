@@ -9,7 +9,12 @@ from sqlalchemy import select
 
 from config import settings
 from multi_domain_enterprise_project import main
-from multi_domain_enterprise_project.core.audit import append_audit_event, list_audit_events
+from multi_domain_enterprise_project.core.audit import (
+    append_audit_event,
+    get_audit_event,
+    list_audit_events,
+    list_request_audit_events,
+)
 from multi_domain_enterprise_project.core.auth import CurrentUser, require_permissions
 from multi_domain_enterprise_project.core.database import (
     ConversationFeedbackRecord,
@@ -108,6 +113,54 @@ async def test_audit_queries_are_tenant_scoped_and_cursor_paginated(isolated_dat
     assert next_cursor is None
     assert {event["tenant_id"] for event in first_page + second_page} == {"tenant-a"}
     assert not {event["id"] for event in first_page}.intersection(event["id"] for event in second_page)
+
+
+@pytest.mark.asyncio
+async def test_audit_detail_and_request_trace_are_tenant_scoped(isolated_database: None) -> None:
+    async with SessionFactory() as session:
+        first = await append_audit_event(
+            session,
+            tenant_id="tenant-a",
+            actor_id="user-a",
+            source="api",
+            action="chat.requested",
+            resource_type="conversation",
+            outcome="success",
+            request_id="trace-shared",
+        )
+        second = await append_audit_event(
+            session,
+            tenant_id="tenant-a",
+            actor_id="user-a",
+            source="worker",
+            action="chat.completed",
+            resource_type="conversation",
+            outcome="success",
+            request_id="trace-shared",
+        )
+        await append_audit_event(
+            session,
+            tenant_id="tenant-b",
+            actor_id="user-b",
+            source="api",
+            action="chat.failed",
+            resource_type="conversation",
+            outcome="failure",
+            request_id="trace-shared",
+        )
+
+        assert await get_audit_event(session, tenant_id="tenant-b", event_id=first["id"]) is None
+        detail = await get_audit_event(session, tenant_id="tenant-a", event_id=first["id"])
+        trace = await list_request_audit_events(
+            session,
+            tenant_id="tenant-a",
+            request_id="trace-shared",
+        )
+
+    assert detail is not None
+    assert detail["id"] == first["id"]
+    assert [item["id"] for item in trace] == [first["id"], second["id"]]
+    assert {item["tenant_id"] for item in trace} == {"tenant-a"}
 
 
 @pytest.mark.asyncio
@@ -218,7 +271,7 @@ async def test_chat_stream_persists_user_visible_conversation(
     monkeypatch.setattr(main, "_rate_limit", no_rate_limit)
     monkeypatch.setattr(main, "append_audit_event", no_audit)
     monkeypatch.setattr(main, "run_agent_stream", fake_stream)
-    monkeypatch.setattr(main, "global_checkpointer", object())
+    monkeypatch.setattr(main.app.state, "checkpointer", object(), raising=False)
 
     async with SessionFactory() as session:
         response = await main.chat_endpoint(

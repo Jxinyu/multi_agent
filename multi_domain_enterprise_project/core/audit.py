@@ -306,3 +306,41 @@ async def list_audit_events(
     page = records[:limit]
     next_cursor = _encode_cursor(page[-1]) if has_more and page else None
     return [audit_event_to_dict(record) for record in page], next_cursor
+
+
+async def get_audit_event(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    event_id: str,
+) -> dict[str, Any] | None:
+    record = await session.scalar(
+        select(AuditEventRecord).where(
+            AuditEventRecord.id == event_id,
+            AuditEventRecord.tenant_id == tenant_id,
+        )
+    )
+    return audit_event_to_dict(record) if record else None
+
+
+async def list_request_audit_events(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    request_id: str,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    if not request_id.strip():
+        return []
+    if not 1 <= limit <= 200:
+        raise ValueError("审计追踪查询数量必须在 1 到 200 之间")
+    result = await session.scalars(
+        select(AuditEventRecord)
+        .where(
+            AuditEventRecord.tenant_id == tenant_id,
+            AuditEventRecord.request_id == request_id,
+        )
+        .order_by(AuditEventRecord.occurred_at.asc(), AuditEventRecord.id.asc())
+        .limit(limit)
+    )
+    return [audit_event_to_dict(record) for record in result.all()]
