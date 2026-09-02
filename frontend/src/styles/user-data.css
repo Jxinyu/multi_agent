@@ -37,9 +37,11 @@
 .ru-search-results { min-width: 0; border-right: 1px solid var(--ru-line); overflow-y: auto; }
 .ru-search-results > header { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--ru-line); font-size: 11px; }
 .ru-search-results > header button { display: flex; align-items: center; gap: 5px; border: 0; background: transparent; font-size: 10px; }
-.ru-result-list > button { width: 100%; display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 8px; padding: 14px 12px; text-align: left; border: 0; border-bottom: 1px solid var(--ru-line); background: var(--ru-white); cursor: pointer; }
-.ru-result-list > button:hover { background: var(--ru-fog); }
-.ru-result-list > button.is-selected { box-shadow: inset 3px 0 var(--ru-cobalt); background: #f6f9ff; }
+.ru-result-list > article { position: relative; border-bottom: 1px solid var(--ru-line); background: var(--ru-white); }
+.ru-result-list > article:hover { background: var(--ru-fog); }
+.ru-result-list > article.is-selected { box-shadow: inset 3px 0 var(--ru-cobalt); background: #f6f9ff; }
+.ru-result-list > article > button:first-child { width: 100%; display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 8px; padding: 14px 44px 14px 12px; text-align: left; border: 0; background: transparent; cursor: pointer; }
+.ru-result-open { position: absolute; top: 12px; right: 10px; width: 30px; height: 30px; display: grid; place-items: center; color: var(--ru-cobalt); border: 1px solid var(--ru-line); border-radius: 4px; background: var(--ru-white); cursor: pointer; }
 .ru-result-score { color: var(--ru-vermilion); font-family: "IBM Plex Mono", monospace; font-weight: 750; }
 .ru-result-copy { min-width: 0; }
 .ru-result-copy > span { display: flex; gap: 6px; }
@@ -60,6 +62,7 @@
 .ru-reader-panel article { padding: 20px; }
 .ru-reader-panel article > span { font-size: 11px; font-weight: 750; }
 .ru-reader-panel article p { padding: 14px; border: 1px solid var(--ru-warning); background: var(--ru-warning-soft); font-size: 12px; line-height: 1.85; white-space: pre-wrap; }
+.ru-reader-panel article .ru-outline-command { width: 100%; margin-top: 10px; }
 .ru-reader-panel dl { margin: 0 20px; border-top: 1px solid var(--ru-line); }
 .ru-reader-panel dl div { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--ru-line); font-size: 10px; }
 .ru-reader-panel dt { color: var(--ru-muted); }
@@ -151,6 +154,32 @@
 .ru-task-detail-state span { color: var(--ru-muted); font-size: 10px; }
 .ru-back-command { align-self: flex-start; padding: 0 10px; }
 
+.ru-record-detail-page { height: 100%; min-height: 0; display: flex; padding: 18px 20px; overflow-y: auto; background: #f6f7f5; flex-direction: column; }
+.ru-record-detail-title { min-height: 74px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--ru-line); }
+.ru-record-detail-title > button:first-child { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--ru-line); border-radius: 4px; background: var(--ru-white); cursor: pointer; }
+.ru-record-detail-title > div { min-width: 0; }
+.ru-record-detail-title > div > span { color: var(--ru-vermilion); font-size: 9px; font-weight: 800; }
+.ru-record-detail-title h1 { margin: 3px 0; overflow: hidden; font-size: 19px; text-overflow: ellipsis; white-space: nowrap; }
+.ru-record-detail-title p { margin: 0; overflow: hidden; color: var(--ru-muted); font-family: "IBM Plex Mono", monospace; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.ru-evidence-detail-layout, .ru-document-detail-layout { min-height: 0; flex: 1; display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 14px; padding-top: 14px; }
+.ru-record-metadata { min-height: 0; overflow-y: auto; }
+.ru-record-metadata section, .ru-evidence-reading, .ru-document-reading { border: 1px solid var(--ru-line); background: var(--ru-white); }
+.ru-record-metadata section + section { margin-top: 10px; }
+.ru-record-metadata section > header, .ru-evidence-reading > header, .ru-document-reading > header { min-height: 42px; display: flex; align-items: center; gap: 7px; padding: 0 12px; border-bottom: 1px solid var(--ru-line); font-size: 10px; }
+.ru-record-metadata section > header > span, .ru-evidence-reading > header > span, .ru-document-reading > header > span { margin-left: auto; color: var(--ru-muted); font-size: 9px; }
+.ru-record-metadata dl { margin: 0; padding: 5px 12px 12px; }
+.ru-record-metadata dl div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--ru-line); font-size: 9px; }
+.ru-record-metadata dt { color: var(--ru-muted); }
+.ru-record-metadata dd { max-width: 170px; margin: 0; overflow-wrap: anywhere; text-align: right; }
+.ru-record-metadata section > p { margin: 0; padding: 13px; color: var(--ru-graphite); font-size: 10px; line-height: 1.65; }
+.ru-record-metadata section > .ru-primary-command { width: calc(100% - 24px); margin: 0 12px 12px; }
+.ru-backend-status-list { padding: 5px 12px 12px; }
+.ru-backend-status-list div { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--ru-line); font-size: 9px; }
+.ru-backend-status-list span { color: var(--ru-muted); }
+.ru-evidence-reading, .ru-document-reading { min-width: 0; min-height: 0; overflow-y: auto; }
+.ru-evidence-reading > div { margin: 18px; padding: 20px; border-left: 3px solid var(--ru-warning); background: var(--ru-warning-soft); font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
+.ru-document-reading pre { margin: 0; padding: 20px; overflow: visible; color: var(--ru-carbon); font-family: "IBM Plex Sans", "Microsoft YaHei", sans-serif; font-size: 12px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 @media (max-width: 1120px) {
   .ru-search-workspace { grid-template-columns: 150px minmax(360px, 1fr); }
   .ru-reader-panel { display: none; }
@@ -187,6 +216,11 @@
   .ru-task-metadata { overflow: visible; }
   .ru-task-transcript { min-height: 420px; overflow: visible; }
   .ru-task-transcript .message-list { overflow: visible; }
+  .ru-record-detail-page { height: auto; min-height: 100%; padding: 12px 10px 78px; }
+  .ru-record-detail-title { grid-template-columns: auto minmax(0, 1fr); }
+  .ru-record-detail-title > .ru-outline-command { grid-column: 1 / 3; width: 100%; }
+  .ru-evidence-detail-layout, .ru-document-detail-layout { display: flex; flex-direction: column; }
+  .ru-record-metadata, .ru-evidence-reading, .ru-document-reading { overflow: visible; }
 }
 
 @media (prefers-reduced-motion: reduce) {

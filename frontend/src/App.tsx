@@ -19,7 +19,9 @@ import { NotificationCenterPage } from './pages/shared/NotificationCenterPage';
 import { ProfilePage } from './pages/shared/ProfilePage';
 import { AgentAnswerPage } from './pages/user/AgentAnswerPage';
 import { EnterpriseSearchPage } from './pages/user/EnterpriseSearchPage';
+import { SearchEvidenceDetailPage } from './pages/user/SearchEvidenceDetailPage';
 import { UserWorkbenchPage } from './pages/user/UserWorkbenchPage';
+import { DocumentDetailPage } from './pages/user/DocumentDetailPage';
 import { UserDocumentsPage } from './pages/user/UserDocumentsPage';
 import { UserTaskDetailPage } from './pages/user/UserTaskDetailPage';
 import { UserTasksPage } from './pages/user/UserTasksPage';
@@ -86,9 +88,11 @@ function AuthenticatedApp() {
           element={<AgentAnswerRoute chat={chat} />}
         />
         <Route path="/app/search" element={<EnterpriseSearchPage />} />
+        <Route path="/app/search/evidence/:evidenceId" element={<SearchEvidenceDetailPage />} />
         <Route path="/app/tasks" element={<UserTasksPage />} />
         <Route path="/app/tasks/:taskId" element={<UserTaskDetailPage />} />
         <Route path="/app/documents" element={<UserDocumentsPage />} />
+        <Route path="/app/documents/:documentId" element={<DocumentDetailPage mode="user" />} />
         <Route path="/app/notifications" element={<NotificationCenterPage mode="user" />} />
         <Route path="/app/help" element={<HelpCenterPage mode="user" />} />
         <Route path="/app/profile" element={<ProfilePage mode="user" currentUser={currentUser.user} />} />
@@ -97,6 +101,7 @@ function AuthenticatedApp() {
       <Route element={<ProductShell mode="enterprise" currentUser={currentUser.user} />}>
         <Route path="/enterprise" element={<EnterpriseOverviewPage />} />
         <Route path="/enterprise/knowledge" element={<EnterpriseKnowledgePage />} />
+        <Route path="/enterprise/knowledge/:documentId" element={<DocumentDetailPage mode="enterprise" />} />
         <Route path="/enterprise/agents" element={<EnterpriseAgentsPage />} />
         <Route path="/enterprise/members" element={<EnterpriseMembersPage />} />
         <Route path="/enterprise/evaluation" element={<EnterpriseEvaluationPage />} />

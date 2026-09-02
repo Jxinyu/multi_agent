@@ -163,8 +163,14 @@ async def format_milvus_context(nodes, *, max_chars: int | None = None, max_chun
         file_name = node.metadata.get('file_name', '未知文件')
         content = node.get_content().strip()
 
-        # 统一 Header 样式
-        header = f"--- [来源: {file_name} | 类型: 原始文本块 | 匹配分值: {score_text}] ---"
+        detail_fields = ["类型: 原始文本块", f"匹配分值: {score_text}"]
+        if node.metadata.get("document_id") is not None:
+            detail_fields.append(f"文档ID: {node.metadata['document_id']}")
+        if node.metadata.get("version") is not None:
+            detail_fields.append(f"版本: {node.metadata['version']}")
+        if node.metadata.get("chunk_index") is not None:
+            detail_fields.append(f"切片: {node.metadata['chunk_index']}")
+        header = f"--- [来源: {file_name} | {' | '.join(detail_fields)}] ---"
         section = f"{header}\n{content}"
         if len("\n\n".join((*context_parts, section))) > max_chars:
             continue

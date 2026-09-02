@@ -19,6 +19,9 @@ class SearchEvidenceItem(BaseModel):
     score: float | None = None
     kind: str
     backend: str
+    document_id: str | None = None
+    version: int | None = None
+    chunk_index: int | None = None
 
 
 class SearchResponse(BaseModel):

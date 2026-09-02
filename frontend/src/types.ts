@@ -68,6 +68,12 @@ export interface KnowledgeBaseItem {
   backend_status: Record<string, string>;
 }
 
+export interface DocumentDetail {
+  item: KnowledgeBaseItem;
+  preview?: string | null;
+  preview_truncated: boolean;
+}
+
 export interface ChatSession {
   threadId: string;
   status: string;
@@ -86,6 +92,9 @@ export interface SearchEvidence {
   score: number | null;
   kind: string;
   backend: string;
+  document_id?: string | null;
+  version?: number | null;
+  chunk_index?: number | null;
 }
 
 export interface UserTask {

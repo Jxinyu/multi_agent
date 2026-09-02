@@ -250,16 +250,24 @@ async def format_graph_retrieval_results(
         file_name = node.metadata.get('file_name', '未知文件')
         content = re.sub(r"\b[a-f0-9]{16}::", "", node.get_content().strip())
 
+        detail_fields = [f"匹配分值: {score_text}"]
+        if node.metadata.get("document_id") is not None:
+            detail_fields.append(f"文档ID: {node.metadata['document_id']}")
+        if node.metadata.get("version") is not None:
+            detail_fields.append(f"版本: {node.metadata['version']}")
+        if node.metadata.get("chunk_index") is not None:
+            detail_fields.append(f"切片: {node.metadata['chunk_index']}")
+
         # 判定是三元组事实还是原始文本
         if "facts extracted from the provided text" in content:
             # 这里的 content 已经包含了 "Here are some facts..."
-            header = f"--- [来源: {file_name} | 类型: 关系事实 | 匹配分值: {score_text}] ---"
+            header = f"--- [来源: {file_name} | 类型: 关系事实 | {' | '.join(detail_fields)}] ---"
             section = f"{header}\n{content}"
             if len("\n\n".join((*kg_parts, *text_parts, section))) <= max_chars:
                 kg_parts.append(section)
                 document_counts[document_key] = document_counts.get(document_key, 0) + 1
         else:
-            header = f"--- [来源: {file_name} | 类型: 关联文本 | 匹配分值: {score_text}] ---"
+            header = f"--- [来源: {file_name} | 类型: 关联文本 | {' | '.join(detail_fields)}] ---"
             section = f"{header}\n{content}"
             if len("\n\n".join((*kg_parts, *text_parts, section))) <= max_chars:
                 text_parts.append(section)

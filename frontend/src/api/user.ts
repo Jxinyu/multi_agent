@@ -1,4 +1,4 @@
-import type { KnowledgeBaseItem, SearchEvidence, SearchMode, UserTask, UserTaskDetail } from '../types';
+import type { DocumentDetail, KnowledgeBaseItem, SearchEvidence, SearchMode, UserTask, UserTaskDetail } from '../types';
 import { authFetch } from './auth';
 
 export async function searchKnowledge(query: string, mode: SearchMode) {
@@ -9,6 +9,12 @@ export async function searchKnowledge(query: string, mode: SearchMode) {
   });
   if (!response.ok) throw new Error(await response.text());
   return await response.json() as { items: SearchEvidence[]; mode: SearchMode; elapsed_ms: number };
+}
+
+export async function fetchSearchEvidence(evidenceId: string): Promise<SearchEvidence> {
+  const response = await authFetch(`/api/search/evidence/${encodeURIComponent(evidenceId)}`);
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json() as SearchEvidence;
 }
 
 export async function fetchUserTasks(): Promise<UserTask[]> {
@@ -39,4 +45,10 @@ export async function fetchUserDocuments(): Promise<KnowledgeBaseItem[]> {
   if (!response.ok) throw new Error(await response.text());
   const data = await response.json() as { items: KnowledgeBaseItem[] };
   return data.items ?? [];
+}
+
+export async function fetchUserDocument(documentId: string): Promise<DocumentDetail> {
+  const response = await authFetch(`/api/documents/${encodeURIComponent(documentId)}`);
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json() as DocumentDetail;
 }

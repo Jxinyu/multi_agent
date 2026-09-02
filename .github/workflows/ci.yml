@@ -33,8 +33,10 @@ jobs:
           multi_domain_enterprise_project/core/auth.py
           multi_domain_enterprise_project/core/chat.py
           multi_domain_enterprise_project/core/database.py
+          multi_domain_enterprise_project/core/document_views.py
           multi_domain_enterprise_project/core/jobs.py
           multi_domain_enterprise_project/core/observability.py
+          multi_domain_enterprise_project/core/search.py
           multi_domain_enterprise_project/core/storage.py
           multi_domain_enterprise_project/core/task_state.py
           multi_domain_enterprise_project/core/user_views.py

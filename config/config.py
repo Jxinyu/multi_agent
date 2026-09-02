@@ -62,6 +62,7 @@ class RetrievalSetting(BaseModel):
     timeout_seconds: float = Field(default=20.0, gt=0, le=120)
     max_context_chars: int = Field(default=12000, ge=1000, le=100000)
     max_chunks_per_document: int = Field(default=2, ge=1, le=20)
+    evidence_cache_ttl_seconds: int = Field(default=900, ge=60, le=86400)
 
 
 class MCPSetting(BaseModel):
@@ -192,6 +193,7 @@ def _apply_env_overrides(config: dict[str, Any]) -> dict[str, Any]:
         "RETRIEVAL_TIMEOUT_SECONDS": ("retrieval", "timeout_seconds"),
         "RETRIEVAL_MAX_CONTEXT_CHARS": ("retrieval", "max_context_chars"),
         "RETRIEVAL_MAX_CHUNKS_PER_DOCUMENT": ("retrieval", "max_chunks_per_document"),
+        "RETRIEVAL_EVIDENCE_CACHE_TTL_SECONDS": ("retrieval", "evidence_cache_ttl_seconds"),
         "MCP_RAG_URL": ("mcp", "rag_url"),
         "MCP_WEB_SEARCH_URL": ("mcp", "web_search_url"),
         "MCP_FINANCE_CHART_URL": ("mcp", "finance_chart_url"),

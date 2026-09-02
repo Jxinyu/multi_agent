@@ -1,4 +1,4 @@
-import type { CurrentUser, KnowledgeBaseItem } from '../types';
+import type { CurrentUser, DocumentDetail, KnowledgeBaseItem } from '../types';
 import { authFetch, openAuthenticatedXhr } from './auth';
 
 export async function fetchCurrentUser(): Promise<CurrentUser> {
@@ -26,6 +26,12 @@ export async function fetchKnowledgeBaseProgress(id: string): Promise<KnowledgeB
   }
   const data = (await response.json()) as { item: KnowledgeBaseItem };
   return data.item;
+}
+
+export async function fetchKnowledgeBaseDocumentDetail(id: string): Promise<DocumentDetail> {
+  const response = await authFetch(`/api/admin/documents/${encodeURIComponent(id)}`);
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json() as DocumentDetail;
 }
 
 export interface ResumableUploadOptions {

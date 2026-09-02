@@ -132,9 +132,14 @@ def format_fused_context(
         score = result.score
         score_text = f"{score:.4f}" if score is not None else "N/A"
         content = node.get_content().strip() if hasattr(node, "get_content") else str(node).strip()
-        header = (
-            f"--- [来源: {file_name} | 后端: {backend_names} | 匹配分值: {score_text}] ---"
-        )
+        detail_fields = [f"后端: {backend_names}", f"匹配分值: {score_text}"]
+        if metadata.get("document_id") is not None:
+            detail_fields.append(f"文档ID: {metadata['document_id']}")
+        if metadata.get("version") is not None:
+            detail_fields.append(f"版本: {metadata['version']}")
+        if metadata.get("chunk_index") is not None:
+            detail_fields.append(f"切片: {metadata['chunk_index']}")
+        header = f"--- [来源: {file_name} | {' | '.join(detail_fields)}] ---"
         section = f"{header}\n{content}"
         candidate = "\n\n".join((*parts, section))
         if len(candidate) > max_chars:

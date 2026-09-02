@@ -1,11 +1,13 @@
-import { Database, File, FileUp, MoreVertical, RefreshCw, Search, Upload, XCircle } from 'lucide-react';
+import { ArrowRight, Database, File, FileUp, RefreshCw, Search, Upload, XCircle } from 'lucide-react';
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { ingestKnowledgeBaseDocument, uploadKnowledgeBaseDocuments } from '../../api/admin';
 import { fetchUserDocuments } from '../../api/user';
 import type { KnowledgeBaseItem } from '../../types';
 
 export function UserDocumentsPage() {
+  const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<KnowledgeBaseItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -62,6 +64,13 @@ export function UserDocumentsPage() {
     }
   };
 
+  const selectDocument = (documentId: string) => {
+    setSelectedId(documentId);
+    if (window.matchMedia('(max-width: 780px)').matches) {
+      navigate(`/app/documents/${documentId}`);
+    }
+  };
+
   return (
     <div className="ru-documents-page">
       <section className="ru-document-main">
@@ -75,14 +84,14 @@ export function UserDocumentsPage() {
           {loading ? <div className="ru-data-empty"><RefreshCw className="is-spinning" size={28} /><strong>正在读取文档</strong></div> : null}
           {!loading && visible.length === 0 ? <div className="ru-data-empty"><File size={30} /><strong>暂无可访问文档</strong><span>上传文件后可选择解析方式并提交入库。</span></div> : null}
           {visible.map((item) => (
-            <button key={item.id} type="button" className={selected?.id === item.id ? 'is-selected' : ''} onClick={() => setSelectedId(item.id)}>
-              <span><File size={18} /><span><strong>{item.file_name}</strong><small>{item.title}</small></span></span><span>v{item.version}</span><span>{item.owner_id}</span><span>{item.mode}</span><span>{item.chunk_count || '—'}</span><span className={`ru-doc-status is-${item.status}`}>{item.status}</span><span><MoreVertical size={16} /></span>
+            <button key={item.id} type="button" className={selected?.id === item.id ? 'is-selected' : ''} onClick={() => selectDocument(item.id)}>
+              <span><File size={18} /><span><strong>{item.file_name}</strong><small>{item.title}</small></span></span><span>v{item.version}</span><span>{item.owner_id}</span><span>{item.mode}</span><span>{item.chunk_count || '—'}</span><span className={`ru-doc-status is-${item.status}`}>{item.status}</span><span><ArrowRight size={16} /></span>
             </button>
           ))}
         </div>
       </section>
       <aside className="ru-document-detail">
-        {selected ? <><header><File size={19} /><strong>{selected.file_name}</strong></header><section><h3>文档配置</h3><dl><div><dt>知识模式</dt><dd>{selected.mode}</dd></div><div><dt>所有者</dt><dd>{selected.owner_id}</dd></div><div><dt>权限范围</dt><dd>{selected.acl.join('、') || 'private'}</dd></div><div><dt>版本</dt><dd>v{selected.version}</dd></div></dl></section><section><h3>解析结果</h3><dl><div><dt>切块数量</dt><dd>{selected.chunk_count}</dd></div><div><dt>当前状态</dt><dd>{selected.status}</dd></div><div><dt>处理进度</dt><dd>{selected.ingest_progress ?? 0}/{selected.ingest_total ?? 0}</dd></div></dl>{selected.error ? <p className="ru-detail-error"><XCircle size={15} />{selected.error}</p> : null}<button className="ru-primary-command" type="button" onClick={() => void ingest()} disabled={selected.status === 'processing'}><Database size={16} />{selected.status === 'processing' ? '正在入库' : '提交混合入库'}</button></section></> : <div className="ru-data-empty"><File size={30} /><strong>选择一个文档</strong><span>右侧将显示解析配置与后端状态。</span></div>}
+        {selected ? <><header><File size={19} /><strong>{selected.file_name}</strong></header><section><h3>文档配置</h3><dl><div><dt>知识模式</dt><dd>{selected.mode}</dd></div><div><dt>所有者</dt><dd>{selected.owner_id}</dd></div><div><dt>权限范围</dt><dd>{selected.acl.join('、') || 'private'}</dd></div><div><dt>版本</dt><dd>v{selected.version}</dd></div></dl><button className="ru-outline-command" type="button" onClick={() => navigate(`/app/documents/${selected.id}`)}>打开完整详情 <ArrowRight size={14} /></button></section><section><h3>解析结果</h3><dl><div><dt>切块数量</dt><dd>{selected.chunk_count}</dd></div><div><dt>当前状态</dt><dd>{selected.status}</dd></div><div><dt>处理进度</dt><dd>{selected.ingest_progress ?? 0}/{selected.ingest_total ?? 0}</dd></div></dl>{selected.error ? <p className="ru-detail-error"><XCircle size={15} />{selected.error}</p> : null}<button className="ru-primary-command" type="button" onClick={() => void ingest()} disabled={selected.status === 'processing'}><Database size={16} />{selected.status === 'processing' ? '正在入库' : '提交混合入库'}</button></section></> : <div className="ru-data-empty"><File size={30} /><strong>选择一个文档</strong><span>右侧将显示解析配置与后端状态。</span></div>}
       </aside>
     </div>
   );

@@ -59,6 +59,7 @@ from multi_domain_enterprise_project.core.database import (
     update_job,
     utc_now,
 )
+from multi_domain_enterprise_project.core.document_views import read_document_preview
 from multi_domain_enterprise_project.core.jobs import enqueue_job, ensure_job_group
 from multi_domain_enterprise_project.core.observability import (
     RequestContextMiddleware,
@@ -66,7 +67,11 @@ from multi_domain_enterprise_project.core.observability import (
     configure_tracing,
     request_id_var,
 )
-from multi_domain_enterprise_project.core.search import parse_retrieval_context
+from multi_domain_enterprise_project.core.search import (
+    cache_search_evidence,
+    get_cached_search_evidence,
+    parse_retrieval_context,
+)
 from multi_domain_enterprise_project.core.storage import (
     combine_chunks,
     document_path,
@@ -164,6 +169,12 @@ class KnowledgeBaseItem(BaseModel):
 
 class KnowledgeBaseListResponse(BaseModel):
     items: list[KnowledgeBaseItem]
+
+
+class DocumentDetailResponse(BaseModel):
+    item: KnowledgeBaseItem
+    preview: str | None = None
+    preview_truncated: bool = False
 
 
 class UploadResponse(BaseModel):
@@ -265,6 +276,14 @@ async def _require_document(session: AsyncSession, document_id: str, user: Curre
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="文档不存在")
     return item
+
+
+async def _document_detail(item: dict[str, Any]) -> DocumentDetailResponse:
+    preview, truncated = await read_document_preview(
+        item,
+        max_chars=settings.retrieval.max_context_chars,
+    )
+    return DocumentDetailResponse(item=_item(item), preview=preview, preview_truncated=truncated)
 
 
 async def _rate_limit(user: CurrentUser, action: str) -> None:
@@ -556,15 +575,43 @@ async def chat_endpoint(request: ChatRequest, current_user: ChatUser, session: S
 async def api_search(request: SearchRequest, current_user: KbReader, session: Session):
     await _rate_limit(current_user, "search")
     started = time.perf_counter()
-    context = await retrieve_service(
-        query_str=request.query,
-        title=request.title,
+    try:
+        context = await retrieve_service(
+            query_str=request.query,
+            title=request.title,
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            acl_list=current_user.groups,
+            mode=request.mode,
+        )
+    except (ConnectionError, TimeoutError) as exc:
+        logger.warning("检索依赖不可用: %s", type(exc).__name__)
+        await append_audit_event(
+            session,
+            tenant_id=current_user.tenant_id,
+            actor_id=current_user.user_id,
+            source="api",
+            action="search.failed",
+            resource_type="knowledge_index",
+            outcome="failure",
+            request_id=request_id_var.get(),
+            metadata={"error_type": type(exc).__name__, "mode": request.mode},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="检索依赖暂不可用，请稍后重试",
+        ) from exc
+    items = parse_retrieval_context(context)
+    evidence_items = [SearchEvidenceItem(**item) for item in items]
+    if redis_conn is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="证据缓存服务未初始化")
+    await cache_search_evidence(
+        redis_conn,
         tenant_id=current_user.tenant_id,
         user_id=current_user.user_id,
-        acl_list=current_user.groups,
-        mode=request.mode,
+        items=[item.model_dump() for item in evidence_items],
+        ttl_seconds=settings.retrieval.evidence_cache_ttl_seconds,
     )
-    items = parse_retrieval_context(context)
     elapsed_ms = round((time.perf_counter() - started) * 1000)
     await append_audit_event(
         session,
@@ -582,7 +629,35 @@ async def api_search(request: SearchRequest, current_user: KbReader, session: Se
             "elapsed_ms": elapsed_ms,
         },
     )
-    return SearchResponse(items=[SearchEvidenceItem(**item) for item in items], mode=request.mode, elapsed_ms=elapsed_ms)
+    return SearchResponse(items=evidence_items, mode=request.mode, elapsed_ms=elapsed_ms)
+
+
+@app.get("/api/search/evidence/{evidence_id}", response_model=SearchEvidenceItem)
+async def api_get_search_evidence(evidence_id: str, current_user: KbReader, session: Session):
+    if len(evidence_id) != 16 or any(character not in "0123456789abcdef" for character in evidence_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="证据不存在或已过期")
+    if redis_conn is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="证据缓存服务未初始化")
+    item = await get_cached_search_evidence(
+        redis_conn,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        evidence_id=evidence_id,
+    )
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="证据不存在或已过期")
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="search.evidence_read",
+        resource_type="search_evidence",
+        resource_id=evidence_id,
+        outcome="success",
+        request_id=request_id_var.get(),
+    )
+    return SearchEvidenceItem(**item)
 
 
 @app.get("/api/documents", response_model=KnowledgeBaseListResponse)
@@ -595,6 +670,32 @@ async def api_list_user_documents(current_user: KbReader, session: Session):
     )
     authorized = [item for item in items if is_metadata_authorized(item, scope)]
     return KnowledgeBaseListResponse(items=[_item(item) for item in authorized])
+
+
+@app.get("/api/documents/{document_id}", response_model=DocumentDetailResponse)
+async def api_get_user_document(document_id: str, current_user: KbReader, session: Session):
+    item = await get_document(session, document_id, current_user.tenant_id)
+    scope = RetrievalAuthorization(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        acl=tuple(current_user.groups),
+    )
+    if item is None or not is_metadata_authorized(item, scope):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="文档不存在或无权访问")
+    detail = await _document_detail(item)
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="document.read",
+        resource_type="document",
+        resource_id=document_id,
+        outcome="success",
+        request_id=request_id_var.get(),
+        metadata={"preview_available": detail.preview is not None},
+    )
+    return detail
 
 
 @app.get("/api/admin/documents", response_model=KnowledgeBaseListResponse)
@@ -614,9 +715,10 @@ async def api_list_documents(current_user: KbReader, session: Session):
     return KnowledgeBaseListResponse(items=[_item(item) for item in items])
 
 
-@app.get("/api/admin/documents/{document_id}")
+@app.get("/api/admin/documents/{document_id}", response_model=DocumentDetailResponse)
 async def api_get_document(document_id: str, current_user: KbReader, session: Session):
     item = await _require_document(session, document_id, current_user)
+    detail = await _document_detail(item)
     await append_audit_event(
         session,
         tenant_id=current_user.tenant_id,
@@ -628,7 +730,7 @@ async def api_get_document(document_id: str, current_user: KbReader, session: Se
         outcome="success",
         request_id=request_id_var.get(),
     )
-    return {"item": _item(item)}
+    return detail
 
 
 @app.get("/api/admin/audit-events", response_model=AuditEventListResponse)

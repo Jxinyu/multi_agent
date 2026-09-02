@@ -39,6 +39,7 @@ retrieval:
   timeout_seconds: 20
   max_context_chars: 12000
   max_chunks_per_document: 2
+  evidence_cache_ttl_seconds: 900
 
 mcp:
   rag_url: 'http://127.0.0.1:8010/rag-retriever'
