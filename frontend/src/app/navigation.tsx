@@ -37,6 +37,7 @@ export const navigationByMode: Record<ShellMode, NavigationItem[]> = {
     { label: '知识与解析', to: '/enterprise/knowledge', icon: Database },
     { label: '智能体与 MCP', to: '/enterprise/agents', icon: Bot },
     { label: '成员与权限', to: '/enterprise/members', icon: Users },
+    { label: '活动与审计', to: '/enterprise/activity', icon: ShieldCheck },
     { label: '评测与成本', to: '/enterprise/evaluation', icon: Gauge }
   ],
   admin: [

@@ -37,6 +37,43 @@ def _event(event_id: str, actor_id: str = "actor-2", action: str = "document.rea
 
 
 @pytest.mark.asyncio
+async def test_security_list_forwards_tenant_filters_and_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict = {}
+
+    async def fake_events(session, **kwargs):
+        captured["query"] = kwargs
+        return ([_event("event-1")], "next-cursor")
+
+    async def fake_append(session, **kwargs):
+        captured["audit"] = kwargs
+        return {}
+
+    monkeypatch.setattr(security, "list_audit_events", fake_events)
+    monkeypatch.setattr(security, "append_audit_event", fake_append)
+
+    response = await security.get_audit_events(
+        _reader(),
+        object(),
+        limit=30,
+        cursor="cursor-1",
+        action="document.read",
+        outcome="success",
+        actor_id="actor-2",
+    )
+
+    assert captured["query"] == {
+        "tenant_id": "tenant-1",
+        "limit": 30,
+        "cursor": "cursor-1",
+        "action": "document.read",
+        "outcome": "success",
+        "actor_id": "actor-2",
+    }
+    assert captured["audit"]["action"] == "audit.events_read"
+    assert response.next_cursor == "next-cursor"
+
+
+@pytest.mark.asyncio
 async def test_member_detail_only_returns_claims_for_current_user(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_events(session, **kwargs):
         actor_id = kwargs["actor_id"]

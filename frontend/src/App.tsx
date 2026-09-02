@@ -20,6 +20,7 @@ import { EnterpriseKnowledgePage } from './pages/enterprise/EnterpriseKnowledgeP
 import { EnterpriseMembersPage } from './pages/enterprise/EnterpriseMembersPage';
 import { EnterpriseMemberDetailPage } from './pages/enterprise/EnterpriseMemberDetailPage';
 import { EnterpriseOverviewPage } from './pages/enterprise/EnterpriseOverviewPage';
+import { EnterpriseActivityPage } from './pages/enterprise/EnterpriseActivityPage';
 import { HelpCenterPage } from './pages/shared/HelpCenterPage';
 import { NotificationCenterPage } from './pages/shared/NotificationCenterPage';
 import { ProfilePage } from './pages/shared/ProfilePage';
@@ -115,6 +116,8 @@ function AuthenticatedApp() {
         <Route path="/enterprise/agents/:agentId" element={<EnterpriseAgentDetailPage />} />
         <Route path="/enterprise/members" element={<EnterpriseMembersPage />} />
         <Route path="/enterprise/members/:actorId" element={<EnterpriseMemberDetailPage />} />
+        <Route path="/enterprise/activity" element={<EnterpriseActivityPage />} />
+        <Route path="/enterprise/activity/:eventId" element={<AdminAuditEventDetailPage mode="enterprise" />} />
         <Route path="/enterprise/evaluation" element={<EnterpriseEvaluationPage />} />
         <Route path="/enterprise/evaluation/:runId" element={<EnterpriseEvaluationRunPage />} />
         <Route path="/enterprise/notifications" element={<NotificationCenterPage mode="enterprise" />} />

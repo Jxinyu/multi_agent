@@ -4,7 +4,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { fetchAuditEventDetail, type AuditEventDetail } from '../../api/platform';
 
-export function AdminAuditEventDetailPage() {
+interface AdminAuditEventDetailPageProps {
+  mode?: 'admin' | 'enterprise';
+}
+
+export function AdminAuditEventDetailPage({ mode = 'admin' }: AdminAuditEventDetailPageProps) {
   const navigate = useNavigate();
   const { eventId = '' } = useParams();
   const [detail, setDetail] = useState<AuditEventDetail | null>(null);
@@ -21,8 +25,11 @@ export function AdminAuditEventDetailPage() {
   };
   useEffect(() => { void load(); }, [eventId]);
 
-  if (loading) return <div className="ru-admin-page"><div className="ru-admin-detail-state"><RefreshCw className="ru-spin" /><strong>正在读取审计事件与请求链</strong></div></div>;
-  if (error || !detail) return <div className="ru-admin-page"><div className="ru-admin-detail-state is-error"><CircleSlash2 /><strong>无法打开审计事件</strong><span>{error || '事件不存在'}</span><button type="button" onClick={() => void load()}>重试</button></div></div>;
+  const pageClass = mode === 'enterprise' ? 'ru-enterprise-page' : 'ru-admin-page';
+  const backPath = mode === 'enterprise' ? '/enterprise/activity' : '/admin/security';
+  const titleClass = mode === 'enterprise' ? 'ru-console-title ru-admin-detail-title' : 'ru-admin-title ru-admin-detail-title';
+  if (loading) return <div className={pageClass}><div className="ru-admin-detail-state"><RefreshCw className="ru-spin" /><strong>正在读取审计事件与请求链</strong></div></div>;
+  if (error || !detail) return <div className={pageClass}><div className="ru-admin-detail-state is-error"><CircleSlash2 /><strong>无法打开审计事件</strong><span>{error || '事件不存在'}</span><button type="button" onClick={() => void load()}>重试</button></div></div>;
   const item = detail.item;
 
   const copyTrace = async () => {
@@ -32,8 +39,8 @@ export function AdminAuditEventDetailPage() {
     window.setTimeout(() => setCopied(false), 1200);
   };
 
-  return <div className="ru-admin-page ru-audit-event-page">
-    <header className="ru-admin-title ru-admin-detail-title"><button type="button" onClick={() => navigate('/admin/security')}><ArrowLeft size={16} />返回审计</button><div><h1>审计事件详情</h1><p>{item.id}</p></div><button type="button" onClick={() => void load()}><RefreshCw size={16} />刷新</button></header>
+  return <div className={`${pageClass} ru-audit-event-page`}>
+    <header className={titleClass}><button type="button" onClick={() => navigate(backPath)}><ArrowLeft size={16} />{mode === 'enterprise' ? '返回活动' : '返回审计'}</button><div><h1>{mode === 'enterprise' ? '租户活动详情' : '审计事件详情'}</h1><p>{item.id}</p></div><button type="button" onClick={() => void load()}><RefreshCw size={16} />刷新</button></header>
 
     <section className={`ru-audit-event-hero is-${item.outcome}`}><span>{item.outcome === 'success' ? <CheckCircle2 size={28} /> : <ShieldAlert size={28} />}</span><div><small>{new Date(item.occurred_at).toLocaleString('zh-CN')}</small><h2>{item.action}</h2><p>{item.actor_id} · {item.source} · {item.actor_type}</p></div><strong>{item.outcome}</strong></section>
 

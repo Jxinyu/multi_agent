@@ -115,10 +115,11 @@ export const fetchServiceProbeDetail = (serviceName: string) => getJson<ServiceP
 export const fetchModelInventory = () => getJson<ModelInventory>('/api/platform/models');
 export const fetchPlatformSettings = () => getJson<PlatformSettings>('/api/platform/settings');
 
-export function fetchAuditEvents(options: { outcome?: string; actor?: string; cursor?: string } = {}) {
+export function fetchAuditEvents(options: { outcome?: string; actor?: string; action?: string; cursor?: string } = {}) {
   const params = new URLSearchParams({ limit: '30' });
   if (options.outcome) params.set('outcome', options.outcome);
   if (options.actor) params.set('actor_id', options.actor);
+  if (options.action) params.set('action', options.action);
   if (options.cursor) params.set('cursor', options.cursor);
   return getJson<{ items: AuditEvent[]; next_cursor: string | null }>(`/api/admin/audit-events?${params}`);
 }
