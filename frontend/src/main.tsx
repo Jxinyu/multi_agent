@@ -10,6 +10,7 @@ import './styles/user.css';
 import './styles/user-data.css';
 import './styles/enterprise.css';
 import './styles/admin.css';
+import './styles/shared.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

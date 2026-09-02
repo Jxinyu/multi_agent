@@ -8,6 +8,21 @@ body { background: var(--ru-fog); color: var(--ru-carbon); }
   overflow: hidden;
   background: var(--ru-fog);
 }
+.ru-shell.is-collapsed { grid-template-columns: 64px minmax(0, 1fr); }
+.ru-shell.is-collapsed .ru-brand { font-size: 0; }
+.ru-shell.is-collapsed .ru-brand::after { content: 'RU'; font-size: 18px; }
+.ru-shell.is-collapsed .ru-brand-mode,
+.ru-shell.is-collapsed .ru-tenant-switcher > span,
+.ru-shell.is-collapsed .ru-tenant-switcher strong,
+.ru-shell.is-collapsed .ru-tenant-switcher svg:last-child,
+.ru-shell.is-collapsed .ru-nav-link span,
+.ru-shell.is-collapsed .ru-mode-switch span { display: none; }
+.ru-shell.is-collapsed .ru-tenant-switcher { padding: 12px; }
+.ru-shell.is-collapsed .ru-tenant-switcher button { display: grid; grid-template-columns: 1fr; padding: 0; place-items: center; }
+.ru-shell.is-collapsed .ru-nav-link { justify-content: center; padding: 0; }
+.ru-shell.is-collapsed .ru-sidebar-footer { padding: 10px 8px; flex-direction: column; }
+.ru-shell.is-collapsed .ru-mode-switch { min-height: 34px; justify-content: center; }
+.ru-shell.is-collapsed .ru-collapse-button svg { transform: rotate(180deg); }
 
 .ru-sidebar {
   position: relative;
@@ -178,6 +193,21 @@ body { background: var(--ru-fog); color: var(--ru-carbon); }
 
 @media (max-width: 900px) {
   .ru-shell { grid-template-columns: minmax(0, 1fr); }
+  .ru-shell.is-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .ru-shell.is-collapsed .ru-brand { font-size: 23px; }
+  .ru-shell.is-collapsed .ru-brand::after { display: none; }
+  .ru-shell.is-collapsed .ru-brand-mode,
+  .ru-shell.is-collapsed .ru-tenant-switcher > span,
+  .ru-shell.is-collapsed .ru-tenant-switcher strong,
+  .ru-shell.is-collapsed .ru-tenant-switcher svg:last-child,
+  .ru-shell.is-collapsed .ru-nav-link span,
+  .ru-shell.is-collapsed .ru-mode-switch span { display: initial; }
+  .ru-shell.is-collapsed .ru-tenant-switcher { padding: 14px 12px; }
+  .ru-shell.is-collapsed .ru-tenant-switcher button { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; padding: 0 10px; place-items: center stretch; }
+  .ru-shell.is-collapsed .ru-nav-link { justify-content: flex-start; padding: 0 18px; }
+  .ru-shell.is-collapsed .ru-sidebar-footer { padding: 12px; flex-direction: row; }
+  .ru-shell.is-collapsed .ru-mode-switch { justify-content: flex-start; }
+  .ru-shell.is-collapsed .ru-collapse-button svg { transform: none; }
   .ru-sidebar { position: fixed; inset: 0 auto 0 0; width: min(86vw, 300px); transform: translateX(-102%); transition: transform 200ms var(--ru-ease); }
   .ru-sidebar.is-open { transform: translateX(0); }
   .ru-nav-scrim { position: fixed; inset: 0; z-index: 20; border: 0; background: rgb(23 26 24 / 48%); }

@@ -69,7 +69,7 @@ export async function downloadEvaluationReport(): Promise<void> {
 
 export async function fetchDependencyHealth(): Promise<Record<string, boolean>> {
   const response = await fetch('/api/health/ready');
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const data = await response.json() as { checks: Record<string, boolean> };
+  if (!data.checks || typeof data.checks !== 'object') throw new Error(`健康检查响应无效（HTTP ${response.status}）`);
   return data.checks;
 }

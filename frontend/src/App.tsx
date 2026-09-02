@@ -13,6 +13,9 @@ import { EnterpriseEvaluationPage } from './pages/enterprise/EnterpriseEvaluatio
 import { EnterpriseKnowledgePage } from './pages/enterprise/EnterpriseKnowledgePage';
 import { EnterpriseMembersPage } from './pages/enterprise/EnterpriseMembersPage';
 import { EnterpriseOverviewPage } from './pages/enterprise/EnterpriseOverviewPage';
+import { HelpCenterPage } from './pages/shared/HelpCenterPage';
+import { NotificationCenterPage } from './pages/shared/NotificationCenterPage';
+import { ProfilePage } from './pages/shared/ProfilePage';
 import { AgentAnswerPage } from './pages/user/AgentAnswerPage';
 import { EnterpriseSearchPage } from './pages/user/EnterpriseSearchPage';
 import { UserWorkbenchPage } from './pages/user/UserWorkbenchPage';
@@ -71,6 +74,9 @@ function AuthenticatedApp() {
         <Route path="/app/search" element={<EnterpriseSearchPage />} />
         <Route path="/app/tasks" element={<UserTasksPage />} />
         <Route path="/app/documents" element={<UserDocumentsPage />} />
+        <Route path="/app/notifications" element={<NotificationCenterPage mode="user" />} />
+        <Route path="/app/help" element={<HelpCenterPage mode="user" />} />
+        <Route path="/app/profile" element={<ProfilePage mode="user" currentUser={currentUser.user} />} />
       </Route>
 
       <Route element={<ProductShell mode="enterprise" currentUser={currentUser.user} />}>
@@ -79,6 +85,9 @@ function AuthenticatedApp() {
         <Route path="/enterprise/agents" element={<EnterpriseAgentsPage />} />
         <Route path="/enterprise/members" element={<EnterpriseMembersPage />} />
         <Route path="/enterprise/evaluation" element={<EnterpriseEvaluationPage />} />
+        <Route path="/enterprise/notifications" element={<NotificationCenterPage mode="enterprise" />} />
+        <Route path="/enterprise/help" element={<HelpCenterPage mode="enterprise" />} />
+        <Route path="/enterprise/profile" element={<ProfilePage mode="enterprise" currentUser={currentUser.user} />} />
       </Route>
 
       <Route element={<ProductShell mode="admin" currentUser={currentUser.user} />}>
@@ -88,6 +97,9 @@ function AuthenticatedApp() {
         <Route path="/admin/operations" element={<AdminOperationsPage />} />
         <Route path="/admin/models" element={<AdminModelsPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
+        <Route path="/admin/notifications" element={<NotificationCenterPage mode="admin" />} />
+        <Route path="/admin/help" element={<HelpCenterPage mode="admin" />} />
+        <Route path="/admin/profile" element={<ProfilePage mode="admin" currentUser={currentUser.user} />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/app" replace />} />
