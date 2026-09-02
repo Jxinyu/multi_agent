@@ -17,6 +17,7 @@ from multi_domain_enterprise_project.rag.retrieval import deduplicate_node_resul
 from multi_domain_enterprise_project.rag.runtime import rerank_nodes
 
 logger = logging.getLogger(__name__)
+DEFAULT_COLLECTION_NAME = "company_knowledge_base"
 
 
 # 全局共享的基础配置获取函数
@@ -86,7 +87,7 @@ class MilvusRetrieverService:
     检索服务 (常驻内存，仅初始化一次 Reranker)
     """
 
-    def __init__(self, collection_name: str = "company_knowledge_base"):
+    def __init__(self, collection_name: str = DEFAULT_COLLECTION_NAME):
         self.index = get_base_index(collection_name)
 
     async def retrieve_candidates(self, query_str: str, filters_dict: dict = None):
@@ -182,13 +183,13 @@ async def format_milvus_context(nodes, *, max_chars: int | None = None, max_chun
 
 @lru_cache(maxsize=4)
 def get_milvus_store_pipeline_service(
-    collection_name: str = "company_knowledge_base",
+    collection_name: str = DEFAULT_COLLECTION_NAME,
 ) -> MilvusStorePipelineService:
     return MilvusStorePipelineService(collection_name)
 
 
 @lru_cache(maxsize=4)
 def get_milvus_retriever_service(
-    collection_name: str = "company_knowledge_base",
+    collection_name: str = DEFAULT_COLLECTION_NAME,
 ) -> MilvusRetrieverService:
     return MilvusRetrieverService(collection_name)

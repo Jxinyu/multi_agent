@@ -18,6 +18,7 @@ import { EnterpriseAgentDetailPage } from './pages/enterprise/EnterpriseAgentDet
 import { EnterpriseEvaluationPage } from './pages/enterprise/EnterpriseEvaluationPage';
 import { EnterpriseEvaluationRunPage } from './pages/enterprise/EnterpriseEvaluationRunPage';
 import { EnterpriseKnowledgePage } from './pages/enterprise/EnterpriseKnowledgePage';
+import { EnterpriseKnowledgeRuntimePage } from './pages/enterprise/EnterpriseKnowledgeRuntimePage';
 import { EnterpriseMembersPage } from './pages/enterprise/EnterpriseMembersPage';
 import { EnterpriseMemberDetailPage } from './pages/enterprise/EnterpriseMemberDetailPage';
 import { EnterpriseOverviewPage } from './pages/enterprise/EnterpriseOverviewPage';
@@ -115,6 +116,7 @@ function AuthenticatedApp() {
       <Route element={<ProductShell mode="enterprise" currentUser={currentUser.user} />}>
         <Route path="/enterprise" element={<EnterpriseOverviewPage />} />
         <Route path="/enterprise/knowledge" element={<EnterpriseKnowledgePage />} />
+        <Route path="/enterprise/knowledge/runtime" element={<EnterpriseKnowledgeRuntimePage />} />
         <Route path="/enterprise/knowledge/jobs" element={<DocumentJobsPage mode="enterprise" />} />
         <Route path="/enterprise/knowledge/jobs/:jobId" element={<DocumentJobDetailPage mode="enterprise" />} />
         <Route path="/enterprise/knowledge/:documentId" element={<DocumentDetailPage mode="enterprise" />} />

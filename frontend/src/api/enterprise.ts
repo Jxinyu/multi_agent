@@ -69,6 +69,52 @@ export interface RuntimeAgentDetail {
   editable: boolean;
 }
 
+export interface KnowledgeIndexRuntime {
+  checked_at: string;
+  tenant_id: string;
+  document_count: number;
+  ready_document_count: number;
+  expected_vector_chunks: number;
+  expected_graph_chunks: number;
+  orphan_document_count: number;
+  milvus: {
+    available: boolean;
+    collection_name: string;
+    collection_exists: boolean;
+    indexed_chunks: number | null;
+    indexed_documents: number | null;
+    embedding_dimensions: number | null;
+    sparse_search_enabled: boolean | null;
+    scan_complete: boolean;
+    error: string | null;
+  };
+  neo4j: {
+    available: boolean;
+    indexed_chunks: number | null;
+    indexed_documents: number | null;
+    entity_count: number | null;
+    relationship_count: number | null;
+    scan_complete: boolean;
+    error: string | null;
+  };
+  state_counts: Record<string, number>;
+  document_checks: {
+    document_id: string;
+    file_name: string;
+    status: string;
+    mode: string;
+    expected_chunks: number;
+    vector_chunks: number | null;
+    graph_chunks: number | null;
+    vector_expected: boolean;
+    graph_expected: boolean;
+    state: 'consistent' | 'mismatch' | 'pending' | 'unknown';
+    issue: string | null;
+  }[];
+  document_checks_complete: boolean;
+  observation_note: string;
+}
+
 export interface EvaluationMetric {
   id: string;
   label: string;
@@ -116,6 +162,7 @@ export const fetchEnterpriseOverview = () => getJson<EnterpriseOverview>('/api/e
 export const fetchObservedMemberDetail = (actorId: string) => getJson<ObservedMemberDetail>(`/api/enterprise/members/${encodeURIComponent(actorId)}`);
 export const fetchRuntimeSummary = () => getJson<RuntimeSummary>('/api/enterprise/runtime');
 export const fetchRuntimeAgentDetail = (agentId: string) => getJson<RuntimeAgentDetail>(`/api/enterprise/runtime/agents/${encodeURIComponent(agentId)}`);
+export const fetchKnowledgeIndexRuntime = () => getJson<KnowledgeIndexRuntime>('/api/enterprise/knowledge/runtime');
 export const fetchEvaluationSummary = async () => (await getJson<{ metrics: EvaluationMetric[] }>('/api/enterprise/evaluation')).metrics;
 export const fetchEvaluationRunDetail = (runId: string) => getJson<EvaluationRunDetail>(`/api/enterprise/evaluation/runs/${encodeURIComponent(runId)}`);
 export const fetchEnterpriseDocuments = async () => (await getJson<{ items: KnowledgeBaseItem[] }>('/api/admin/documents')).items;

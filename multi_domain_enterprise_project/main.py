@@ -31,6 +31,7 @@ from multi_domain_enterprise_project.api.files import router as files_router
 from multi_domain_enterprise_project.api.health import router as health_router
 from multi_domain_enterprise_project.api.jobs import router as jobs_router
 from multi_domain_enterprise_project.api.jobs import user_router as user_jobs_router
+from multi_domain_enterprise_project.api.knowledge_runtime import router as knowledge_runtime_router
 from multi_domain_enterprise_project.api.members import router as members_router
 from multi_domain_enterprise_project.api.platform import router as platform_router
 from multi_domain_enterprise_project.api.security import router as security_router
@@ -134,6 +135,7 @@ app.include_router(files_router)
 app.include_router(health_router)
 app.include_router(jobs_router)
 app.include_router(user_jobs_router)
+app.include_router(knowledge_runtime_router)
 app.include_router(members_router)
 app.include_router(platform_router)
 app.include_router(security_router)
