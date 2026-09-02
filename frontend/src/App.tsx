@@ -10,7 +10,9 @@ import { AdminSecurityPage } from './pages/admin/AdminSecurityPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminTenantsPage } from './pages/admin/AdminTenantsPage';
 import { EnterpriseAgentsPage } from './pages/enterprise/EnterpriseAgentsPage';
+import { EnterpriseAgentDetailPage } from './pages/enterprise/EnterpriseAgentDetailPage';
 import { EnterpriseEvaluationPage } from './pages/enterprise/EnterpriseEvaluationPage';
+import { EnterpriseEvaluationRunPage } from './pages/enterprise/EnterpriseEvaluationRunPage';
 import { EnterpriseKnowledgePage } from './pages/enterprise/EnterpriseKnowledgePage';
 import { EnterpriseMembersPage } from './pages/enterprise/EnterpriseMembersPage';
 import { EnterpriseOverviewPage } from './pages/enterprise/EnterpriseOverviewPage';
@@ -103,8 +105,10 @@ function AuthenticatedApp() {
         <Route path="/enterprise/knowledge" element={<EnterpriseKnowledgePage />} />
         <Route path="/enterprise/knowledge/:documentId" element={<DocumentDetailPage mode="enterprise" />} />
         <Route path="/enterprise/agents" element={<EnterpriseAgentsPage />} />
+        <Route path="/enterprise/agents/:agentId" element={<EnterpriseAgentDetailPage />} />
         <Route path="/enterprise/members" element={<EnterpriseMembersPage />} />
         <Route path="/enterprise/evaluation" element={<EnterpriseEvaluationPage />} />
+        <Route path="/enterprise/evaluation/:runId" element={<EnterpriseEvaluationRunPage />} />
         <Route path="/enterprise/notifications" element={<NotificationCenterPage mode="enterprise" />} />
         <Route path="/enterprise/help" element={<HelpCenterPage mode="enterprise" />} />
         <Route path="/enterprise/profile" element={<ProfilePage mode="enterprise" currentUser={currentUser.user} />} />

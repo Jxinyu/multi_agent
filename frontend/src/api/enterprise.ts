@@ -33,6 +33,23 @@ export interface RuntimeSummary {
   pipeline: string[];
 }
 
+export interface RuntimeAgentDetail {
+  id: string;
+  label: string;
+  description: string;
+  source_module: string;
+  model_provider: string;
+  model_name: string;
+  output_schema: string;
+  tool_call_limit: number;
+  summarization_trigger_messages: number;
+  summarization_keep_messages: number;
+  capabilities: string[];
+  guardrails: string[];
+  connections: { id: string; label: string; configured: boolean }[];
+  editable: boolean;
+}
+
 export interface EvaluationMetric {
   id: string;
   label: string;
@@ -44,6 +61,32 @@ export interface EvaluationMetric {
   run_id: string;
 }
 
+export interface EvaluationRunValue {
+  id: string;
+  label: string;
+  value: number;
+  unit: 'ratio' | 'count' | 'seconds';
+}
+
+export interface EvaluationRunVariant {
+  id: string;
+  label: string;
+  role: string;
+  values: EvaluationRunValue[];
+}
+
+export interface EvaluationRunDetail {
+  run_id: string;
+  title: string;
+  category: string;
+  dataset: string;
+  split: string;
+  sample_count: number;
+  source: string;
+  variants: EvaluationRunVariant[];
+  notes: string[];
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const response = await authFetch(path);
   if (!response.ok) throw new Error(await response.text());
@@ -52,7 +95,9 @@ async function getJson<T>(path: string): Promise<T> {
 
 export const fetchEnterpriseOverview = () => getJson<EnterpriseOverview>('/api/enterprise/overview');
 export const fetchRuntimeSummary = () => getJson<RuntimeSummary>('/api/enterprise/runtime');
+export const fetchRuntimeAgentDetail = (agentId: string) => getJson<RuntimeAgentDetail>(`/api/enterprise/runtime/agents/${encodeURIComponent(agentId)}`);
 export const fetchEvaluationSummary = async () => (await getJson<{ metrics: EvaluationMetric[] }>('/api/enterprise/evaluation')).metrics;
+export const fetchEvaluationRunDetail = (runId: string) => getJson<EvaluationRunDetail>(`/api/enterprise/evaluation/runs/${encodeURIComponent(runId)}`);
 export const fetchEnterpriseDocuments = async () => (await getJson<{ items: KnowledgeBaseItem[] }>('/api/admin/documents')).items;
 export const fetchEnterpriseCurrentUser = async () => (await getJson<{ user: CurrentUser }>('/api/auth/me')).user;
 
