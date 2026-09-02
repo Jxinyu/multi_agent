@@ -1,4 +1,4 @@
-import { ArrowRight, Database, File, FileUp, RefreshCw, Search, Upload, XCircle } from 'lucide-react';
+import { ArrowRight, Database, File, FileUp, ListChecks, RefreshCw, Search, Upload, XCircle } from 'lucide-react';
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -57,8 +57,8 @@ export function UserDocumentsPage() {
     if (!selected) return;
     setError('');
     try {
-      const updated = await ingestKnowledgeBaseDocument(selected.id, 'graphrag');
-      setItems((current) => current.map((item) => item.id === updated.id ? updated : item));
+      const submission = await ingestKnowledgeBaseDocument(selected.id, 'graphrag');
+      navigate(`/app/documents/jobs/${submission.jobId}`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '入库任务提交失败');
     }
@@ -75,7 +75,7 @@ export function UserDocumentsPage() {
     <div className="ru-documents-page">
       <section className="ru-document-main">
         <header className="ru-page-title"><div><h1>我的文档</h1><p>上传、解析并管理当前账号有权访问的知识文档。</p></div><button className="ru-outline-command" type="button" onClick={() => fileInput.current?.click()}><Upload size={16} />上传文件</button><input ref={fileInput} hidden multiple type="file" onChange={(event) => void upload(event)} /></header>
-        <div className="ru-document-tabs"><button className="is-active" type="button">我的文档</button><button type="button">与我分享</button><button type="button">回收站</button></div>
+        <div className="ru-document-tabs"><button className="is-active" type="button">我的文档</button><button type="button" onClick={() => navigate('/app/documents/jobs')}><ListChecks size={14} />入库任务</button></div>
         {uploading.length ? <div className="ru-upload-queue"><header><strong>上传队列（{uploading.length}）</strong><span>正在写入安全存储</span></header>{uploading.map((name) => <div key={name}><FileUp size={19} /><strong>{name}</strong><span><i /></span><small>上传中</small></div>)}</div> : null}
         <div className="ru-document-toolbar"><button type="button" onClick={() => fileInput.current?.click()}><FileUp size={15} />新建上传</button><button type="button" onClick={() => void load()}><RefreshCw size={15} />刷新</button><div><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名" /></div></div>
         {error ? <div className="ru-inline-error">{error}</div> : null}

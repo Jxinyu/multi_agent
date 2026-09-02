@@ -141,7 +141,12 @@ export async function uploadKnowledgeBaseDocumentsResumable(files: File[], optio
   return uploadedItems;
 }
 
-export async function ingestKnowledgeBaseDocument(id: string, mode: 'rag' | 'graphrag'): Promise<KnowledgeBaseItem> {
+export interface IngestSubmission {
+  item: KnowledgeBaseItem;
+  jobId: string;
+}
+
+export async function ingestKnowledgeBaseDocument(id: string, mode: 'rag' | 'graphrag'): Promise<IngestSubmission> {
   const response = await authFetch(`/api/admin/documents/${id}/ingest`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -150,10 +155,12 @@ export async function ingestKnowledgeBaseDocument(id: string, mode: 'rag' | 'gra
   if (!response.ok) {
     throw new Error(await response.text());
   }
-  const data = (await response.json()) as { items?: KnowledgeBaseItem[]; item?: KnowledgeBaseItem };
+  const data = (await response.json()) as { items?: KnowledgeBaseItem[]; item?: KnowledgeBaseItem; job_ids?: string[] };
   const item = data.item ?? data.items?.[0];
   if (!item) throw new Error('入库响应缺少文档数据');
-  return item;
+  const jobId = data.job_ids?.[0];
+  if (!jobId) throw new Error('入库响应缺少任务标识');
+  return { item, jobId };
 }
 
 export async function bulkIngestKnowledgeBaseDocuments(ids: string[], mode: 'rag' | 'graphrag'): Promise<KnowledgeBaseItem[]> {

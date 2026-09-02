@@ -22,6 +22,8 @@ import { EnterpriseMemberDetailPage } from './pages/enterprise/EnterpriseMemberD
 import { EnterpriseOverviewPage } from './pages/enterprise/EnterpriseOverviewPage';
 import { EnterpriseActivityPage } from './pages/enterprise/EnterpriseActivityPage';
 import { HelpCenterPage } from './pages/shared/HelpCenterPage';
+import { DocumentJobDetailPage } from './pages/shared/DocumentJobDetailPage';
+import { DocumentJobsPage } from './pages/shared/DocumentJobsPage';
 import { NotificationCenterPage } from './pages/shared/NotificationCenterPage';
 import { ProfilePage } from './pages/shared/ProfilePage';
 import { AgentAnswerPage } from './pages/user/AgentAnswerPage';
@@ -100,6 +102,8 @@ function AuthenticatedApp() {
         <Route path="/app/tasks" element={<UserTasksPage />} />
         <Route path="/app/tasks/:taskId" element={<UserTaskDetailPage />} />
         <Route path="/app/documents" element={<UserDocumentsPage />} />
+        <Route path="/app/documents/jobs" element={<DocumentJobsPage mode="user" />} />
+        <Route path="/app/documents/jobs/:jobId" element={<DocumentJobDetailPage mode="user" />} />
         <Route path="/app/documents/:documentId" element={<DocumentDetailPage mode="user" />} />
         <Route path="/app/documents/:documentId/preview" element={<DocumentOriginalPage mode="user" />} />
         <Route path="/app/notifications" element={<NotificationCenterPage mode="user" />} />
@@ -110,6 +114,8 @@ function AuthenticatedApp() {
       <Route element={<ProductShell mode="enterprise" currentUser={currentUser.user} />}>
         <Route path="/enterprise" element={<EnterpriseOverviewPage />} />
         <Route path="/enterprise/knowledge" element={<EnterpriseKnowledgePage />} />
+        <Route path="/enterprise/knowledge/jobs" element={<DocumentJobsPage mode="enterprise" />} />
+        <Route path="/enterprise/knowledge/jobs/:jobId" element={<DocumentJobDetailPage mode="enterprise" />} />
         <Route path="/enterprise/knowledge/:documentId" element={<DocumentDetailPage mode="enterprise" />} />
         <Route path="/enterprise/knowledge/:documentId/preview" element={<DocumentOriginalPage mode="enterprise" />} />
         <Route path="/enterprise/agents" element={<EnterpriseAgentsPage />} />

@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from config import settings
 from multi_domain_enterprise_project import main
+from multi_domain_enterprise_project.api import jobs
 from multi_domain_enterprise_project.core.audit import (
     append_audit_event,
     get_audit_event,
@@ -22,6 +23,7 @@ from multi_domain_enterprise_project.core.database import (
     append_conversation_message,
     close_database,
     create_document,
+    create_job,
     ensure_conversation,
     finish_conversation_turn,
     get_document,
@@ -31,6 +33,7 @@ from multi_domain_enterprise_project.core.database import (
     list_user_conversations,
     reconfigure_database,
     set_conversation_feedback,
+    update_job,
 )
 from multi_domain_enterprise_project.core.storage import KB_ROOT, parsed_document_path, remove_storage_path
 
@@ -57,6 +60,53 @@ def document_payload(document_id: str, tenant_id: str, file_path: Path) -> dict:
     }
 
 
+def job_reader(tenant_id: str) -> CurrentUser:
+    return CurrentUser(
+        user_id=f"admin-{tenant_id}",
+        username="admin",
+        tenant_id=tenant_id,
+        role="admin",
+        permissions=["kb:read"],
+        groups=[],
+        access_token="token",
+    )
+
+
+def document_owner() -> CurrentUser:
+    return CurrentUser(
+        user_id="owner-1",
+        username="owner",
+        tenant_id="tenant-a",
+        role="user",
+        permissions=["kb:read"],
+        groups=[],
+        access_token="token",
+    )
+
+
+def knowledge_item(document_id: str = "a" * 32) -> dict:
+    return {
+        "id": document_id,
+        "file_name": "a.pdf",
+        "title": "企业制度",
+        "tenant_id": "tenant-a",
+        "owner_id": "owner-1",
+        "acl": ["finance"],
+        "upload_time": "2026-09-02T08:00:00+00:00",
+        "mode": "graphrag",
+        "status": "queued",
+        "chunk_count": 0,
+        "error": None,
+        "ingest_progress": 0,
+        "ingest_total": 1,
+        "ingest_message": "等待入库 Worker",
+        "batch_id": None,
+        "version": 1,
+        "checksum": "a" * 64,
+        "backend_status": {},
+    }
+
+
 @pytest.mark.asyncio
 async def test_document_queries_are_tenant_scoped(isolated_database: None, tmp_path: Path) -> None:
     async with SessionFactory() as session:
@@ -69,6 +119,108 @@ async def test_document_queries_are_tenant_scoped(isolated_database: None, tmp_p
 
     assert [item["id"] for item in tenant_a] == ["a" * 32]
     assert [item["id"] for item in tenant_b] == ["b" * 32]
+
+
+@pytest.mark.asyncio
+async def test_job_list_and_detail_are_tenant_scoped_and_filterable(
+    isolated_database: None,
+    tmp_path: Path,
+) -> None:
+    async with SessionFactory() as session:
+        await create_document(session, document_payload("a" * 32, "tenant-a", tmp_path / "a.pdf"))
+        await create_document(session, document_payload("b" * 32, "tenant-b", tmp_path / "b.pdf"))
+        first = await create_job(
+            session,
+            job_id="job-a-1",
+            document_id="a" * 32,
+            tenant_id="tenant-a",
+            operation="ingest",
+            mode="mg",
+            requested_by="user-a",
+            request_id="request-a-1",
+        )
+        await update_job(session, first.id, status="processing", attempts=1)
+        await create_job(
+            session,
+            job_id="job-a-2",
+            document_id="a" * 32,
+            tenant_id="tenant-a",
+            operation="ingest",
+            mode="milvus",
+            requested_by="user-a",
+            request_id="request-a-2",
+        )
+        await create_job(
+            session,
+            job_id="job-b-1",
+            document_id="b" * 32,
+            tenant_id="tenant-b",
+            operation="ingest",
+            mode="graph",
+            requested_by="user-b",
+            request_id="request-b-1",
+        )
+
+        all_jobs = await jobs.list_jobs(job_reader("tenant-a"), session, limit=50, offset=0)
+        processing = await jobs.list_jobs(
+            job_reader("tenant-a"), session, job_status="processing", limit=50, offset=0
+        )
+        second_page = await jobs.list_jobs(job_reader("tenant-a"), session, limit=1, offset=1)
+        detail = await jobs.get_job("job-a-1", job_reader("tenant-a"), session)
+        user_jobs = await jobs.list_user_jobs(document_owner(), session, limit=50, offset=0)
+        denied_jobs = await jobs.list_user_jobs(job_reader("tenant-a"), session, limit=50, offset=0)
+        user_detail = await jobs.get_user_job("job-a-1", document_owner(), session)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await jobs.get_job("job-b-1", job_reader("tenant-a"), session)
+        with pytest.raises(HTTPException) as denied_detail:
+            await jobs.get_user_job("job-a-1", job_reader("tenant-a"), session)
+
+    assert all_jobs.total == 2
+    assert {item.id for item in all_jobs.items} == {"job-a-1", "job-a-2"}
+    assert processing.total == 1
+    assert processing.items[0].id == "job-a-1"
+    assert len(second_page.items) == 1
+    assert detail.file_name == "a.pdf"
+    assert detail.request_id == "request-a-1"
+    assert user_jobs.total == 2
+    assert user_detail.id == "job-a-1"
+    assert denied_jobs.total == 0
+    assert exc_info.value.status_code == 404
+    assert denied_detail.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_ingest_submission_returns_persisted_job_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict = {}
+
+    async def fake_require(session, document_id, current_user):
+        return {**knowledge_item(document_id), "status": "ready"}
+
+    async def fake_update(session, document_id, tenant_id, **updates):
+        captured["update"] = {"document_id": document_id, "tenant_id": tenant_id, **updates}
+        return knowledge_item(document_id)
+
+    async def fake_queue(session, item, **kwargs):
+        captured["queue"] = kwargs
+        return "job-real-1"
+
+    monkeypatch.setattr(main, "_require_document", fake_require)
+    monkeypatch.setattr(main, "update_document", fake_update)
+    monkeypatch.setattr(main, "_queue_document_job", fake_queue)
+
+    response = await main.ingest_document(
+        "a" * 32,
+        main.IngestRequest(mode="graphrag"),
+        job_reader("tenant-a"),
+        object(),
+    )
+
+    assert response.job_ids == ["job-real-1"]
+    assert response.items is not None
+    assert response.items[0].id == "a" * 32
+    assert captured["queue"]["operation"] == "ingest"
+    assert captured["queue"]["mode"] == "graph"
 
 
 @pytest.mark.asyncio

@@ -20,7 +20,6 @@ from langgraph.checkpoint.redis import AsyncRedisSaver
 from prometheus_client import make_asgi_app
 from pydantic import BaseModel, Field, field_validator
 from redis.asyncio import Redis
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings, validate_runtime_settings
@@ -30,6 +29,8 @@ from multi_domain_enterprise_project.api.conversations import router as conversa
 from multi_domain_enterprise_project.api.enterprise import router as enterprise_router
 from multi_domain_enterprise_project.api.files import router as files_router
 from multi_domain_enterprise_project.api.health import router as health_router
+from multi_domain_enterprise_project.api.jobs import router as jobs_router
+from multi_domain_enterprise_project.api.jobs import user_router as user_jobs_router
 from multi_domain_enterprise_project.api.members import router as members_router
 from multi_domain_enterprise_project.api.platform import router as platform_router
 from multi_domain_enterprise_project.api.security import router as security_router
@@ -45,7 +46,6 @@ from multi_domain_enterprise_project.core.auth import (
 )
 from multi_domain_enterprise_project.core.chat import ChatRequest, build_attachment_context
 from multi_domain_enterprise_project.core.database import (
-    IngestionJobRecord,
     SessionFactory,
     append_conversation_message,
     close_database,
@@ -131,6 +131,8 @@ app.include_router(conversations_router)
 app.include_router(enterprise_router)
 app.include_router(files_router)
 app.include_router(health_router)
+app.include_router(jobs_router)
+app.include_router(user_jobs_router)
 app.include_router(members_router)
 app.include_router(platform_router)
 app.include_router(security_router)
@@ -178,6 +180,7 @@ class DocumentDetailResponse(BaseModel):
 class UploadResponse(BaseModel):
     item: KnowledgeBaseItem | None = None
     items: list[KnowledgeBaseItem] | None = None
+    job_ids: list[str] = Field(default_factory=list)
 
 
 class IngestRequest(BaseModel):
@@ -224,16 +227,6 @@ class ResumableUploadCompleteRequest(BaseModel):
 
 class DeleteResponse(BaseModel):
     success: bool
-
-
-class JobResponse(BaseModel):
-    id: str
-    document_id: str
-    operation: str
-    mode: str
-    status: str
-    attempts: int
-    error: str | None
 
 
 Session = Annotated[AsyncSession, Depends(get_session)]
@@ -294,7 +287,7 @@ async def _queue_document_job(
     operation: str,
     mode: str,
     current_user: CurrentUser,
-) -> None:
+) -> str:
     if redis_conn is None:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="任务队列未初始化")
     job_id = uuid.uuid4().hex
@@ -343,6 +336,7 @@ async def _queue_document_job(
             metadata={"job_id": job_id, "error_type": type(exc).__name__},
         )
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="任务入队失败") from exc
+    return job_id
 
 
 @app.post("/api/chat")
@@ -877,15 +871,16 @@ async def ingest_document(document_id: str, payload: IngestRequest, current_user
         ingest_total=1,
         ingest_message="等待入库 Worker",
     )
-    await _queue_document_job(
+    job_id = await _queue_document_job(
         session, item, operation="ingest", mode=mode, current_user=current_user
     )  # type: ignore[arg-type]
-    return UploadResponse(items=[_item(item)])  # type: ignore[arg-type]
+    return UploadResponse(items=[_item(item)], job_ids=[job_id])  # type: ignore[arg-type]
 
 
 @app.post("/api/admin/documents/bulk/ingest", response_model=UploadResponse, status_code=202)
 async def bulk_ingest_documents(payload: BulkIngestRequest, current_user: KbWriter, session: Session):
     items: list[KnowledgeBaseItem] = []
+    job_ids: list[str] = []
     for document_id in dict.fromkeys(payload.ids):
         item = await _require_document(session, document_id, current_user)
         if item["status"] in {"queued", "processing", "delete_queued"}:
@@ -899,7 +894,7 @@ async def bulk_ingest_documents(payload: BulkIngestRequest, current_user: KbWrit
             error=None,
             ingest_message="等待入库 Worker",
         )
-        await _queue_document_job(
+        job_id = await _queue_document_job(
             session,
             updated,
             operation="ingest",
@@ -907,7 +902,8 @@ async def bulk_ingest_documents(payload: BulkIngestRequest, current_user: KbWrit
             current_user=current_user,
         )  # type: ignore[arg-type]
         items.append(_item(updated))  # type: ignore[arg-type]
-    return UploadResponse(items=items)
+        job_ids.append(job_id)
+    return UploadResponse(items=items, job_ids=job_ids)
 
 
 async def _queue_delete(session: AsyncSession, item: dict[str, Any], current_user: CurrentUser) -> None:
@@ -949,27 +945,6 @@ async def remove_knowledge_base(current_user: KbDeleter, session: Session):
         if item["status"] != "delete_queued":
             await _queue_delete(session, item, current_user)
     return DeleteResponse(success=bool(items))
-
-
-@app.get("/api/admin/jobs/{job_id}", response_model=JobResponse)
-async def get_job_status(job_id: str, current_user: KbReader, session: Session):
-    job = await session.scalar(
-        select(IngestionJobRecord).where(
-            IngestionJobRecord.id == job_id,
-            IngestionJobRecord.tenant_id == current_user.tenant_id,
-        )
-    )
-    if job is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="任务不存在")
-    return JobResponse(
-        id=job.id,
-        document_id=job.document_id,
-        operation=job.operation,
-        mode=job.mode,
-        status=job.status,
-        attempts=job.attempts,
-        error=job.error,
-    )
 
 
 app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets"), check_dir=False), name="assets")

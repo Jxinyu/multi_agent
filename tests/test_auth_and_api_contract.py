@@ -86,8 +86,10 @@ async def test_tampered_token_is_rejected(development_keys: None) -> None:
 def test_openapi_excludes_server_paths_and_marks_protected_routes() -> None:
     schema = app.openapi()
     item_properties = schema["components"]["schemas"]["KnowledgeBaseItem"]["properties"]
+    upload_properties = schema["components"]["schemas"]["UploadResponse"]["properties"]
     assert "file_path" not in item_properties
     assert "file_path_md" not in item_properties
+    assert "job_ids" in upload_properties
     assert schema["paths"]["/api/admin/documents"]["get"]["security"]
     assert schema["paths"]["/api/admin/audit-events"]["get"]["security"]
     assert schema["paths"]["/api/search"]["post"]["security"]
@@ -104,6 +106,10 @@ def test_openapi_excludes_server_paths_and_marks_protected_routes() -> None:
     assert schema["paths"]["/api/enterprise/evaluation/runs/{run_id}"]["get"]["security"]
     assert schema["paths"]["/api/enterprise/members/{actor_id}"]["get"]["security"]
     assert schema["paths"]["/api/admin/audit-events/{event_id}"]["get"]["security"]
+    assert schema["paths"]["/api/admin/jobs"]["get"]["security"]
+    assert schema["paths"]["/api/admin/jobs/{job_id}"]["get"]["security"]
+    assert schema["paths"]["/api/jobs"]["get"]["security"]
+    assert schema["paths"]["/api/jobs/{job_id}"]["get"]["security"]
     assert schema["paths"]["/api/documents/{document_id}/content"]["get"]["security"]
     assert schema["paths"]["/api/admin/documents/{document_id}/content"]["get"]["security"]
     assert schema["paths"]["/api/platform/tenants"]["get"]["security"]

@@ -11,6 +11,7 @@ import './styles/user-data.css';
 import './styles/enterprise.css';
 import './styles/admin.css';
 import './styles/shared.css';
+import './styles/jobs.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
