@@ -34,6 +34,7 @@ from multi_domain_enterprise_project.api.jobs import user_router as user_jobs_ro
 from multi_domain_enterprise_project.api.members import router as members_router
 from multi_domain_enterprise_project.api.platform import router as platform_router
 from multi_domain_enterprise_project.api.security import router as security_router
+from multi_domain_enterprise_project.api.worker_runtime import router as worker_runtime_router
 from multi_domain_enterprise_project.core.audit import (
     append_audit_event,
     create_document_with_audit,
@@ -136,6 +137,7 @@ app.include_router(user_jobs_router)
 app.include_router(members_router)
 app.include_router(platform_router)
 app.include_router(security_router)
+app.include_router(worker_runtime_router)
 app.add_middleware(RequestContextMiddleware)
 if settings.runtime.cors_origins:
     app.add_middleware(

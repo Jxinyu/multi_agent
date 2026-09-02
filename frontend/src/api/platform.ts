@@ -57,6 +57,38 @@ export interface RuntimeStatus {
   maintenance_operations_enabled: boolean;
 }
 
+export interface WorkerRuntimeSnapshot {
+  checked_at: string;
+  stream_name: string;
+  dead_letter_stream_name: string;
+  group_name: string;
+  queue: {
+    available: boolean;
+    group_initialized: boolean;
+    stream_length: number;
+    dead_letter_length: number;
+    pending: number;
+    lag: number | null;
+    consumers: { name: string; pending: number; idle_ms: number; inactive_ms: number | null }[];
+    error: string | null;
+  };
+  status_counts: { status: string; count: number }[];
+  active_jobs: {
+    id: string;
+    document_id: string;
+    file_name: string | null;
+    operation: string;
+    mode: string;
+    status: string;
+    attempts: number;
+    updated_at: string;
+  }[];
+  worker_max_attempts: number;
+  worker_block_ms: number;
+  heartbeat_available: boolean;
+  observation_note: string;
+}
+
 export interface ServiceProbeDetail {
   service: { name: string; ok: boolean; detail: string };
   checked_at: string;
@@ -111,6 +143,7 @@ async function getJson<T>(path: string): Promise<T> {
 export const fetchTenantDirectory = () => getJson<TenantDirectory>('/api/platform/tenants');
 export const fetchTenantDetail = (tenantId: string) => getJson<TenantDetail>(`/api/platform/tenants/${encodeURIComponent(tenantId)}`);
 export const fetchRuntimeStatus = () => getJson<RuntimeStatus>('/api/platform/runtime');
+export const fetchWorkerRuntime = () => getJson<WorkerRuntimeSnapshot>('/api/platform/runtime/worker');
 export const fetchServiceProbeDetail = (serviceName: string) => getJson<ServiceProbeDetail>(`/api/platform/runtime/services/${encodeURIComponent(serviceName)}`);
 export const fetchModelInventory = () => getJson<ModelInventory>('/api/platform/models');
 export const fetchPlatformSettings = () => getJson<PlatformSettings>('/api/platform/settings');

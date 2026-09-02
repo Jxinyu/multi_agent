@@ -9,7 +9,7 @@ import type { DocumentDetail } from '../../types';
 import { isActiveJob, jobModeLabel, jobOperationLabel, jobStatusLabel } from './jobStatus';
 
 interface DocumentJobDetailPageProps {
-  mode: 'user' | 'enterprise';
+  mode: 'user' | 'enterprise' | 'admin';
 }
 
 export function DocumentJobDetailPage({ mode }: DocumentJobDetailPageProps) {
@@ -20,17 +20,18 @@ export function DocumentJobDetailPage({ mode }: DocumentJobDetailPageProps) {
   const [documentError, setDocumentError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const listPath = mode === 'enterprise' ? '/enterprise/knowledge/jobs' : '/app/documents/jobs';
-  const documentBase = mode === 'enterprise' ? '/enterprise/knowledge' : '/app/documents';
+  const listPath = mode === 'admin' ? '/admin/operations/worker' : mode === 'enterprise' ? '/enterprise/knowledge/jobs' : '/app/documents/jobs';
+  const documentBase = mode === 'user' ? '/app/documents' : '/enterprise/knowledge';
+  const backLabel = mode === 'admin' ? '返回 Worker' : '返回任务记录';
 
   const load = async (initial = false) => {
     if (initial) setLoading(true);
     setError('');
     try {
-      const nextJob = await fetchDocumentJob(jobId, mode);
+      const nextJob = await fetchDocumentJob(jobId, mode === 'user' ? 'user' : 'enterprise');
       setJob(nextJob);
       try {
-        const nextDocument = await (mode === 'enterprise' ? fetchKnowledgeBaseDocumentDetail(nextJob.document_id) : fetchUserDocument(nextJob.document_id));
+        const nextDocument = await (mode === 'user' ? fetchUserDocument(nextJob.document_id) : fetchKnowledgeBaseDocumentDetail(nextJob.document_id));
         setDocument(nextDocument);
         setDocumentError('');
       } catch (reason) {
@@ -52,9 +53,9 @@ export function DocumentJobDetailPage({ mode }: DocumentJobDetailPageProps) {
   }, [job?.status, jobId, mode]);
 
   if (loading) return <div className="ru-job-page"><div className="ru-job-state"><RefreshCw className="ru-spin" /><strong>正在读取任务记录</strong></div></div>;
-  if (error || !job) return <div className="ru-job-page"><button className="ru-job-back" type="button" onClick={() => navigate(listPath)}><ArrowLeft size={16} />返回任务记录</button><div className="ru-job-state is-error"><CircleSlash2 /><strong>无法打开任务</strong><span>{error || '任务不存在'}</span><button type="button" onClick={() => void load(true)}>重试</button></div></div>;
+  if (error || !job) return <div className="ru-job-page"><button className="ru-job-back" type="button" onClick={() => navigate(listPath)}><ArrowLeft size={16} />{backLabel}</button><div className="ru-job-state is-error"><CircleSlash2 /><strong>无法打开任务</strong><span>{error || '任务不存在'}</span><button type="button" onClick={() => void load(true)}>重试</button></div></div>;
 
-  return <div className="ru-job-page ru-job-detail-page"><header className="ru-job-title"><button type="button" aria-label="返回任务记录" onClick={() => navigate(listPath)}><ArrowLeft size={17} /></button><div><span>{jobOperationLabel[job.operation] ?? job.operation}</span><h1>任务执行详情</h1><p>{job.id}</p></div><button type="button" onClick={() => void load()}><RefreshCw size={16} />刷新</button></header>
+  return <div className="ru-job-page ru-job-detail-page"><header className="ru-job-title"><button type="button" aria-label={backLabel} title={backLabel} onClick={() => navigate(listPath)}><ArrowLeft size={17} /></button><div><span>{jobOperationLabel[job.operation] ?? job.operation}</span><h1>任务执行详情</h1><p>{job.id}</p></div><button type="button" onClick={() => void load()}><RefreshCw size={16} />刷新</button></header>
 
     <section className={`ru-job-hero is-${job.status}`}><span>{job.status === 'succeeded' ? <CheckCircle2 size={28} /> : job.status === 'failed' ? <CircleSlash2 size={28} /> : <RotateCw className="ru-spin" size={28} />}</span><div><small>{job.file_name ?? '关联文档已删除'}</small><h2>{jobStatusLabel[job.status] ?? job.status}</h2><p>{jobModeLabel[job.mode] ?? job.mode}</p></div><strong>{isActiveJob(job.status) ? '每 3 秒自动刷新' : '任务已进入终态'}</strong></section>
 

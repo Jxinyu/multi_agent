@@ -6,6 +6,7 @@ import { ProductShell } from './layouts/ProductShell';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AdminModelsPage } from './pages/admin/AdminModelsPage';
 import { AdminOperationsPage } from './pages/admin/AdminOperationsPage';
+import { AdminWorkerRuntimePage } from './pages/admin/AdminWorkerRuntimePage';
 import { AdminSecurityPage } from './pages/admin/AdminSecurityPage';
 import { AdminAuditEventDetailPage } from './pages/admin/AdminAuditEventDetailPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
@@ -138,6 +139,8 @@ function AuthenticatedApp() {
         <Route path="/admin/security" element={<AdminSecurityPage />} />
         <Route path="/admin/security/:eventId" element={<AdminAuditEventDetailPage />} />
         <Route path="/admin/operations" element={<AdminOperationsPage />} />
+        <Route path="/admin/operations/worker" element={<AdminWorkerRuntimePage />} />
+        <Route path="/admin/operations/worker/jobs/:jobId" element={<DocumentJobDetailPage mode="admin" />} />
         <Route path="/admin/operations/services/:serviceName" element={<AdminServiceDetailPage />} />
         <Route path="/admin/models" element={<AdminModelsPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />

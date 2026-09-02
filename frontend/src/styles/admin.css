@@ -63,6 +63,32 @@
 .ru-audit-detail pre { max-height: 180px; margin: 0 13px 13px; padding: 10px; overflow: auto; color: #d7edd2; background: #1d211e; font-size: 9px; white-space: pre-wrap; }
 .ru-audit-detail > p { margin: 15px; color: var(--ru-muted); font-size: 11px; }
 .ru-audit-detail > button { width: calc(100% - 26px); margin: 0 13px 13px; }
+.ru-worker-policy > button { width: calc(100% - 26px); min-height: 32px; display: flex; align-items: center; justify-content: space-between; margin: 0 13px 13px; padding: 0 10px; color: var(--ru-cobalt); border: 1px solid var(--ru-line); background: var(--ru-white); font-size: 9px; font-weight: 700; }
+.ru-worker-runtime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ru-worker-runtime-grid .ru-admin-panel > header strong { display: flex; align-items: center; gap: 7px; }
+.ru-worker-consumers > div { min-height: 46px; display: grid; grid-template-columns: minmax(170px, 1.3fr) repeat(3, minmax(80px, .7fr)); align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid var(--ru-line); font-size: 9px; }
+.ru-worker-consumers > div > span { min-width: 0; display: flex; color: var(--ru-muted); flex-direction: column; gap: 2px; }
+.ru-worker-consumers > div > span:first-child { color: var(--ru-carbon); flex-direction: row; align-items: center; }
+.ru-worker-consumers strong { overflow: hidden; color: var(--ru-carbon); text-overflow: ellipsis; white-space: nowrap; }
+.ru-worker-consumers > p, .ru-worker-active > p, .ru-worker-distribution > p { margin: 0; padding: 22px 12px; color: var(--ru-muted); font-size: 9px; }
+.ru-worker-active > button { width: 100%; min-height: 49px; display: grid; grid-template-columns: minmax(150px, 1.25fr) .65fr .55fr 1fr 24px; align-items: center; gap: 8px; padding: 7px 10px; color: var(--ru-carbon); border: 0; border-bottom: 1px solid var(--ru-line); border-radius: 0; background: transparent; text-align: left; font-size: 9px; font-weight: 400; }
+.ru-worker-active > button:hover { background: #eef6ff; box-shadow: inset 3px 0 var(--ru-cobalt); }
+.ru-worker-active > button > span:first-child { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ru-worker-active strong, .ru-worker-active small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ru-worker-active small, .ru-worker-active time { color: var(--ru-muted); font-size: 8px; }
+.ru-worker-active em { color: var(--ru-cobalt); font-style: normal; font-weight: 700; }
+.ru-worker-active em.is-failed { color: var(--ru-danger); }
+.ru-worker-active em.is-succeeded { color: #287317; }
+.ru-worker-facts dl { margin: 0; padding: 5px 12px; }
+.ru-worker-facts dl div { display: grid; grid-template-columns: .7fr minmax(0, 1.3fr); gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--ru-line); font-size: 9px; }
+.ru-worker-facts dt { color: var(--ru-muted); }
+.ru-worker-facts dd { min-width: 0; margin: 0; overflow-wrap: anywhere; text-align: right; }
+.ru-worker-facts > p { margin: 6px 12px 12px; padding: 9px; color: #665423; background: #fff8d7; font-size: 9px; line-height: 1.5; }
+.ru-worker-distribution { padding-bottom: 10px; }
+.ru-worker-distribution > div { min-height: 35px; display: grid; grid-template-columns: minmax(90px, .7fr) minmax(100px, 1.3fr) 34px; align-items: center; gap: 8px; padding: 6px 12px; font-size: 9px; }
+.ru-worker-distribution i { height: 6px; overflow: hidden; background: #e8ebe6; }
+.ru-worker-distribution b { height: 100%; display: block; background: var(--ru-vermilion); }
+.ru-worker-distribution > div > strong { text-align: right; }
 .ru-admin-detail-state { min-height: 340px; display: flex; align-items: center; justify-content: center; gap: 9px; color: var(--ru-muted); border: 1px solid var(--ru-line); background: var(--ru-white); }
 .ru-admin-detail-state.is-error { color: var(--ru-danger); flex-direction: column; }
 .ru-admin-detail-state button { min-height: 32px; padding: 0 14px; color: var(--ru-white); border: 0; background: var(--ru-danger); }
@@ -181,6 +207,7 @@
   .ru-audit-table .ru-audit-row-open { min-height: 44px; }
   .ru-tenant-analysis-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ru-tenant-activity-grid, .ru-service-detail-grid { grid-template-columns: minmax(0, 1fr); }
+  .ru-worker-runtime-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 560px) {
@@ -204,4 +231,8 @@
   .ru-tenant-detail-hero, .ru-service-detail-hero { grid-template-columns: auto minmax(0, 1fr); padding: 12px; }
   .ru-tenant-detail-hero > strong, .ru-service-detail-hero > strong { grid-column: 1 / 3; }
   .ru-tenant-analysis-grid { grid-template-columns: minmax(0, 1fr); }
+  .ru-worker-consumers > div { grid-template-columns: minmax(0, 1fr) auto; }
+  .ru-worker-consumers > div > span:nth-child(3), .ru-worker-consumers > div > span:nth-child(4) { grid-column: 1 / 3; flex-direction: row; justify-content: space-between; }
+  .ru-worker-active > button { grid-template-columns: minmax(0, 1fr) auto 24px; }
+  .ru-worker-active > button > span:nth-child(2), .ru-worker-active time { display: none; }
 }
