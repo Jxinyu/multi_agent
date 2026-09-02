@@ -28,6 +28,7 @@ import { EnterpriseSearchPage } from './pages/user/EnterpriseSearchPage';
 import { SearchEvidenceDetailPage } from './pages/user/SearchEvidenceDetailPage';
 import { UserWorkbenchPage } from './pages/user/UserWorkbenchPage';
 import { DocumentDetailPage } from './pages/user/DocumentDetailPage';
+import { DocumentOriginalPage } from './pages/user/DocumentOriginalPage';
 import { UserDocumentsPage } from './pages/user/UserDocumentsPage';
 import { UserTaskDetailPage } from './pages/user/UserTaskDetailPage';
 import { UserTasksPage } from './pages/user/UserTasksPage';
@@ -99,6 +100,7 @@ function AuthenticatedApp() {
         <Route path="/app/tasks/:taskId" element={<UserTaskDetailPage />} />
         <Route path="/app/documents" element={<UserDocumentsPage />} />
         <Route path="/app/documents/:documentId" element={<DocumentDetailPage mode="user" />} />
+        <Route path="/app/documents/:documentId/preview" element={<DocumentOriginalPage mode="user" />} />
         <Route path="/app/notifications" element={<NotificationCenterPage mode="user" />} />
         <Route path="/app/help" element={<HelpCenterPage mode="user" />} />
         <Route path="/app/profile" element={<ProfilePage mode="user" currentUser={currentUser.user} />} />
@@ -108,6 +110,7 @@ function AuthenticatedApp() {
         <Route path="/enterprise" element={<EnterpriseOverviewPage />} />
         <Route path="/enterprise/knowledge" element={<EnterpriseKnowledgePage />} />
         <Route path="/enterprise/knowledge/:documentId" element={<DocumentDetailPage mode="enterprise" />} />
+        <Route path="/enterprise/knowledge/:documentId/preview" element={<DocumentOriginalPage mode="enterprise" />} />
         <Route path="/enterprise/agents" element={<EnterpriseAgentsPage />} />
         <Route path="/enterprise/agents/:agentId" element={<EnterpriseAgentDetailPage />} />
         <Route path="/enterprise/members" element={<EnterpriseMembersPage />} />

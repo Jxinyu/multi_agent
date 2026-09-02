@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, Database, FileText, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Database, Eye, FileText, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -17,6 +17,7 @@ export function DocumentDetailPage({ mode }: DocumentDetailPageProps) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const backPath = mode === 'enterprise' ? '/enterprise/knowledge' : '/app/documents';
+  const previewPath = mode === 'enterprise' ? `/enterprise/knowledge/${documentId}/preview` : `/app/documents/${documentId}/preview`;
 
   const load = async () => {
     if (!documentId) {
@@ -73,6 +74,7 @@ export function DocumentDetailPage({ mode }: DocumentDetailPageProps) {
         <aside className="ru-record-metadata">
           <section><header><FileText size={15} /><strong>文档信息</strong><span className={`ru-doc-status is-${item.status}`}>{item.status}</span></header><dl><div><dt>版本</dt><dd>v{item.version}</dd></div><div><dt>所有者</dt><dd>{item.owner_id}</dd></div><div><dt>上传时间</dt><dd>{new Date(item.upload_time).toLocaleString('zh-CN')}</dd></div><div><dt>校验摘要</dt><dd title={item.checksum}>{item.checksum.slice(0, 16)}</dd></div></dl></section>
           <section><header><ShieldCheck size={15} /><strong>权限范围</strong></header><p>{item.acl.length ? item.acl.join('、') : 'private'}</p></section>
+          <section><header><Eye size={15} /><strong>原文件核验</strong></header><p>通过服务端权限校验预览或下载上传时保存的原文件，不暴露服务器存储路径。</p><button className="ru-primary-command" type="button" onClick={() => navigate(previewPath)}><Eye size={15} />预览原文件</button></section>
           <section><header><Database size={15} /><strong>解析与入库</strong></header><dl><div><dt>解析模式</dt><dd>{item.mode}</dd></div><div><dt>切块数量</dt><dd>{item.chunk_count}</dd></div><div><dt>处理进度</dt><dd>{item.ingest_progress ?? 0}/{item.ingest_total ?? 0}</dd></div><div><dt>批次</dt><dd>{item.batch_id || '无进行中批次'}</dd></div></dl>{item.ingest_message ? <p>{item.ingest_message}</p> : null}{item.error ? <p className="ru-detail-error"><XCircle size={15} />{item.error}</p> : null}<button className="ru-primary-command" type="button" onClick={() => void ingest()} disabled={busy || item.status === 'processing'}><Database size={15} />{item.status === 'processing' ? '正在入库' : '重新混合入库'}</button></section>
           <section><header><CheckCircle2 size={15} /><strong>后端状态</strong></header>{backendEntries.length ? <div className="ru-backend-status-list">{backendEntries.map(([backend, value]) => <div key={backend}><span>{backend}</span><strong>{value}</strong></div>)}</div> : <p>当前尚未记录向量库或图谱后端状态。</p>}</section>
         </aside>

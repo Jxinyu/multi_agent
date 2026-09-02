@@ -28,6 +28,7 @@ from multi_domain_enterprise_project.agent.agent_main import run_agent_stream
 from multi_domain_enterprise_project.api.authentication import router as authentication_router
 from multi_domain_enterprise_project.api.conversations import router as conversations_router
 from multi_domain_enterprise_project.api.enterprise import router as enterprise_router
+from multi_domain_enterprise_project.api.files import router as files_router
 from multi_domain_enterprise_project.api.health import router as health_router
 from multi_domain_enterprise_project.api.members import router as members_router
 from multi_domain_enterprise_project.api.platform import router as platform_router
@@ -128,6 +129,7 @@ app = FastAPI(title="企业多智能体助手", version="1.0.0", lifespan=lifesp
 app.include_router(authentication_router)
 app.include_router(conversations_router)
 app.include_router(enterprise_router)
+app.include_router(files_router)
 app.include_router(health_router)
 app.include_router(members_router)
 app.include_router(platform_router)
@@ -142,8 +144,6 @@ if settings.runtime.cors_origins:
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
 app.mount("/metrics", make_asgi_app(), name="metrics")
-
-
 class KnowledgeBaseItem(BaseModel):
     id: str
     file_name: str

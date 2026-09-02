@@ -1,4 +1,4 @@
-import { ArrowLeft, Clock3, Copy, Database, FileText, Layers3 } from 'lucide-react';
+import { ArrowLeft, Clock3, Copy, Database, Eye, FileText, Layers3 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -52,7 +52,7 @@ export function SearchEvidenceDetailPage() {
       <div className="ru-evidence-detail-layout">
         <aside className="ru-record-metadata">
           <section><header><Layers3 size={15} /><strong>检索定位</strong></header><dl><div><dt>证据类型</dt><dd>{item.kind}</dd></div><div><dt>检索后端</dt><dd>{item.backend || '未标注'}</dd></div><div><dt>匹配分值</dt><dd>{item.score?.toFixed(4) ?? 'N/A'}</dd></div><div><dt>文档版本</dt><dd>{item.version == null ? '未标注' : `v${item.version}`}</dd></div><div><dt>切片序号</dt><dd>{item.chunk_index == null ? '未标注' : item.chunk_index}</dd></div></dl></section>
-          <section><header><Database size={15} /><strong>来源文档</strong></header><p>{item.document_id ? '该证据包含可验证的文档标识，可继续核对解析结果和权限信息。' : '当前检索后端未返回文档标识，不能跳转到文档详情。'}</p>{item.document_id ? <button className="ru-primary-command" type="button" onClick={() => navigate(`/app/documents/${item.document_id}`)}><FileText size={15} />查看文档详情</button> : null}</section>
+          <section><header><Database size={15} /><strong>来源文档</strong></header><p>{item.document_id ? '该证据包含可验证的文档标识，可继续核对解析结果、权限和原文件。' : '当前检索后端未返回文档标识，不能跳转到文档详情。'}</p>{item.document_id ? <div className="ru-record-source-actions"><button className="ru-outline-command" type="button" onClick={() => navigate(`/app/documents/${item.document_id}`)}><FileText size={15} />文档详情</button><button className="ru-primary-command" type="button" onClick={() => navigate(`/app/documents/${item.document_id}/preview`)}><Eye size={15} />原文件</button></div> : null}</section>
         </aside>
         <article className="ru-evidence-reading"><header><FileText size={16} /><strong>命中正文</strong><span>当前账号授权范围</span></header><div>{item.content}</div></article>
       </div>
