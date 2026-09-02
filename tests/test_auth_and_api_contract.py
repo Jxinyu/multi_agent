@@ -120,4 +120,5 @@ def test_openapi_excludes_server_paths_and_marks_protected_routes() -> None:
     assert schema["paths"]["/api/platform/runtime/services/{service_name}"]["get"]["security"]
     assert schema["paths"]["/api/platform/runtime/worker"]["get"]["security"]
     assert schema["paths"]["/api/platform/models"]["get"]["security"]
+    assert schema["paths"]["/api/platform/models/detail"]["get"]["security"]
     assert schema["paths"]["/api/platform/settings"]["get"]["security"]

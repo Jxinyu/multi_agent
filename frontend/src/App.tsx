@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-do
 import { AuthState } from './components/AuthState';
 import { ProductShell } from './layouts/ProductShell';
 import { LoginPage } from './pages/auth/LoginPage';
+import { AdminModelDetailPage } from './pages/admin/AdminModelDetailPage';
 import { AdminModelsPage } from './pages/admin/AdminModelsPage';
 import { AdminOperationsPage } from './pages/admin/AdminOperationsPage';
 import { AdminWorkerRuntimePage } from './pages/admin/AdminWorkerRuntimePage';
@@ -147,6 +148,7 @@ function AuthenticatedApp() {
         <Route path="/admin/operations/worker/jobs/:jobId" element={<DocumentJobDetailPage mode="admin" />} />
         <Route path="/admin/operations/services/:serviceName" element={<AdminServiceDetailPage />} />
         <Route path="/admin/models" element={<AdminModelsPage />} />
+        <Route path="/admin/models/detail" element={<AdminModelDetailPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
         <Route path="/admin/notifications" element={<NotificationCenterPage mode="admin" />} />
         <Route path="/admin/help" element={<HelpCenterPage mode="admin" />} />

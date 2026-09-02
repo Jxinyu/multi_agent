@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import httpx
@@ -20,6 +21,17 @@ def _admin() -> CurrentUser:
         groups=["platform"],
         access_token="token",
     )
+
+
+class _Response:
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict:
+        return self.payload
 
 
 @pytest.mark.asyncio
@@ -156,8 +168,131 @@ async def test_model_inventory_marks_transport_failure(monkeypatch: pytest.Monke
     response = await platform.get_model_inventory(_admin())
 
     assert response.connected is False
-    assert response.models == []
+    assert {item.name for item in response.models} == {
+        platform.settings.ollama.embedding_model,
+        platform.settings.ollama.vlm_model,
+    }
+    assert all(item.configured and item.installed is None for item in response.models)
     assert "ConnectError" in (response.error or "")
+    assert "offline" not in (response.error or "")
+
+
+@pytest.mark.asyncio
+async def test_model_runtime_detail_maps_only_verified_public_fields(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+    model_name = platform.settings.ollama.embedding_model
+
+    class RuntimeClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def get(self, url):
+            if url.endswith("/api/tags"):
+                return _Response({"models": [{
+                    "name": model_name,
+                    "size": 4_000_000_000,
+                    "modified_at": "2026-09-02T08:00:00Z",
+                    "details": {"format": "gguf", "family": "qwen3", "parameter_size": "4B"},
+                    "digest": "private-digest",
+                }]})
+            return _Response({"models": [{
+                "name": model_name,
+                "size": 3_500_000_000,
+                "size_vram": 2_500_000_000,
+                "context_length": 8192,
+                "expires_at": "2026-09-02T09:00:00Z",
+            }]})
+
+        async def post(self, url, json):
+            captured["show_body"] = json
+            return _Response({
+                "details": {
+                    "format": "gguf",
+                    "family": "qwen3",
+                    "families": ["qwen3"],
+                    "parameter_size": "4B",
+                    "quantization_level": "Q4_K_M",
+                },
+                "capabilities": ["embedding"],
+                "model_info": {"general.architecture": "qwen3", "qwen3.context_length": 32768},
+                "template": "private-template",
+                "license": "private-license",
+                "system": "private-system-prompt",
+            })
+
+    async def fake_append(session, **kwargs):
+        captured["audit"] = kwargs
+
+    monkeypatch.setattr(platform.settings.ollama, "base_url", "http://user:secret@127.0.0.1:11434/private?q=secret")
+    monkeypatch.setattr(platform.httpx, "AsyncClient", lambda **kwargs: RuntimeClient())
+    monkeypatch.setattr(platform, "append_audit_event", fake_append)
+
+    response = await platform.get_model_runtime_detail(model_name, _admin(), object())
+    serialized = json.dumps(response.model_dump())
+
+    assert response.endpoint == "http://127.0.0.1:11434"
+    assert response.installed is True
+    assert response.running is True
+    assert response.maximum_context_length == 32768
+    assert response.active_context_length == 8192
+    assert response.quantization_level == "Q4_K_M"
+    assert captured["show_body"] == {"model": model_name, "verbose": False}
+    assert captured["audit"]["metadata"] == {"runtime_connected": True, "installed": True, "running": True}
+    assert "private" not in serialized
+    assert "secret" not in serialized
+
+
+@pytest.mark.asyncio
+async def test_model_runtime_detail_preserves_config_when_runtime_is_offline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    model_name = platform.settings.ollama.vlm_model
+
+    class BrokenClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def get(self, url):
+            raise httpx.ConnectError("offline")
+
+    async def fake_append(session, **kwargs):
+        return None
+
+    monkeypatch.setattr(platform.httpx, "AsyncClient", lambda **kwargs: BrokenClient())
+    monkeypatch.setattr(platform, "append_audit_event", fake_append)
+
+    response = await platform.get_model_runtime_detail(model_name, _admin(), object())
+
+    assert response.configured is True
+    assert response.runtime_connected is False
+    assert response.installed is None
+    assert response.running is None
+    assert response.issues == ["模型清单不可用（ConnectError）"]
+
+
+@pytest.mark.asyncio
+async def test_model_runtime_detail_rejects_unpublished_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    class RuntimeClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def get(self, url):
+            return _Response({"models": []})
+
+    monkeypatch.setattr(platform.httpx, "AsyncClient", lambda **kwargs: RuntimeClient())
+
+    with pytest.raises(HTTPException) as exc_info:
+        await platform.get_model_runtime_detail("not-published", _admin(), object())
+    assert exc_info.value.status_code == 404
 
 
 @pytest.mark.asyncio

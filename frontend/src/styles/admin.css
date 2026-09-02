@@ -140,11 +140,16 @@
 .ru-probe-table > div > button { width: 30px; min-height: 30px; padding: 0; color: var(--ru-muted); border: 0; background: transparent; }
 .ru-probe-table > div > button:hover { color: var(--ru-cobalt); background: #eef6ff; }
 .ru-model-table { overflow-x: auto; }
-.ru-model-head, .ru-model-table > div { min-width: 720px; display: grid; grid-template-columns: 1.3fr .9fr .7fr 1fr .45fr; align-items: center; gap: 8px; padding: 0 13px; }
+.ru-model-head, .ru-model-table > button { min-width: 760px; display: grid; grid-template-columns: 1.3fr .9fr .7fr 1fr .45fr 24px; align-items: center; gap: 8px; padding: 0 13px; }
 .ru-model-head { height: 34px; color: var(--ru-muted); border-bottom: 1px solid var(--ru-line); font-size: 9px; }
-.ru-model-table > div { min-height: 50px; border-bottom: 1px solid var(--ru-line); font-size: 10px; }
-.ru-model-table > div strong { display: flex; align-items: center; gap: 7px; }
-.ru-model-table > div em { color: #287317; font-style: normal; font-weight: 700; }
+.ru-model-table > button { width: 100%; min-height: 50px; justify-content: initial; color: var(--ru-carbon); border: 0; border-bottom: 1px solid var(--ru-line); border-radius: 0; background: transparent; text-align: left; font-size: 10px; font-weight: 400; }
+.ru-model-table > button:hover { background: #eef6ff; box-shadow: inset 3px 0 var(--ru-cobalt); }
+.ru-model-table > button strong { min-width: 0; display: flex; align-items: center; gap: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ru-model-table > button em { font-style: normal; font-weight: 700; }
+.ru-model-table > button em.is-installed { color: #287317; }
+.ru-model-table > button em.is-missing { color: var(--ru-danger); }
+.ru-model-table > button em.is-unknown { color: #806000; }
+.ru-model-table > button > svg:last-child { color: var(--ru-muted); }
 .ru-admin-empty { margin: 0; padding: 30px; color: var(--ru-muted); text-align: center; font-size: 11px; }
 .ru-model-table + .ru-admin-notice { margin-top: 12px; }
 .ru-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -188,6 +193,20 @@
 .ru-service-detail-grid dd { margin: 0; overflow-wrap: anywhere; text-align: right; }
 .ru-service-result pre { min-height: 118px; margin: 12px; padding: 13px; overflow: auto; color: #d7edd2; background: #1d211e; font-size: 10px; white-space: pre-wrap; }
 .ru-service-result > p { display: flex; align-items: center; gap: 6px; margin: 0 12px 12px; color: var(--ru-muted); font-size: 9px; }
+.ru-model-detail-hero { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 13px; margin-bottom: 12px; padding: 16px; border: 1px solid var(--ru-line); border-left: 4px solid var(--ru-danger); background: var(--ru-white); }
+.ru-model-detail-hero.is-ok { border-left-color: #287317; }
+.ru-model-detail-hero > span { width: 48px; height: 48px; display: grid; place-items: center; color: var(--ru-danger); background: #fff0ee; }
+.ru-model-detail-hero.is-ok > span { color: #287317; background: #f1f8ed; }
+.ru-model-detail-hero small, .ru-model-detail-hero p { margin: 0; color: var(--ru-muted); font-size: 9px; }
+.ru-model-detail-hero h2 { margin: 3px 0; overflow-wrap: anywhere; font-family: "IBM Plex Mono", monospace; font-size: 17px; }
+.ru-model-detail-hero > strong { color: var(--ru-danger); font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+.ru-model-detail-hero.is-ok > strong { color: #287317; }
+.ru-model-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.ru-model-facts dl { margin: 0; padding: 5px 13px 13px; }
+.ru-model-facts dl div { display: grid; grid-template-columns: minmax(90px, .6fr) minmax(0, 1.4fr); gap: 9px; padding: 10px 0; border-bottom: 1px solid var(--ru-line); font-size: 9px; }
+.ru-model-facts dt { color: var(--ru-muted); }
+.ru-model-facts dd { margin: 0; overflow-wrap: anywhere; text-align: right; }
+.ru-model-checked-at { margin: 0; color: var(--ru-muted); font-size: 9px; text-align: right; }
 
 @media (max-width: 980px) {
   .ru-admin-page { padding: 14px 12px 24px; }
@@ -206,7 +225,7 @@
   .ru-audit-row-main > em { grid-column: 2; grid-row: 1; }
   .ru-audit-table .ru-audit-row-open { min-height: 44px; }
   .ru-tenant-analysis-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ru-tenant-activity-grid, .ru-service-detail-grid { grid-template-columns: minmax(0, 1fr); }
+  .ru-tenant-activity-grid, .ru-service-detail-grid, .ru-model-detail-grid { grid-template-columns: minmax(0, 1fr); }
   .ru-worker-runtime-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -221,8 +240,16 @@
   .ru-service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ru-probe-table > div { grid-template-columns: minmax(0, 1fr) auto 30px; }
   .ru-probe-table code { grid-column: 1 / 4; grid-row: 2; }
+  .ru-model-head { display: none; }
+  .ru-model-table > button { min-width: 0; grid-template-columns: minmax(0, 1fr) auto 24px; grid-template-rows: auto auto; gap: 3px 8px; padding-top: 9px; padding-bottom: 9px; }
+  .ru-model-table > button strong { grid-column: 1; grid-row: 1; }
+  .ru-model-table > button > span:nth-child(2) { grid-column: 1; grid-row: 2; color: var(--ru-muted); font-size: 9px; }
+  .ru-model-table > button > span:nth-child(3), .ru-model-table > button time { display: none; }
+  .ru-model-table > button em { grid-column: 2; grid-row: 1 / 3; }
+  .ru-model-table > button > svg:last-child { grid-column: 3; grid-row: 1 / 3; }
   .ru-admin-detail-title { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
   .ru-admin-detail-title > button { width: 36px; padding: 0; font-size: 0; }
+  .ru-admin-detail-title > button span { display: none; }
   .ru-audit-event-hero { grid-template-columns: auto minmax(0, 1fr); }
   .ru-audit-event-hero > strong { grid-column: 1 / 3; }
   .ru-audit-trace > div { grid-template-columns: 25px minmax(0, 1fr) auto; }
@@ -230,6 +257,8 @@
   .ru-audit-trace small { grid-column: 2 / 4; grid-row: 3; }
   .ru-tenant-detail-hero, .ru-service-detail-hero { grid-template-columns: auto minmax(0, 1fr); padding: 12px; }
   .ru-tenant-detail-hero > strong, .ru-service-detail-hero > strong { grid-column: 1 / 3; }
+  .ru-model-detail-hero { grid-template-columns: auto minmax(0, 1fr); padding: 12px; }
+  .ru-model-detail-hero > strong { grid-column: 1 / 3; }
   .ru-tenant-analysis-grid { grid-template-columns: minmax(0, 1fr); }
   .ru-worker-consumers > div { grid-template-columns: minmax(0, 1fr) auto; }
   .ru-worker-consumers > div > span:nth-child(3), .ru-worker-consumers > div > span:nth-child(4) { grid-column: 1 / 3; flex-direction: row; justify-content: space-between; }

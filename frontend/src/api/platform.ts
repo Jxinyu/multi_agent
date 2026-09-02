@@ -103,8 +103,44 @@ export interface ServiceProbeDetail {
 export interface ModelInventory {
   connected: boolean;
   endpoint: string;
-  models: { name: string; size_bytes: number | null; modified_at: string | null; roles: string[] }[];
+  models: {
+    name: string;
+    size_bytes: number | null;
+    modified_at: string | null;
+    roles: string[];
+    configured: boolean;
+    installed: boolean | null;
+  }[];
   error: string | null;
+}
+
+export interface ModelRuntimeDetail {
+  name: string;
+  endpoint: string;
+  checked_at: string;
+  roles: string[];
+  configured: boolean;
+  runtime_connected: boolean;
+  installed: boolean | null;
+  size_bytes: number | null;
+  modified_at: string | null;
+  metadata_available: boolean;
+  process_available: boolean;
+  running: boolean | null;
+  format: string | null;
+  family: string | null;
+  families: string[];
+  parameter_size: string | null;
+  quantization_level: string | null;
+  capabilities: string[];
+  maximum_context_length: number | null;
+  active_context_length: number | null;
+  loaded_size_bytes: number | null;
+  vram_size_bytes: number | null;
+  expires_at: string | null;
+  issues: string[];
+  capacity_metrics_available: boolean;
+  capacity_note: string;
 }
 
 export interface PlatformSettings {
@@ -146,6 +182,10 @@ export const fetchRuntimeStatus = () => getJson<RuntimeStatus>('/api/platform/ru
 export const fetchWorkerRuntime = () => getJson<WorkerRuntimeSnapshot>('/api/platform/runtime/worker');
 export const fetchServiceProbeDetail = (serviceName: string) => getJson<ServiceProbeDetail>(`/api/platform/runtime/services/${encodeURIComponent(serviceName)}`);
 export const fetchModelInventory = () => getJson<ModelInventory>('/api/platform/models');
+export const fetchModelRuntimeDetail = (name: string) => {
+  const params = new URLSearchParams({ name });
+  return getJson<ModelRuntimeDetail>(`/api/platform/models/detail?${params}`);
+};
 export const fetchPlatformSettings = () => getJson<PlatformSettings>('/api/platform/settings');
 
 export function fetchAuditEvents(options: { outcome?: string; actor?: string; action?: string; cursor?: string } = {}) {

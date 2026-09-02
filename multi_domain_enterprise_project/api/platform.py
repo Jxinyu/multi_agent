@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import UTC, datetime
 from typing import Annotated, Any
+from urllib.parse import urlsplit
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
@@ -102,6 +103,8 @@ class ModelItem(BaseModel):
     size_bytes: int | None = None
     modified_at: str | None = None
     roles: list[str] = Field(default_factory=list)
+    configured: bool = False
+    installed: bool | None = None
 
 
 class ModelInventory(BaseModel):
@@ -109,6 +112,35 @@ class ModelInventory(BaseModel):
     endpoint: str
     models: list[ModelItem]
     error: str | None = None
+
+
+class ModelRuntimeDetail(BaseModel):
+    name: str
+    endpoint: str
+    checked_at: str
+    roles: list[str] = Field(default_factory=list)
+    configured: bool
+    runtime_connected: bool
+    installed: bool | None = None
+    size_bytes: int | None = None
+    modified_at: str | None = None
+    metadata_available: bool = False
+    process_available: bool = False
+    running: bool | None = None
+    format: str | None = None
+    family: str | None = None
+    families: list[str] = Field(default_factory=list)
+    parameter_size: str | None = None
+    quantization_level: str | None = None
+    capabilities: list[str] = Field(default_factory=list)
+    maximum_context_length: int | None = None
+    active_context_length: int | None = None
+    loaded_size_bytes: int | None = None
+    vram_size_bytes: int | None = None
+    expires_at: str | None = None
+    issues: list[str] = Field(default_factory=list)
+    capacity_metrics_available: bool = False
+    capacity_note: str = "Ollama 接口不提供 QPS、请求队列和 GPU 利用率，当前不推算并发容量。"
 
 
 class PublicSetting(BaseModel):
@@ -131,6 +163,57 @@ class PlatformSettings(BaseModel):
 
 def _distribution(values: list[str], *, limit: int | None = None) -> list[DistributionItem]:
     return [DistributionItem(id=item, count=count) for item, count in Counter(values).most_common(limit)]
+
+
+def _configured_model_roles() -> dict[str, list[str]]:
+    roles: dict[str, list[str]] = {}
+    for name, role in (
+        (settings.ollama.embedding_model.strip(), "向量嵌入"),
+        (settings.ollama.vlm_model.strip(), "视觉解析"),
+    ):
+        if name:
+            roles.setdefault(name, []).append(role)
+    return roles
+
+
+def _public_ollama_endpoint() -> str:
+    parsed = urlsplit(settings.ollama.base_url)
+    if not parsed.scheme or not parsed.hostname:
+        return "服务端配置无效"
+    host = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+    try:
+        port = f":{parsed.port}" if parsed.port is not None else ""
+    except ValueError:
+        return "服务端配置无效"
+    return f"{parsed.scheme}://{host}{port}"
+
+
+def _runtime_issue(operation: str, exc: Exception) -> str:
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"{operation}返回 HTTP {exc.response.status_code}"
+    return f"{operation}不可用（{type(exc).__name__}）"
+
+
+def _model_item(item: dict[str, Any], roles: dict[str, list[str]]) -> ModelItem | None:
+    name = str(item.get("name") or item.get("model") or "").strip()
+    if not name:
+        return None
+    return ModelItem(
+        name=name,
+        size_bytes=item.get("size") if isinstance(item.get("size"), int) else None,
+        modified_at=item.get("modified_at") if isinstance(item.get("modified_at"), str) else None,
+        roles=roles.get(name, []),
+        configured=name in roles,
+        installed=True,
+    )
+
+
+def _model_details(payload: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
+    details = payload.get("details") if isinstance(payload.get("details"), dict) else {}
+    model_info = payload.get("model_info") if isinstance(payload.get("model_info"), dict) else {}
+    architecture = model_info.get("general.architecture")
+    context_length = model_info.get(f"{architecture}.context_length") if isinstance(architecture, str) else None
+    return details, context_length if isinstance(context_length, int) else None
 
 
 def _tenant_usage(tenant_id: str, events: list[dict[str, Any]], documents: list[dict[str, Any]]) -> TenantUsage:
@@ -241,31 +324,181 @@ async def get_service_probe_detail(
 @router.get("/models", response_model=ModelInventory)
 async def get_model_inventory(current_user: PlatformReader) -> ModelInventory:
     endpoint = settings.ollama.base_url.rstrip("/")
+    public_endpoint = _public_ollama_endpoint()
+    roles = _configured_model_roles()
     try:
         async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
             response = await client.get(f"{endpoint}/api/tags")
         response.raise_for_status()
         payload = response.json()
     except Exception as exc:
-        return ModelInventory(connected=False, endpoint=endpoint, models=[], error=f"{type(exc).__name__}: {exc}")
+        models = [
+            ModelItem(name=name, roles=model_roles, configured=True, installed=None)
+            for name, model_roles in roles.items()
+        ]
+        return ModelInventory(
+            connected=False,
+            endpoint=public_endpoint,
+            models=models,
+            error=_runtime_issue("模型清单", exc),
+        )
 
-    models = []
-    for item in payload.get("models", []):
-        name = str(item.get("name") or "").strip()
-        if not name:
-            continue
-        roles = []
-        if name == settings.ollama.embedding_model:
-            roles.append("向量嵌入")
-        if name == settings.ollama.vlm_model:
-            roles.append("视觉解析")
-        models.append(ModelItem(
-            name=name,
-            size_bytes=item.get("size") if isinstance(item.get("size"), int) else None,
-            modified_at=item.get("modified_at") if isinstance(item.get("modified_at"), str) else None,
-            roles=roles,
-        ))
-    return ModelInventory(connected=True, endpoint=endpoint, models=models)
+    raw_models = payload.get("models", []) if isinstance(payload, dict) else []
+    models = [model for item in raw_models if isinstance(item, dict) and (model := _model_item(item, roles))]
+    installed_names = {model.name for model in models}
+    models.extend(
+        ModelItem(name=name, roles=model_roles, configured=True, installed=False)
+        for name, model_roles in roles.items()
+        if name not in installed_names
+    )
+    return ModelInventory(connected=True, endpoint=public_endpoint, models=models)
+
+
+@router.get("/models/detail", response_model=ModelRuntimeDetail)
+async def get_model_runtime_detail(
+    name: str,
+    current_user: PlatformReader,
+    session: Session,
+) -> ModelRuntimeDetail:
+    model_name = name.strip()
+    if not model_name or len(model_name) > 200:
+        raise HTTPException(status_code=404, detail="模型不存在")
+
+    endpoint = settings.ollama.base_url.rstrip("/")
+    roles = _configured_model_roles()
+    configured = model_name in roles
+    checked_at = datetime.now(UTC).isoformat()
+    issues: list[str] = []
+
+    try:
+        async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
+            tags_response = await client.get(f"{endpoint}/api/tags")
+            tags_response.raise_for_status()
+            tags_payload = tags_response.json()
+            raw_models = tags_payload.get("models", []) if isinstance(tags_payload, dict) else []
+            installed_item = next(
+                (
+                    item for item in raw_models
+                    if isinstance(item, dict) and str(item.get("name") or item.get("model") or "").strip() == model_name
+                ),
+                None,
+            )
+            if installed_item is None and not configured:
+                raise HTTPException(status_code=404, detail="模型不存在")
+
+            show_payload: dict[str, Any] = {}
+            metadata_available = False
+            if installed_item is not None:
+                try:
+                    show_response = await client.post(
+                        f"{endpoint}/api/show",
+                        json={"model": model_name, "verbose": False},
+                    )
+                    show_response.raise_for_status()
+                    candidate = show_response.json()
+                    if isinstance(candidate, dict):
+                        show_payload = candidate
+                        metadata_available = True
+                except Exception as exc:
+                    issues.append(_runtime_issue("模型详情", exc))
+
+            running_item: dict[str, Any] | None = None
+            process_available = False
+            try:
+                ps_response = await client.get(f"{endpoint}/api/ps")
+                ps_response.raise_for_status()
+                ps_payload = ps_response.json()
+                running_models = ps_payload.get("models", []) if isinstance(ps_payload, dict) else []
+                process_available = True
+                running_item = next(
+                    (
+                        item for item in running_models
+                        if isinstance(item, dict)
+                        and str(item.get("name") or item.get("model") or "").strip() == model_name
+                    ),
+                    None,
+                )
+            except Exception as exc:
+                issues.append(_runtime_issue("运行进程清单", exc))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        if not configured:
+            raise HTTPException(status_code=404, detail="运行时不可用，无法核验该模型") from exc
+        response = ModelRuntimeDetail(
+            name=model_name,
+            endpoint=_public_ollama_endpoint(),
+            checked_at=checked_at,
+            roles=roles[model_name],
+            configured=True,
+            runtime_connected=False,
+            installed=None,
+            issues=[_runtime_issue("模型清单", exc)],
+        )
+        await append_audit_event(
+            session,
+            tenant_id=current_user.tenant_id,
+            actor_id=current_user.user_id,
+            source="api",
+            action="platform.model_runtime_read",
+            resource_type="model_runtime",
+            resource_id=model_name,
+            outcome="success",
+            request_id=request_id_var.get(),
+            metadata={"runtime_connected": False, "installed": None},
+        )
+        return response
+
+    tag_details = installed_item.get("details") if isinstance(installed_item, dict) else {}
+    if not isinstance(tag_details, dict):
+        tag_details = {}
+    show_details, maximum_context_length = _model_details(show_payload)
+    details = show_details or tag_details
+    capabilities = show_payload.get("capabilities", [])
+    if not isinstance(capabilities, list):
+        capabilities = []
+    families = details.get("families", [])
+    if not isinstance(families, list):
+        families = []
+    response = ModelRuntimeDetail(
+        name=model_name,
+        endpoint=_public_ollama_endpoint(),
+        checked_at=checked_at,
+        roles=roles.get(model_name, []),
+        configured=configured,
+        runtime_connected=True,
+        installed=installed_item is not None,
+        size_bytes=installed_item.get("size") if isinstance(installed_item, dict) and isinstance(installed_item.get("size"), int) else None,
+        modified_at=installed_item.get("modified_at") if isinstance(installed_item, dict) and isinstance(installed_item.get("modified_at"), str) else None,
+        metadata_available=metadata_available,
+        process_available=process_available,
+        running=running_item is not None if process_available else None,
+        format=details.get("format") if isinstance(details.get("format"), str) else None,
+        family=details.get("family") if isinstance(details.get("family"), str) else None,
+        families=[item for item in families if isinstance(item, str)],
+        parameter_size=details.get("parameter_size") if isinstance(details.get("parameter_size"), str) else None,
+        quantization_level=details.get("quantization_level") if isinstance(details.get("quantization_level"), str) else None,
+        capabilities=[item for item in capabilities if isinstance(item, str)],
+        maximum_context_length=maximum_context_length,
+        active_context_length=running_item.get("context_length") if running_item and isinstance(running_item.get("context_length"), int) else None,
+        loaded_size_bytes=running_item.get("size") if running_item and isinstance(running_item.get("size"), int) else None,
+        vram_size_bytes=running_item.get("size_vram") if running_item and isinstance(running_item.get("size_vram"), int) else None,
+        expires_at=running_item.get("expires_at") if running_item and isinstance(running_item.get("expires_at"), str) else None,
+        issues=issues,
+    )
+    await append_audit_event(
+        session,
+        tenant_id=current_user.tenant_id,
+        actor_id=current_user.user_id,
+        source="api",
+        action="platform.model_runtime_read",
+        resource_type="model_runtime",
+        resource_id=model_name,
+        outcome="success",
+        request_id=request_id_var.get(),
+        metadata={"runtime_connected": True, "installed": response.installed, "running": response.running},
+    )
+    return response
 
 
 def _setting(key: str, label: str, value: Any) -> PublicSetting:
