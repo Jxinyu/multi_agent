@@ -27,6 +27,46 @@ export interface EnterpriseOverview {
   data_window: string;
 }
 
+export interface SearchAnalytics {
+  checked_at: string;
+  tenant_id: string;
+  audit_window_size: number;
+  audit_window_complete: boolean;
+  search_event_count: number;
+  completed_count: number;
+  failed_count: number;
+  success_rate: number | null;
+  latency: {
+    sample_count: number;
+    average_ms: number | null;
+    p50_ms: number | null;
+    p95_ms: number | null;
+    maximum_ms: number | null;
+  };
+  results: {
+    sample_count: number;
+    average_count: number | null;
+    zero_result_count: number;
+    zero_result_rate: number | null;
+  };
+  modes: { id: string; count: number }[];
+  error_types: { id: string; count: number }[];
+  recent_events: {
+    id: string;
+    actor_id: string;
+    action: 'search.completed' | 'search.failed';
+    outcome: 'success' | 'failure' | 'denied';
+    occurred_at: string;
+    request_id: string | null;
+    mode: string | null;
+    elapsed_ms: number | null;
+    result_count: number | null;
+    error_type: string | null;
+  }[];
+  data_window: string;
+  privacy_note: string;
+}
+
 export interface ObservedMemberDetail {
   actor_id: string;
   actor_type: string;
@@ -210,6 +250,7 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export const fetchEnterpriseOverview = () => getJson<EnterpriseOverview>('/api/enterprise/overview');
+export const fetchSearchAnalytics = () => getJson<SearchAnalytics>('/api/enterprise/search-analytics');
 export const fetchObservedMemberDetail = (actorId: string) => getJson<ObservedMemberDetail>(`/api/enterprise/members/${encodeURIComponent(actorId)}`);
 export const fetchRuntimeSummary = () => getJson<RuntimeSummary>('/api/enterprise/runtime');
 export const fetchRuntimeAgentDetail = (agentId: string) => getJson<RuntimeAgentDetail>(`/api/enterprise/runtime/agents/${encodeURIComponent(agentId)}`);

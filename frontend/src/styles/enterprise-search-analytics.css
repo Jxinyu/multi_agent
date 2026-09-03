@@ -1,0 +1,84 @@
+.ru-kpi-drilldown { position: relative; }
+.ru-kpi-drilldown > button { position: absolute; right: 10px; bottom: 9px; width: 25px; height: 25px; display: grid; place-items: center; padding: 0; color: var(--ru-cobalt); border: 1px solid var(--ru-line); background: var(--ru-white); }
+.ru-kpi-drilldown > button:hover { color: var(--ru-white); border-color: var(--ru-cobalt); background: var(--ru-cobalt); }
+
+.ru-search-analytics-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 10px; border: 1px solid var(--ru-line); background: var(--ru-white); }
+.ru-search-analytics-kpis > div { min-width: 0; min-height: 82px; display: flex; align-items: center; gap: 11px; padding: 12px 14px; border-right: 1px solid var(--ru-line); }
+.ru-search-analytics-kpis > div:last-child { border-right: 0; }
+.ru-search-analytics-kpis svg { flex: 0 0 auto; color: var(--ru-vermilion); }
+.ru-search-analytics-kpis > div:nth-child(2) svg { color: #287317; }
+.ru-search-analytics-kpis > div:nth-child(3) svg { color: #174a42; }
+.ru-search-analytics-kpis > div:nth-child(4) svg { color: #9b6b00; }
+.ru-search-analytics-kpis span { min-width: 0; display: flex; color: var(--ru-muted); font-size: 9px; flex-direction: column; }
+.ru-search-analytics-kpis strong { margin-top: 3px; overflow: hidden; color: var(--ru-carbon); font-family: "IBM Plex Mono", monospace; font-size: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.ru-search-analytics-kpis small { margin-top: 2px; overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+
+.ru-search-analytics-grid { display: grid; grid-template-columns: minmax(250px, .9fr) minmax(250px, .85fr) minmax(280px, 1fr); gap: 10px; margin-bottom: 10px; }
+.ru-search-latency-rows, .ru-search-outcomes, .ru-search-distribution { padding: 8px 12px 11px; }
+.ru-search-latency-rows > div { min-height: 35px; display: grid; grid-template-columns: 55px 58px minmax(70px, 1fr) 20px; align-items: center; gap: 7px; font-size: 9px; }
+.ru-search-latency-rows > div > strong { font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+.ru-search-latency-rows > div > i, .ru-search-outcomes > div > i, .ru-search-distribution b { height: 7px; overflow: hidden; background: #e5e8e2; }
+.ru-search-latency-rows b, .ru-search-outcomes b, .ru-search-distribution em { height: 100%; display: block; background: #174a42; transition: width 220ms ease; }
+.ru-search-latency-rows small { color: var(--ru-muted); }
+.ru-search-outcomes { display: flex; gap: 10px; flex-direction: column; }
+.ru-search-outcomes > div { min-height: 56px; display: grid; grid-template-columns: auto 70px minmax(70px, 1fr) 44px; align-items: center; gap: 8px; color: #287317; }
+.ru-search-outcomes > div.is-failure { color: var(--ru-danger); }
+.ru-search-outcomes > div.is-failure b { background: var(--ru-danger); }
+.ru-search-outcomes span { display: flex; color: var(--ru-graphite); font-size: 9px; flex-direction: column; }
+.ru-search-outcomes span strong { margin-top: 2px; color: var(--ru-carbon); font-size: 14px; }
+.ru-search-outcomes small { text-align: right; font-family: "IBM Plex Mono", monospace; }
+.ru-search-distribution > div { min-height: 34px; display: grid; grid-template-columns: 8px 82px minmax(60px, 1fr) 32px 42px; align-items: center; gap: 7px; font-size: 8px; }
+.ru-search-distribution > div > i { width: 7px; height: 7px; border-radius: 50%; }
+.ru-search-distribution > div > strong, .ru-search-distribution > div > small { text-align: right; }
+.ru-search-distribution > div > small { color: var(--ru-muted); font-family: "IBM Plex Mono", monospace; }
+.ru-search-distribution .is-series-0 { background: #174a42; }
+.ru-search-distribution .is-series-1 { background: #88a800; }
+.ru-search-distribution .is-series-2 { background: #d89b00; }
+.ru-search-distribution .is-series-3 { background: var(--ru-vermilion); }
+.ru-search-distribution.is-danger > div > i, .ru-search-distribution.is-danger em { background: var(--ru-danger); }
+.ru-search-analytics-empty { min-height: 110px; display: grid; place-items: center; padding: 16px; color: var(--ru-muted); font-size: 9px; text-align: center; }
+
+.ru-search-event-layout { display: grid; grid-template-columns: minmax(560px, 2.1fr) minmax(250px, .9fr); gap: 10px; margin-bottom: 10px; }
+.ru-search-event-head, .ru-search-events-panel > button { display: grid; grid-template-columns: 132px minmax(90px, 1fr) 80px 54px 72px 54px 18px; align-items: center; gap: 8px; padding: 0 11px; }
+.ru-search-event-head { min-height: 31px; color: var(--ru-muted); border-bottom: 1px solid var(--ru-line); background: var(--ru-fog); font-size: 8px; }
+.ru-search-events-panel > button { width: 100%; min-height: 42px; color: var(--ru-graphite); border: 0; border-bottom: 1px solid var(--ru-line); background: var(--ru-white); font-size: 8px; text-align: left; }
+.ru-search-events-panel > button:hover { background: #f4f8ed; }
+.ru-search-events-panel > button > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ru-search-events-panel > button em { color: #287317; font-style: normal; font-weight: 700; }
+.ru-search-events-panel > button em.is-failure, .ru-search-events-panel > button em.is-denied { color: var(--ru-danger); }
+.ru-search-events-panel > button svg { color: var(--ru-cobalt); }
+.ru-search-errors-panel > p { display: flex; align-items: flex-start; gap: 6px; margin: 0; padding: 9px 12px; color: #665423; border-top: 1px solid #e1c25e; background: #fff8d7; font-size: 8px; line-height: 1.5; }
+.ru-search-errors-panel > p svg { flex: 0 0 auto; }
+.ru-search-window-note { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: center; gap: 0; border: 1px solid var(--ru-line); background: var(--ru-white); }
+.ru-search-window-note > div { min-height: 54px; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-right: 1px solid var(--ru-line); }
+.ru-search-window-note svg { flex: 0 0 auto; color: #174a42; }
+.ru-search-window-note span { display: flex; color: var(--ru-muted); font-size: 8px; line-height: 1.45; flex-direction: column; }
+.ru-search-window-note strong { color: var(--ru-carbon); font-size: 9px; }
+.ru-search-window-note time { padding: 0 12px; color: var(--ru-muted); font-size: 8px; white-space: nowrap; }
+
+@media (max-width: 1050px) {
+  .ru-search-analytics-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ru-search-analytics-kpis > div { border-bottom: 1px solid var(--ru-line); }
+  .ru-search-analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ru-search-mode-panel { grid-column: 1 / 3; }
+  .ru-search-event-layout { grid-template-columns: 1fr; }
+  .ru-search-window-note { grid-template-columns: 1fr 1fr; }
+  .ru-search-window-note time { min-height: 38px; display: flex; align-items: center; grid-column: 1 / 3; border-top: 1px solid var(--ru-line); }
+}
+
+@media (max-width: 760px) {
+  .ru-search-analytics-kpis, .ru-search-analytics-grid, .ru-search-window-note { grid-template-columns: 1fr; }
+  .ru-search-analytics-kpis > div { min-height: 68px; border-right: 0; }
+  .ru-search-mode-panel, .ru-search-window-note time { grid-column: auto; }
+  .ru-search-event-head { display: none; }
+  .ru-search-events-panel > button { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: auto auto auto; gap: 5px 8px; padding: 10px; }
+  .ru-search-events-panel > button time { grid-column: 1 / 3; }
+  .ru-search-events-panel > button > span:nth-of-type(1) { grid-column: 1; grid-row: 2; }
+  .ru-search-events-panel > button > span:nth-of-type(2) { grid-column: 2; grid-row: 2; }
+  .ru-search-events-panel > button > em { grid-column: 3; grid-row: 1; }
+  .ru-search-events-panel > button > span:nth-of-type(3) { grid-column: 1; grid-row: 3; color: var(--ru-muted); }
+  .ru-search-events-panel > button > span:nth-of-type(4) { grid-column: 2; grid-row: 3; color: var(--ru-muted); }
+  .ru-search-events-panel > button > svg { grid-column: 3; grid-row: 2 / 4; }
+  .ru-search-window-note > div { border-right: 0; border-bottom: 1px solid var(--ru-line); }
+  .ru-search-window-note time { padding: 10px 12px; }
+}

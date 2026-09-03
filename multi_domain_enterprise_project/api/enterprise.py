@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
 from multi_domain_enterprise_project.api.evaluation_datasets import router as evaluation_dataset_router
+from multi_domain_enterprise_project.api.search_analytics import router as search_analytics_router
 from multi_domain_enterprise_project.core.audit import append_audit_event, list_audit_events
 from multi_domain_enterprise_project.core.auth import CurrentUser, require_permissions
 from multi_domain_enterprise_project.core.database import get_session, list_documents
@@ -23,6 +24,7 @@ from multi_domain_enterprise_project.core.sub_agent_enum import SubAgentEnum
 
 router = APIRouter(prefix="/api/enterprise", tags=["enterprise"])
 router.include_router(evaluation_dataset_router)
+router.include_router(search_analytics_router)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 Session = Annotated[AsyncSession, Depends(get_session)]
 EnterpriseReader = Annotated[CurrentUser, Depends(require_permissions("audit:read", "kb:read"))]
@@ -411,7 +413,7 @@ async def get_enterprise_overview(current_user: EnterpriseReader, session: Sessi
         running_count=actions.count("chat.requested"),
         document_count=len(documents),
         healthy_document_count=sum(item.get("status") in {"completed", "ready"} for item in documents),
-        search_count=sum(event["action"] == "search.completed" for event in events),
+        search_count=sum(event["action"] in {"search.completed", "search.failed"} for event in events),
         average_search_ms=round(sum(search_latencies) / len(search_latencies)) if search_latencies else None,
         recent_events=events[:12],
     )

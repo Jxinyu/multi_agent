@@ -1,9 +1,11 @@
-import { Activity, AlertTriangle, CheckCircle2, Clock3, Database, RefreshCw, Search, Users } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowRight, CheckCircle2, Clock3, Database, RefreshCw, Search, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { fetchDependencyHealth, fetchEnterpriseOverview, type EnterpriseOverview } from '../../api/enterprise';
 
 export function EnterpriseOverviewPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState<EnterpriseOverview | null>(null);
   const [health, setHealth] = useState<Record<string, boolean>>({});
   const [error, setError] = useState('');
@@ -29,7 +31,7 @@ export function EnterpriseOverviewPage() {
         <div><span><Users size={15} />观测用户</span><strong>{data?.observed_actors.length ?? '—'}</strong><small>来自租户审计事件</small></div>
         <div><span><CheckCircle2 size={15} />问答完成率</span><strong>{loading ? '—' : `${(completionRate * 100).toFixed(1)}%`}</strong><small>{data?.completed_count ?? 0}/{data?.conversation_count ?? 0} 个会话</small></div>
         <div><span><Database size={15} />文档健康</span><strong>{loading ? '—' : `${(documentHealth * 100).toFixed(1)}%`}</strong><small>{data?.healthy_document_count ?? 0}/{data?.document_count ?? 0} 个文档</small></div>
-        <div><span><Search size={15} />检索调用</span><strong>{data?.search_count ?? '—'}</strong><small>平均 {data?.average_search_ms ?? '—'} ms</small></div>
+        <div className="ru-kpi-drilldown"><span><Search size={15} />检索调用</span><strong>{data?.search_count ?? '—'}</strong><small>平均 {data?.average_search_ms ?? '—'} ms</small><button type="button" title="查看检索运行分析" aria-label="查看检索运行分析" onClick={() => navigate('/enterprise/search-analytics')}><ArrowRight size={14} /></button></div>
         <div><span><AlertTriangle size={15} />失败任务</span><strong>{data?.failed_count ?? '—'}</strong><small>等待补充 {data?.waiting_count ?? 0}</small></div>
       </section>
       <div className="ru-overview-grid">

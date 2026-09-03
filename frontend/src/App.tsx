@@ -26,6 +26,7 @@ import { EnterpriseMembersPage } from './pages/enterprise/EnterpriseMembersPage'
 import { EnterpriseMemberDetailPage } from './pages/enterprise/EnterpriseMemberDetailPage';
 import { EnterpriseOverviewPage } from './pages/enterprise/EnterpriseOverviewPage';
 import { EnterpriseActivityPage } from './pages/enterprise/EnterpriseActivityPage';
+import { EnterpriseSearchAnalyticsPage } from './pages/enterprise/EnterpriseSearchAnalyticsPage';
 import { HelpCenterPage } from './pages/shared/HelpCenterPage';
 import { DocumentJobDetailPage } from './pages/shared/DocumentJobDetailPage';
 import { DocumentJobsPage } from './pages/shared/DocumentJobsPage';
@@ -118,6 +119,7 @@ function AuthenticatedApp() {
 
       <Route element={<ProductShell mode="enterprise" currentUser={currentUser.user} />}>
         <Route path="/enterprise" element={<EnterpriseOverviewPage />} />
+        <Route path="/enterprise/search-analytics" element={<EnterpriseSearchAnalyticsPage />} />
         <Route path="/enterprise/knowledge" element={<EnterpriseKnowledgePage />} />
         <Route path="/enterprise/knowledge/runtime" element={<EnterpriseKnowledgeRuntimePage />} />
         <Route path="/enterprise/knowledge/jobs" element={<DocumentJobsPage mode="enterprise" />} />

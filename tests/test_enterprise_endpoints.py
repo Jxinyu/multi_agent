@@ -26,6 +26,7 @@ async def test_enterprise_overview_uses_tenant_scoped_events(monkeypatch: pytest
     async def fake_events(session, **kwargs):
         captured.update(kwargs)
         return ([
+            {"id": "4", "actor_id": "u1", "action": "search.failed", "resource_id": None, "metadata": {"mode": "mg"}, "occurred_at": "2026-08-29T10:04:00+00:00"},
             {"id": "3", "actor_id": "u1", "action": "search.completed", "resource_id": None, "metadata": {"elapsed_ms": 120}, "occurred_at": "2026-08-29T10:03:00+00:00"},
             {"id": "2", "actor_id": "u1", "action": "chat.completed", "resource_id": "t1", "metadata": {}, "occurred_at": "2026-08-29T10:02:00+00:00"},
             {"id": "1", "actor_id": "u2", "action": "chat.requested", "resource_id": "t1", "metadata": {}, "occurred_at": "2026-08-29T10:01:00+00:00"},
@@ -44,6 +45,7 @@ async def test_enterprise_overview_uses_tenant_scoped_events(monkeypatch: pytest
     assert response.conversation_count == 1
     assert response.completed_count == 1
     assert response.running_count == 0
+    assert response.search_count == 2
     assert response.average_search_ms == 120
     assert response.healthy_document_count == 1
 
