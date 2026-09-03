@@ -1,4 +1,4 @@
-import { ArrowRight, BarChart3, Database, ExternalLink } from 'lucide-react';
+import { ArrowRight, BarChart3, Database, ExternalLink, MessageSquareText } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,6 +28,7 @@ export function EnterpriseEvaluationPage() {
       <button type="button" onClick={() => void downloadEvaluationReport()}><ExternalLink size={16} />证据报告</button>
     </header>
     {error ? <div className="ru-inline-error">{error}</div> : null}
+    <button className="ru-eval-feedback-entry" type="button" onClick={() => navigate('/enterprise/evaluation/feedback')}><MessageSquareText size={18} /><span><strong>用户反馈分析</strong><small>查看当前租户的真实有帮助/无帮助反馈快照</small></span><ArrowRight size={15} /></button>
     <section className="ru-eval-kpis">{metrics.map((metric) => {
       const lift = metric.baseline === 0 ? null : (metric.current - metric.baseline) / metric.baseline;
       return <article key={metric.id}><span>{metric.id.includes('recall') ? <Database size={15} /> : <BarChart3 size={15} />}{metric.label}</span><strong>{format(metric, metric.current)}</strong><small>基线 {format(metric, metric.baseline)} · {lift === null ? '绝对值口径' : `${lift >= 0 ? '+' : ''}${(lift * 100).toFixed(2)}%`}</small></article>;

@@ -18,6 +18,7 @@ import { EnterpriseAgentsPage } from './pages/enterprise/EnterpriseAgentsPage';
 import { EnterpriseAgentDetailPage } from './pages/enterprise/EnterpriseAgentDetailPage';
 import { EnterpriseConnectionDetailPage } from './pages/enterprise/EnterpriseConnectionDetailPage';
 import { EnterpriseEvaluationPage } from './pages/enterprise/EnterpriseEvaluationPage';
+import { EnterpriseFeedbackAnalyticsPage } from './pages/enterprise/EnterpriseFeedbackAnalyticsPage';
 import { EnterpriseEvaluationDatasetPage } from './pages/enterprise/EnterpriseEvaluationDatasetPage';
 import { EnterpriseEvaluationRunPage } from './pages/enterprise/EnterpriseEvaluationRunPage';
 import { EnterpriseKnowledgePage } from './pages/enterprise/EnterpriseKnowledgePage';
@@ -134,6 +135,7 @@ function AuthenticatedApp() {
         <Route path="/enterprise/activity" element={<EnterpriseActivityPage />} />
         <Route path="/enterprise/activity/:eventId" element={<AdminAuditEventDetailPage mode="enterprise" />} />
         <Route path="/enterprise/evaluation" element={<EnterpriseEvaluationPage />} />
+        <Route path="/enterprise/evaluation/feedback" element={<EnterpriseFeedbackAnalyticsPage />} />
         <Route path="/enterprise/evaluation/:runId/dataset" element={<EnterpriseEvaluationDatasetPage />} />
         <Route path="/enterprise/evaluation/:runId" element={<EnterpriseEvaluationRunPage />} />
         <Route path="/enterprise/notifications" element={<NotificationCenterPage mode="enterprise" />} />

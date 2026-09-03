@@ -10,6 +10,7 @@ import './styles/user.css';
 import './styles/user-data.css';
 import './styles/enterprise.css';
 import './styles/enterprise-search-analytics.css';
+import './styles/enterprise-feedback-analytics.css';
 import './styles/admin.css';
 import './styles/shared.css';
 import './styles/jobs.css';

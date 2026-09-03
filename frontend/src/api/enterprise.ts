@@ -67,6 +67,34 @@ export interface SearchAnalytics {
   privacy_note: string;
 }
 
+export interface FeedbackAnalytics {
+  checked_at: string;
+  tenant_id: string;
+  feedback_count: number;
+  helpful_count: number;
+  not_helpful_count: number;
+  helpful_rate: number | null;
+  respondent_count: number;
+  average_per_respondent: number | null;
+  window_complete: boolean;
+  ratings: { id: string; count: number }[];
+  conversation_statuses: { id: string; count: number }[];
+  recent_feedback: {
+    id: string;
+    conversation_id: string;
+    thread_id: string;
+    respondent_id: string;
+    conversation_status: 'running' | 'waiting' | 'completed' | 'failed' | 'cancelled';
+    rating: 'helpful' | 'not_helpful';
+    created_at: string;
+    updated_at: string;
+    conversation_updated_at: string;
+  }[];
+  data_window: string;
+  privacy_note: string;
+  history_note: string;
+}
+
 export interface ObservedMemberDetail {
   actor_id: string;
   actor_type: string;
@@ -251,6 +279,7 @@ async function getJson<T>(path: string): Promise<T> {
 
 export const fetchEnterpriseOverview = () => getJson<EnterpriseOverview>('/api/enterprise/overview');
 export const fetchSearchAnalytics = () => getJson<SearchAnalytics>('/api/enterprise/search-analytics');
+export const fetchFeedbackAnalytics = () => getJson<FeedbackAnalytics>('/api/enterprise/feedback-analytics');
 export const fetchObservedMemberDetail = (actorId: string) => getJson<ObservedMemberDetail>(`/api/enterprise/members/${encodeURIComponent(actorId)}`);
 export const fetchRuntimeSummary = () => getJson<RuntimeSummary>('/api/enterprise/runtime');
 export const fetchRuntimeAgentDetail = (agentId: string) => getJson<RuntimeAgentDetail>(`/api/enterprise/runtime/agents/${encodeURIComponent(agentId)}`);

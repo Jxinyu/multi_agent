@@ -30,6 +30,7 @@ from multi_domain_enterprise_project.core.database import (
     get_user_conversation,
     init_database,
     list_documents,
+    list_tenant_conversation_feedback,
     list_user_conversations,
     reconfigure_database,
     set_conversation_feedback,
@@ -393,6 +394,51 @@ async def test_conversation_history_is_scoped_and_preserves_public_messages(isol
     assert {record.rating for record in feedback_records} == {"helpful", "not_helpful"}
     assert wrong_tenant is None
     assert wrong_owner == []
+
+
+@pytest.mark.asyncio
+async def test_tenant_feedback_list_excludes_other_tenants_and_message_content(
+    isolated_database: None,
+) -> None:
+    async with SessionFactory() as session:
+        for tenant_id, user_id, rating in (
+            ("tenant-a", "user-a", "helpful"),
+            ("tenant-b", "user-b", "not_helpful"),
+        ):
+            conversation = await ensure_conversation(
+                session,
+                thread_id=f"thread-{tenant_id}",
+                tenant_id=tenant_id,
+                owner_id=user_id,
+                title=f"{tenant_id} 敏感标题",
+                attachment_count=0,
+            )
+            await finish_conversation_turn(
+                session,
+                conversation_id=conversation["id"],
+                status="completed",
+                role="assistant",
+                content=f"{tenant_id} 敏感回答",
+            )
+            await set_conversation_feedback(
+                session,
+                conversation_id=conversation["id"],
+                user_id=user_id,
+                rating=rating,
+            )
+
+        records, window_complete = await list_tenant_conversation_feedback(
+            session,
+            tenant_id="tenant-a",
+        )
+
+    assert window_complete is True
+    assert len(records) == 1
+    assert records[0]["respondent_id"] == "user-a"
+    assert records[0]["rating"] == "helpful"
+    assert "title" not in records[0]
+    assert "content" not in records[0]
+    assert "message_id" not in records[0]
 
 
 @pytest.mark.asyncio

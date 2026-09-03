@@ -540,6 +540,39 @@ async def list_user_conversations(
     return [conversation_to_dict(record) for record in result.all()]
 
 
+async def list_tenant_conversation_feedback(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    limit: int = 200,
+) -> tuple[list[dict[str, Any]], bool]:
+    if not 1 <= limit <= 200:
+        raise ValueError("反馈查询数量必须在 1 到 200 之间")
+    result = await session.execute(
+        select(ConversationFeedbackRecord, ConversationRecord)
+        .join(ConversationRecord, ConversationRecord.id == ConversationFeedbackRecord.conversation_id)
+        .where(ConversationRecord.tenant_id == tenant_id)
+        .order_by(ConversationFeedbackRecord.updated_at.desc(), ConversationFeedbackRecord.id.desc())
+        .limit(limit + 1)
+    )
+    rows = result.all()
+    window_complete = len(rows) <= limit
+    return [
+        {
+            "id": feedback.id,
+            "conversation_id": conversation.id,
+            "thread_id": conversation.thread_id,
+            "respondent_id": feedback.user_id,
+            "conversation_status": conversation.status,
+            "rating": feedback.rating,
+            "created_at": utc_iso(feedback.created_at),
+            "updated_at": utc_iso(feedback.updated_at),
+            "conversation_updated_at": utc_iso(conversation.updated_at),
+        }
+        for feedback, conversation in rows[:limit]
+    ], window_complete
+
+
 async def get_user_conversation(
     session: AsyncSession,
     *,

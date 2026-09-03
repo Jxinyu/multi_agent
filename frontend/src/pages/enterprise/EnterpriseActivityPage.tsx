@@ -11,17 +11,18 @@ import {
   X
 } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { fetchAuditEvents, type AuditEvent } from '../../api/platform';
 
 export function EnterpriseActivityPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState<AuditEvent[]>([]);
   const [selected, setSelected] = useState<AuditEvent | null>(null);
   const [outcome, setOutcome] = useState('');
-  const [actor, setActor] = useState('');
-  const [action, setAction] = useState('');
+  const [actor, setActor] = useState(() => searchParams.get('actor')?.slice(0, 128) ?? '');
+  const [action, setAction] = useState(() => searchParams.get('action')?.slice(0, 128) ?? '');
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
